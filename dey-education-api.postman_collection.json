@@ -1,0 +1,353 @@
+{
+  "info": {
+    "_postman_id": "1b5bb2de-0ff6-4f9b-bd9b-deyeducationapi",
+    "name": "Dey Education Student API",
+    "description": "Laravel API collection for the Dey Education Android app. Import this file in Postman, run Login first, then run authenticated endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/admin/laravel-api/public/api"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "material_id",
+      "value": "1"
+    },
+    {
+      "key": "notice_id",
+      "value": "1"
+    },
+    {
+      "key": "homework_id",
+      "value": "1"
+    },
+    {
+      "key": "poll_id",
+      "value": "1"
+    },
+    {
+      "key": "option_id",
+      "value": "1"
+    },
+    {
+      "key": "resource_id",
+      "value": "1"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        },
+        {
+          "name": "Home",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/home"
+          }
+        },
+        {
+          "name": "Dashboard",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/dashboard"
+          }
+        },
+        {
+          "name": "Company",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/company"
+          }
+        },
+        {
+          "name": "Classes",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/classes"
+          }
+        },
+        {
+          "name": "Contact",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fname\": \"Test\",\n  \"lname\": \"User\",\n  \"email\": \"test@example.com\",\n  \"subject\": \"App enquiry\",\n  \"phone\": \"9038495748\",\n  \"city\": \"Kolkata\",\n  \"message\": \"Testing from Postman\"\n}"
+            },
+            "url": "{{base_url}}/contact"
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Student\",\n  \"mobile_number\": \"9000000000\",\n  \"password\": \"123456\",\n  \"email\": \"postman-student@example.com\",\n  \"address\": \"Kolkata\",\n  \"father_name\": \"Father Name\",\n  \"school_name\": \"School Name\",\n  \"class\": \"CLASS 12 WB BOARD\",\n  \"session\": \"2026-2027\"\n}"
+            },
+            "url": "{{base_url}}/register"
+          }
+        },
+        {
+          "name": "Exams",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/exams?per_page=20"
+          }
+        },
+        {
+          "name": "Mock Questions",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/mock-questions?limit=10"
+          }
+        },
+        {
+          "name": "Question Meta",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/question-meta"
+          }
+        },
+        {
+          "name": "Questions",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/questions?per_page=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.access_token) {",
+                  "  pm.collectionVariables.set('access_token', data.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile_number\": \"9038495748\",\n  \"password\": \"12345677\"\n}"
+            },
+            "url": "{{base_url}}/login"
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/me"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address\": \"Updated address from Postman\"\n}"
+            },
+            "url": "{{base_url}}/me"
+          }
+        },
+        {
+          "name": "Upload Profile Photo",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "image", "type": "file", "src": [] }
+              ]
+            },
+            "url": "{{base_url}}/me/photo"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"12345677\",\n  \"new_password\": \"12345677\"\n}"
+            },
+            "url": "{{base_url}}/change-password"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Student Screens",
+      "item": [
+        { "name": "Notices", "request": { "method": "GET", "url": "{{base_url}}/notices?per_page=20" } },
+        { "name": "Mark Notice Seen", "request": { "method": "PATCH", "url": "{{base_url}}/notices/{{notice_id}}/seen" } },
+        { "name": "Materials", "request": { "method": "GET", "url": "{{base_url}}/materials?per_page=20" } },
+        { "name": "Material Detail", "request": { "method": "GET", "url": "{{base_url}}/materials/{{material_id}}" } },
+        {
+          "name": "Toggle Material Favorite",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"is_favorite\": true\n}" },
+            "url": "{{base_url}}/materials/{{material_id}}/favorite"
+          }
+        },
+        { "name": "Progress", "request": { "method": "GET", "url": "{{base_url}}/progress?per_page=20" } },
+        { "name": "Fees", "request": { "method": "GET", "url": "{{base_url}}/fees?per_page=20" } },
+        { "name": "Fees By Month", "request": { "method": "GET", "url": "{{base_url}}/fees?month=June&per_page=20" } },
+        { "name": "Reminders", "request": { "method": "GET", "url": "{{base_url}}/reminders" } },
+        { "name": "Admission", "request": { "method": "GET", "url": "{{base_url}}/admission" } },
+        { "name": "Polls", "request": { "method": "GET", "url": "{{base_url}}/polls" } },
+        {
+          "name": "Vote Poll",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"option_id\": {{option_id}}\n}" },
+            "url": "{{base_url}}/polls/{{poll_id}}/vote"
+          }
+        },
+        { "name": "Attendance", "request": { "method": "GET", "url": "{{base_url}}/attendance?per_page=31" } },
+        { "name": "Homework", "request": { "method": "GET", "url": "{{base_url}}/homework?per_page=20" } },
+        {
+          "name": "Submit Homework",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "homework_file", "type": "file", "src": [] },
+                { "key": "comments", "value": "Submitted from Postman", "type": "text" }
+              ]
+            },
+            "url": "{{base_url}}/homework/{{homework_id}}/submit"
+          }
+        },
+        { "name": "Enquiries", "request": { "method": "GET", "url": "{{base_url}}/enquiries?per_page=20" } },
+        {
+          "name": "Create Enquiry",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enquiry_type\": \"general\",\n  \"subject\": \"Need help\",\n  \"message\": \"Testing enquiry API from Postman\"\n}"
+            },
+            "url": "{{base_url}}/enquiries"
+          }
+        },
+        { "name": "Payment Methods", "request": { "method": "GET", "url": "{{base_url}}/payment-methods" } },
+        {
+          "name": "Add Card Payment Method",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"card\",\n  \"card_type\": \"Visa\",\n  \"card_number\": \"4111111111111111\",\n  \"card_holder_name\": \"Test User\",\n  \"expiry_date\": \"12/30\"\n}"
+            },
+            "url": "{{base_url}}/payment-methods"
+          }
+        },
+        {
+          "name": "Submit Mock Answer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_id\": 1,\n  \"selected_option\": \"a\"\n}"
+            },
+            "url": "{{base_url}}/mock-questions/answer"
+          }
+        },
+        {
+          "name": "Submit Question Answer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_id\": 1,\n  \"answer_id\": 1\n}"
+            },
+            "url": "{{base_url}}/questions/answer"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public Resources",
+      "item": [
+        { "name": "Blogs", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/blogs?per_page=20" } },
+        { "name": "Blog Detail", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/blogs/{{resource_id}}" } },
+        { "name": "Categories", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/categories?per_page=20" } },
+        { "name": "Courses", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/courses?per_page=20" } },
+        { "name": "Events", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/events?per_page=20" } },
+        { "name": "Event Detail", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/events/{{resource_id}}" } },
+        { "name": "Gallery", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/gallery?per_page=20" } },
+        { "name": "News", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/news?per_page=20" } },
+        { "name": "PDFs", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/pdfs?per_page=20" } },
+        { "name": "Services", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/services?per_page=20" } },
+        { "name": "Sliders", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/sliders?per_page=20" } },
+        { "name": "Staff", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/staff?per_page=20" } },
+        { "name": "Subcategories", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/subcategories?per_page=20" } },
+        { "name": "Teachers", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/teachers?per_page=20" } },
+        { "name": "Teacher Detail", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/teachers/{{resource_id}}" } },
+        { "name": "Testimonials", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{base_url}}/testimonials?per_page=20" } }
+      ]
+    }
+  ]
+}

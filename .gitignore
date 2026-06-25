@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Laravel
+laravel-api/.env
+laravel-api/vendor/
+laravel-api/node_modules/
+laravel-api/storage/logs/*
+laravel-api/bootstrap/cache/*.php
+
+# Android
+android-app/.gradle/
+android-app/build/
+
+# Logs
+*.log
