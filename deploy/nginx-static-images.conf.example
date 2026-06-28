@@ -1,0 +1,35 @@
+# Add inside your nginx server { } block for /var/www/student
+# so /admin/event/, /admin/promotional/, and /img/ serve real files (not Laravel/index.php).
+#
+# After editing:  nginx -t && systemctl reload nginx
+
+root /var/www/student;
+
+location /admin/event/ {
+    alias /var/www/student/admin/event/;
+    expires 7d;
+    access_log off;
+}
+
+location /admin/promotional/ {
+    alias /var/www/student/admin/promotional/;
+    expires 7d;
+    access_log off;
+}
+
+location /admin/slider/ {
+    alias /var/www/student/admin/slider/;
+    expires 7d;
+    access_log off;
+}
+
+location /img/ {
+    alias /var/www/student/img/;
+    expires 7d;
+    access_log off;
+}
+
+# Laravel API (adjust if your path differs)
+location /api/ {
+    try_files $uri $uri/ /laravel-api/public/index.php?$query_string;
+}

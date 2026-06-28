@@ -963,7 +963,7 @@ class StudentApiController extends Controller
         }
 
         $path = str_replace('\\/', '/', $path);
-        $base = rtrim((string) config('app.public_asset_base'), '/');
+        $base = $this->publicAssetBase();
 
         if (str_starts_with($path, '../img/')) {
             return $base.'/img/'.$this->encodePath(substr($path, 7));
@@ -981,6 +981,24 @@ class StudentApiController extends Controller
         }
 
         return $base.'/admin/'.$this->encodePath(ltrim($path, '/'));
+    }
+
+    /** Absolute site root for legacy PHP assets (falls back to request host if .env is empty). */
+    private function publicAssetBase(): string
+    {
+        $base = rtrim((string) config('app.public_asset_base'), '/');
+
+        if ($base !== '' && (str_starts_with($base, 'http://') || str_starts_with($base, 'https://'))) {
+            return $base;
+        }
+
+        $host = rtrim((string) request()->getSchemeAndHttpHost(), '/');
+
+        if ($base !== '' && str_starts_with($base, '/')) {
+            return $host !== '' ? $host.$base : $base;
+        }
+
+        return $host !== '' ? $host : 'http://127.0.0.1';
     }
 
     private function encodePath(string $path): string

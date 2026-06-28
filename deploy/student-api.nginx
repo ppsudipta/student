@@ -1,0 +1,76 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/student;
+    index index.php index.html;
+
+    client_max_body_size 20M;
+
+    location ^~ /admin/event/ {
+        alias /var/www/student/admin/event/;
+        expires 7d;
+        access_log off;
+    }
+
+    location ^~ /admin/promotional/ {
+        alias /var/www/student/admin/promotional/;
+        expires 7d;
+        access_log off;
+    }
+
+    location ^~ /admin/slider/ {
+        alias /var/www/student/admin/slider/;
+        expires 7d;
+        access_log off;
+    }
+
+    location ^~ /admin/gallery/ {
+        alias /var/www/student/admin/gallery/;
+        expires 7d;
+        access_log off;
+    }
+
+    location ^~ /admin/images/ {
+        alias /var/www/student/admin/images/;
+        expires 7d;
+        access_log off;
+    }
+
+    location ^~ /img/ {
+        alias /var/www/student/img/;
+        expires 7d;
+        access_log off;
+    }
+
+    location ^~ /api {
+        alias /var/www/student/laravel-api/public;
+        try_files $uri $uri/ @api_rewrite;
+
+        location ~ \.php$ {
+            include snippets/fastcgi-php.conf;
+            fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+            fastcgi_param SCRIPT_FILENAME $request_filename;
+            include fastcgi_params;
+        }
+    }
+
+    location @api_rewrite {
+        rewrite ^/api/(.*)$ /api/index.php?$query_string last;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

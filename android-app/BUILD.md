@@ -67,3 +67,13 @@ PUBLIC_ASSET_BASE=http://localhost/admin
 ```
 
 The API adds an `image_url` field alongside `image`. The Android app uses `image_url` when present.
+
+### Nginx: images must be served as static files
+
+If `curl -I http://YOUR_IP/admin/event/some.jpg` returns `Content-Type: text/html`, add the locations from `deploy/nginx-static-images.conf.example`, then:
+
+```bash
+nginx -t && systemctl reload nginx
+```
+
+Without this, the API URLs are correct but the server returns HTML instead of JPEG/PNG.

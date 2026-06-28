@@ -18,7 +18,7 @@ public final class UrlHelper {
         }
         String direct = row.optString("image_url", "");
         if (!TextUtils.isEmpty(direct) && !"null".equals(direct)) {
-            return direct;
+            return resolveImageUrl(baseUrl, direct);
         }
         return resolveImageUrl(baseUrl, row.optString("image"));
     }
@@ -27,6 +27,7 @@ public final class UrlHelper {
      * Mirrors PHP {@code ../admin/{path}} from the pages folder:
      * - admin uploads (event/, promotional/, …) → {projectRoot}/admin/{path}
      * - student photos (../img/…) → {projectRoot}/img/{file}
+     * - API image_url may be "/admin/event/file.jpg" → prepend host from API base
      */
     public static String resolveImageUrl(String baseUrl, String path) {
         if (TextUtils.isEmpty(path)) {
@@ -35,9 +36,20 @@ public final class UrlHelper {
         if (path.startsWith("http://") || path.startsWith("https://")) {
             return path;
         }
-        String cleaned = normalizeRelativePath(path);
+        String cleaned = path.replace("\\/", "/");
+        if (cleaned.startsWith("/")) {
+            String root = projectRootFromApi(baseUrl);
+            if (root.endsWith("/")) {
+                root = root.substring(0, root.length() - 1);
+            }
+            return encodeUrl(root + cleaned);
+        }
+        cleaned = normalizeRelativePath(cleaned);
         String projectRoot = projectRootFromApi(baseUrl);
 
+        if (cleaned.startsWith("admin/")) {
+            return encodeUrl(projectRoot + cleaned);
+        }
         if (cleaned.startsWith("img/")) {
             return encodeUrl(projectRoot + cleaned);
         }
