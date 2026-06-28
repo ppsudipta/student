@@ -250,19 +250,13 @@ class StudentApiController extends Controller
     {
         $student = $this->studentFromRequest($request);
 
+        $query = StudentMaterial::query();
+        $this->applyMaterialAccessFilter($query, $student);
+
         return response()->json([
-            'data' => $this->transformPaginator(StudentMaterial::query()
-                ->where(function ($query) use ($student) {
-                    $query->where('student_id', $student->id)
-                        ->orWhere('access_level', 'public')
-                        ->orWhere(function ($classQuery) use ($student) {
-                            $classQuery->where('access_level', 'class')
-                                ->where('class', $student->class)
-                                ->where('session', $student->session);
-                        });
-                })
-                ->latest('upload_date')
-                ->paginate($request->integer('per_page', 20))),
+            'data' => $this->transformPaginator(
+                $query->latest('upload_date')->paginate($request->integer('per_page', 20))
+            ),
         ]);
     }
 
@@ -1050,13 +1044,79 @@ class StudentApiController extends Controller
 
     private function canAccessMaterial(Student $student, StudentMaterial $material): bool
     {
-        return $material->access_level === 'public'
-            || $material->student_id === $student->id
-            || (
-                $material->access_level === 'class'
-                && $material->class === $student->class
-                && $material->session === $student->session
-            );
+        if ($material->access_level === 'public') {
+            return true;
+        }
+
+        if ((int) $material->student_id === (int) $student->id) {
+            return true;
+        }
+
+        if ($material->access_level !== 'class') {
+            return false;
+        }
+
+        if (trim((string) $material->session) !== trim((string) $student->session)) {
+            return false;
+        }
+
+        return $this->classesOverlap($student->class, $material->class);
+    }
+
+    /** Match pages/explore.php: student may have comma-separated classes. */
+    private function applyMaterialAccessFilter($query, Student $student): void
+    {
+        $studentClasses = $this->splitClasses($student->class);
+        $session = trim((string) ($student->session ?? ''));
+
+        $query->where(function ($outer) use ($student, $session, $studentClasses) {
+            $outer->where('student_id', $student->id)
+                ->orWhere('access_level', 'public');
+
+            if ($session === '') {
+                return;
+            }
+
+            $outer->orWhere(function ($classQuery) use ($session, $studentClasses) {
+                $classQuery->where('access_level', 'class')
+                    ->where('session', $session);
+
+                if ($studentClasses === []) {
+                    return;
+                }
+
+                $classQuery->where(function ($match) use ($studentClasses) {
+                    foreach ($studentClasses as $cls) {
+                        $match->orWhere('class', $cls)
+                            ->orWhereRaw('FIND_IN_SET(?, REPLACE(`class`, ", ", ",")) > 0', [$cls])
+                            ->orWhereRaw('FIND_IN_SET(`class`, REPLACE(?, ", ", ",")) > 0', [$cls]);
+                    }
+                });
+            });
+        });
+    }
+
+    private function splitClasses(?string $value): array
+    {
+        if ($value === null || trim($value) === '') {
+            return [];
+        }
+
+        $parts = array_map('trim', explode(',', str_replace(', ', ',', $value)));
+
+        return array_values(array_filter($parts, fn ($part) => $part !== ''));
+    }
+
+    private function classesOverlap(?string $studentClass, ?string $materialClass): bool
+    {
+        $studentClasses = $this->splitClasses($studentClass);
+        $materialClasses = $this->splitClasses($materialClass);
+
+        if ($studentClasses === [] || $materialClasses === []) {
+            return false;
+        }
+
+        return count(array_intersect($studentClasses, $materialClasses)) > 0;
     }
 
     private function transformPaginator($paginator)
@@ -1071,9 +1131,11 @@ class StudentApiController extends Controller
         $data = $material->toArray();
         $data['playback'] = $this->videoPlayback($material->file_path, $material->material_type);
 
-        if ($data['playback']) {
+        if (! empty($data['playback'])) {
             unset($data['file_path']);
             $data['permission'] = 'no';
+        } elseif (! empty($material->file_path)) {
+            $data['file_url'] = $this->assetUrl($material->file_path);
         }
 
         return $data;

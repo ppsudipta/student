@@ -37,6 +37,12 @@ server {
         access_log off;
     }
 
+    location ^~ /admin/uploads/ {
+        alias /var/www/student/admin/uploads/;
+        expires 7d;
+        access_log off;
+    }
+
     location ^~ /img/ {
         alias /var/www/student/img/;
         expires 7d;

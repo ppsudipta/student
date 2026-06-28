@@ -8,9 +8,9 @@
         android:id="@+id/sliderImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/bg_image_rounded"
         android:contentDescription="@null"
-        android:scaleType="centerCrop" />
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_image_placeholder" />
 
     <TextView
         android:id="@+id/sliderTitle"

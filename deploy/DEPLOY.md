@@ -2,6 +2,27 @@
 
 ## 1. Pull latest code
 
+**Important:** `admin/config.php` and `pages/config.php` hold database credentials. They must **not** be overwritten on the server. Before `git pull` or `git reset --hard`, back them up:
+
+```bash
+cp /var/www/student/admin/config.php /root/admin-config.php.bak
+cp /var/www/student/pages/config.php /root/pages-config.php.bak
+```
+
+```bash
+cd /var/www/student
+git fetch origin
+git reset --hard origin/main
+cp /root/admin-config.php.bak /var/www/student/admin/config.php
+cp /root/pages-config.php.bak /var/www/student/pages/config.php
+```
+
+If admin shows **500** after deploy, restore config from backup or recreate from `admin/config.example.php` using credentials from Laravel `.env`:
+
+```bash
+grep ^DB_ /var/www/student/laravel-api/.env
+```
+
 ```bash
 cd /var/www/student
 git pull origin main

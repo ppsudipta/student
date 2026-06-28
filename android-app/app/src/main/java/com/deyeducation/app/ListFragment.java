@@ -1,6 +1,7 @@
 package com.deyeducation.app;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -183,13 +184,21 @@ public class ListFragment extends Fragment {
     }
 
     private void appendMaterialRows(List<ListItem> items, JSONArray rows) {
+        String baseUrl = session.getBaseUrl();
         for (int i = 0; i < rows.length(); i++) {
             JSONObject row = rows.optJSONObject(i);
             if (row == null) continue;
             ListItem item = new ListItem();
             item.title = first(row, "material_title", "name", "title");
-            item.subtitle = UrlHelper.cleanHtml(first(row, "material_description", "description"));
+            item.subtitle = UrlHelper.cleanHtml(first(row, "material_description", "description", "subject", "material_category"));
             item.raw = row;
+            item.fileUrl = first(row, "file_url");
+            if (item.fileUrl.isEmpty()) {
+                String filePath = row.optString("file_path");
+                if (!filePath.isEmpty() && !"null".equals(filePath)) {
+                    item.fileUrl = UrlHelper.resolveImageUrl(baseUrl, filePath);
+                }
+            }
             JSONObject playback = row.optJSONObject("playback");
             if (playback != null) {
                 item.videoUrl = playback.optString("embed_url");
@@ -279,14 +288,26 @@ public class ListFragment extends Fragment {
             ListItem item = items.get(position);
             holder.title.setText(item.title.isEmpty() ? "Item" : item.title);
             holder.subtitle.setText(item.subtitle);
+            holder.action.setOnClickListener(null);
+            holder.itemView.setOnClickListener(null);
+
             if (item.videoUrl != null && !item.videoUrl.isEmpty()) {
                 holder.action.setVisibility(View.VISIBLE);
-                holder.action.setOnClickListener(v -> {
+                holder.action.setText(R.string.play_video);
+                View.OnClickListener openVideo = v -> {
                     Intent intent = new Intent(requireContext(), VideoActivity.class);
                     intent.putExtra(VideoActivity.EXTRA_URL, item.videoUrl);
                     intent.putExtra(VideoActivity.EXTRA_TITLE, item.title);
                     startActivity(intent);
-                });
+                };
+                holder.action.setOnClickListener(openVideo);
+                holder.itemView.setOnClickListener(openVideo);
+            } else if (item.fileUrl != null && !item.fileUrl.isEmpty()) {
+                holder.action.setVisibility(View.VISIBLE);
+                holder.action.setText(R.string.open_material);
+                View.OnClickListener openFile = v -> openMaterial(item.fileUrl);
+                holder.action.setOnClickListener(openFile);
+                holder.itemView.setOnClickListener(openFile);
             } else {
                 holder.action.setVisibility(View.GONE);
             }
@@ -311,10 +332,20 @@ public class ListFragment extends Fragment {
         }
     }
 
+    private void openMaterial(String url) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            startActivity(Intent.createChooser(intent, getString(R.string.open_material)));
+        } catch (Exception e) {
+            UiUtils.toast(requireContext(), "Unable to open file");
+        }
+    }
+
     private static class ListItem {
         String title = "";
         String subtitle = "";
         String videoUrl = "";
+        String fileUrl = "";
         JSONObject raw;
     }
 }

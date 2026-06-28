@@ -1,6 +1,7 @@
 package com.deyeducation.app;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -16,12 +17,17 @@ public final class UiUtils {
     }
 
     public static void loadImage(Context context, String url, ImageView view, int cornerRadiusDp) {
-        if (url == null || url.isEmpty()) {
+        if (context == null || view == null) {
             return;
         }
+        int placeholder = R.drawable.bg_image_placeholder;
         int radius = (int) (cornerRadiusDp * context.getResources().getDisplayMetrics().density);
+        Object source = TextUtils.isEmpty(url) ? null : url;
         Glide.with(context)
-                .load(url)
+                .load(source)
+                .placeholder(placeholder)
+                .error(placeholder)
+                .fallback(placeholder)
                 .transform(new RoundedCorners(radius))
                 .centerCrop()
                 .into(view);

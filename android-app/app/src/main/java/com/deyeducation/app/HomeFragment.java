@@ -1,6 +1,8 @@
 package com.deyeducation.app;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,12 +27,33 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
+    private static final long SLIDER_INTERVAL_MS = 4000L;
+
     private ApiClient api;
     private SessionManager session;
     private ProgressBar progressBar;
     private TextView feeBanner;
     private View notificationDot;
+    private ViewPager2 sliderPager;
     private ViewPager2.OnPageChangeCallback sliderPageCallback;
+    private final Handler sliderHandler = new Handler(Looper.getMainLooper());
+    private boolean sliderAutoScrollEnabled;
+    private boolean sliderUserDragging;
+    private final Runnable sliderAutoTick = new Runnable() {
+        @Override
+        public void run() {
+            if (!sliderAutoScrollEnabled || sliderPager == null || !isResumed()) {
+                return;
+            }
+            RecyclerView.Adapter<?> adapter = sliderPager.getAdapter();
+            if (adapter == null || adapter.getItemCount() <= 1) {
+                return;
+            }
+            int next = (sliderPager.getCurrentItem() + 1) % adapter.getItemCount();
+            sliderPager.setCurrentItem(next, true);
+            sliderHandler.postDelayed(this, SLIDER_INTERVAL_MS);
+        }
+    };
 
     @Nullable
     @Override
@@ -52,7 +75,7 @@ public class HomeFragment extends Fragment {
         LinearLayout coursesContainer = view.findViewById(R.id.coursesContainer);
         LinearLayout promotionsContainer = view.findViewById(R.id.promotionsContainer);
         View sliderSection = view.findViewById(R.id.sliderSection);
-        ViewPager2 sliderPager = view.findViewById(R.id.sliderPager);
+        sliderPager = view.findViewById(R.id.sliderPager);
         LinearLayout sliderDots = view.findViewById(R.id.sliderDots);
 
         addServiceItem(serviceGrid, R.drawable.ic_service_academy, getString(R.string.academy_details), v ->
@@ -67,17 +90,49 @@ public class HomeFragment extends Fragment {
                 activity.selectBottomNav(R.id.nav_notices));
         view.findViewById(R.id.btnWhatsapp).setOnClickListener(v -> activity.openWhatsapp());
 
-        loadHome(view, coursesContainer, promotionsContainer, sliderSection, sliderPager, sliderDots);
+        loadHome(view, coursesContainer, promotionsContainer, sliderSection, sliderDots);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (sliderPager != null) {
+            sliderPager.post(this::startSliderAutoScroll);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        stopSliderAutoScroll();
+        super.onPause();
     }
 
     @Override
     public void onDestroyView() {
-        ViewPager2 pager = getView() != null ? getView().findViewById(R.id.sliderPager) : null;
-        if (pager != null && sliderPageCallback != null) {
-            pager.unregisterOnPageChangeCallback(sliderPageCallback);
+        stopSliderAutoScroll();
+        if (sliderPager != null && sliderPageCallback != null) {
+            sliderPager.unregisterOnPageChangeCallback(sliderPageCallback);
         }
         sliderPageCallback = null;
+        sliderPager = null;
         super.onDestroyView();
+    }
+
+    private void startSliderAutoScroll() {
+        stopSliderAutoScroll();
+        if (sliderPager == null || sliderPager.getAdapter() == null) {
+            return;
+        }
+        if (sliderPager.getAdapter().getItemCount() <= 1) {
+            return;
+        }
+        sliderAutoScrollEnabled = true;
+        sliderHandler.postDelayed(sliderAutoTick, SLIDER_INTERVAL_MS);
+    }
+
+    private void stopSliderAutoScroll() {
+        sliderAutoScrollEnabled = false;
+        sliderHandler.removeCallbacks(sliderAutoTick);
     }
 
     private void addServiceItem(GridLayout grid, int iconRes, String label, View.OnClickListener click) {
@@ -129,7 +184,7 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadHome(View root, LinearLayout coursesContainer, LinearLayout promotionsContainer,
-                          View sliderSection, ViewPager2 sliderPager, LinearLayout sliderDots) {
+                          View sliderSection, LinearLayout sliderDots) {
         progressBar.setVisibility(View.VISIBLE);
         api.get("/home", true, new ApiClient.Callback() {
             @Override
@@ -150,7 +205,7 @@ public class HomeFragment extends Fragment {
                     }
                     feeBanner.setVisibility(json.optBoolean("has_pending_fees") ? View.VISIBLE : View.GONE);
                     notificationDot.setVisibility(json.optInt("notices_count") > 0 ? View.VISIBLE : View.GONE);
-                    bindSliders(sliderSection, sliderPager, sliderDots, json.optJSONArray("sliders"));
+                    bindSliders(sliderSection, sliderDots, json.optJSONArray("sliders"));
                     bindCourses(coursesContainer, json.optJSONArray("events"));
                     bindPromotions(promotionsContainer, json.optJSONArray("promotions"));
                 });
@@ -167,23 +222,19 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    private void bindSliders(View sliderSection, ViewPager2 pager, LinearLayout dotsContainer, JSONArray rows) {
-        if (sliderSection == null || pager == null) {
+    private void bindSliders(View sliderSection, LinearLayout dotsContainer, JSONArray rows) {
+        if (sliderSection == null || sliderPager == null) {
             return;
         }
+        stopSliderAutoScroll();
         List<JSONObject> items = new ArrayList<>();
         String baseUrl = session.getBaseUrl();
         if (rows != null) {
             for (int i = 0; i < rows.length(); i++) {
                 JSONObject row = rows.optJSONObject(i);
-                if (row == null) {
-                    continue;
+                if (row != null) {
+                    items.add(row);
                 }
-                String imageUrl = UrlHelper.imageFromJson(baseUrl, row);
-                if (imageUrl == null || imageUrl.isEmpty()) {
-                    continue;
-                }
-                items.add(row);
             }
         }
         if (items.isEmpty()) {
@@ -191,8 +242,10 @@ public class HomeFragment extends Fragment {
             return;
         }
         sliderSection.setVisibility(View.VISIBLE);
-        pager.setAdapter(new SliderAdapter(items, baseUrl));
-        bindSliderDots(pager, dotsContainer, items.size());
+        sliderPager.setOffscreenPageLimit(Math.min(items.size() - 1, 3));
+        sliderPager.setAdapter(new SliderAdapter(items, baseUrl));
+        bindSliderDots(sliderPager, dotsContainer, items.size());
+        sliderPager.post(this::startSliderAutoScroll);
     }
 
     private void bindSliderDots(ViewPager2 pager, LinearLayout dotsContainer, int count) {
@@ -225,6 +278,17 @@ public class HomeFragment extends Fragment {
             @Override
             public void onPageSelected(int position) {
                 updateSliderDot(dots, position);
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+                if (state == ViewPager2.SCROLL_STATE_DRAGGING) {
+                    sliderUserDragging = true;
+                    stopSliderAutoScroll();
+                } else if (state == ViewPager2.SCROLL_STATE_IDLE && sliderUserDragging) {
+                    sliderUserDragging = false;
+                    startSliderAutoScroll();
+                }
             }
         };
         pager.registerOnPageChangeCallback(sliderPageCallback);

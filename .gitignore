@@ -8,6 +8,12 @@ laravel-api/node_modules/
 laravel-api/storage/logs/*
 laravel-api/bootstrap/cache/*.php
 
+# PHP DB config (per-server; never overwrite on VPS git pull)
+admin/config.php
+pages/config.php
+pages/config/config.php
+pages/auth/config.php
+
 # Android
 android-app/.gradle/
 android-app/build/
