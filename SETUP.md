@@ -25,7 +25,7 @@ The code currently connects to:
 - host: `localhost`
 - user: `root`
 - password: empty
-- database: `a1773756_app`
+- database: `tea` (local XAMPP)
 
 These values are present in:
 

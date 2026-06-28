@@ -56,6 +56,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Public Asset Base URL
+    |--------------------------------------------------------------------------
+    |
+    | Root URL of the legacy PHP project (where admin/, img/, pages/ live).
+    | Used to build full image URLs for the Android app. Defaults to APP_URL
+    | with /laravel-api/public stripped off.
+    |
+    */
+
+    'public_asset_base' => env(
+        'PUBLIC_ASSET_BASE',
+        rtrim(preg_replace('#/laravel-api/public/?$#', '', env('APP_URL', 'http://localhost')), '/')
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

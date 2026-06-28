@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item android:id="@+id/drawer_home" android:title="@string/home" android:icon="@drawable/ic_nav_home" />
+        <item android:id="@+id/drawer_notices" android:title="@string/notice" android:icon="@drawable/ic_nav_notices" />
+        <item android:id="@+id/drawer_materials" android:title="@string/materials" android:icon="@drawable/ic_nav_explore" />
+        <item android:id="@+id/drawer_fees" android:title="@string/fees" android:icon="@drawable/ic_service_academy" />
+        <item android:id="@+id/drawer_homework" android:title="@string/homework" android:icon="@drawable/ic_service_about" />
+        <item android:id="@+id/drawer_enquiry" android:title="@string/enquiry" android:icon="@drawable/ic_bell" />
+        <item android:id="@+id/drawer_logout" android:title="@string/logout" />
+    </group>
+</menu>

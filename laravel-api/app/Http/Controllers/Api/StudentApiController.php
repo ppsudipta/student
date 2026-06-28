@@ -28,6 +28,14 @@ class StudentApiController extends Controller
         ]);
     }
 
+    public function ping(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'The Laravel API is connected and working!',
+        ]);
+    }
+
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -121,13 +129,20 @@ class StudentApiController extends Controller
     public function home(Request $request): JsonResponse
     {
         $student = $this->optionalStudentFromRequest($request);
+        $company = Company::query()->first();
 
         return response()->json([
-            'company' => Company::query()->first(),
+            'company' => $company ? $this->withImageUrl($company->toArray()) : null,
             'student' => $student ? $this->studentPayload($student) : null,
-            'sliders' => $this->table('slider')->latest('id')->limit(10)->get(),
-            'events' => $this->table('event')->latest('id')->limit(10)->get(),
-            'promotions' => $this->table('gallery')->where('type', 'promotional')->latest('id')->limit(10)->get(),
+            'sliders' => $this->mapImageUrls($this->table('slider')->latest('id')->limit(10)->get()),
+            'events' => $this->mapImageUrls($this->table('event')->latest('id')->limit(10)->get()),
+            'promotions' => $this->mapImageUrls(
+                $this->table('gallery')
+                    ->whereIn('type', ['promotional', 'Promotional'])
+                    ->latest('id')
+                    ->limit(10)
+                    ->get()
+            ),
             'notices_count' => $student ? Notice::query()->where('student_id', $student->id)->where('seen', 0)->count() : 0,
             'has_pending_fees' => $student ? $this->hasPendingFees($student) : false,
         ]);
@@ -664,20 +679,25 @@ class StudentApiController extends Controller
     public function listTable(Request $request, string $resource): JsonResponse
     {
         [$table, $order] = $this->resourceMap($resource);
+        $paginator = $this->table($table)
+            ->orderByDesc($order)
+            ->paginate($request->integer('per_page', 20));
+        $paginator->setCollection(
+            $paginator->getCollection()->map(fn ($row) => $this->withImageUrl((array) $row))
+        );
 
         return response()->json([
-            'data' => $this->table($table)
-                ->orderByDesc($order)
-                ->paginate($request->integer('per_page', 20)),
+            'data' => $paginator,
         ]);
     }
 
     public function showTable(string $resource, int $id): JsonResponse
     {
         [$table] = $this->resourceMap($resource);
+        $row = $this->table($table)->where('id', $id)->firstOrFail();
 
         return response()->json([
-            'data' => $this->table($table)->where('id', $id)->firstOrFail(),
+            'data' => $this->withImageUrl((array) $row),
         ]);
     }
 
@@ -854,6 +874,7 @@ class StudentApiController extends Controller
             'class' => $student->class,
             'session' => $student->session,
             'image' => $student->image,
+            'image_url' => $this->assetUrl($student->image),
             'gender' => $student->gender,
             'father_name' => $student->father_name,
             'date_of_birth' => $this->validDate($student->date_of_birth),
@@ -912,6 +933,61 @@ class StudentApiController extends Controller
         abort_unless(isset($resources[$resource]), 404, 'Unknown API resource.');
 
         return $resources[$resource];
+    }
+
+    private function mapImageUrls($rows)
+    {
+        return collect($rows)->map(fn ($row) => $this->withImageUrl((array) $row))->values();
+    }
+
+    private function withImageUrl(array $row): array
+    {
+        if (array_key_exists('image', $row)) {
+            $row['image_url'] = $this->assetUrl($row['image']);
+        }
+
+        return $row;
+    }
+
+    /**
+     * Build a public URL the same way pages/home.php does: ../admin/{path} from pages/.
+     */
+    private function assetUrl(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        $path = str_replace('\\/', '/', $path);
+        $base = rtrim((string) config('app.public_asset_base'), '/');
+
+        if (str_starts_with($path, '../img/')) {
+            return $base.'/img/'.$this->encodePath(substr($path, 7));
+        }
+
+        if (str_starts_with($path, 'img/')) {
+            return $base.'/'.$this->encodePath($path);
+        }
+
+        while (str_starts_with($path, '../')) {
+            $path = substr($path, 3);
+        }
+        while (str_starts_with($path, './')) {
+            $path = substr($path, 2);
+        }
+
+        return $base.'/admin/'.$this->encodePath(ltrim($path, '/'));
+    }
+
+    private function encodePath(string $path): string
+    {
+        $segments = explode('/', $path);
+
+        return implode('/', array_map('rawurlencode', $segments));
     }
 
     private function saveUploadedFile($file, string $directory, string $databasePrefix): string

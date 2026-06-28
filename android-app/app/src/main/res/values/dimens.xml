@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="bottom_nav_height">70dp</dimen>
+    <dimen name="toolbar_height">55dp</dimen>
+    <dimen name="screen_padding">24dp</dimen>
+    <dimen name="service_icon_size">64dp</dimen>
+    <dimen name="course_card_width">220dp</dimen>
+    <dimen name="course_image_height">120dp</dimen>
+    <dimen name="promo_card_width">280dp</dimen>
+    <dimen name="promo_image_height">200dp</dimen>
+    <dimen name="radius_12">12dp</dimen>
+    <dimen name="radius_16">16dp</dimen>
+    <dimen name="radius_24">24dp</dimen>
+    <dimen name="radius_30">30dp</dimen>
+</resources>

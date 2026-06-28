@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DeyEducation" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/primary_light</item>
+        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:navigationBarColor">@color/bottom_nav_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <style name="Widget.DeyEducation.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@color/primary</item>
+        <item name="titleTextColor">@color/white</item>
+        <item name="android:minHeight">@dimen/toolbar_height</item>
+    </style>
+
+    <style name="Widget.DeyEducation.Button.Primary" parent="Widget.Material3.Button">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="backgroundTint">@color/primary</item>
+        <item name="cornerRadius">@dimen/radius_16</item>
+        <item name="android:minHeight">54dp</item>
+    </style>
+
+    <style name="Widget.DeyEducation.TextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">@dimen/radius_12</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/radius_12</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/radius_12</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/radius_12</item>
+        <item name="boxBackgroundColor">@color/input_bg</item>
+        <item name="boxStrokeColor">@color/border</item>
+    </style>
+
+    <style name="TextSectionTitle">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/primary_text</item>
+    </style>
+
+    <style name="TextSubtitle">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/secondary_text</item>
+    </style>
+
+    <style name="TextBody">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/primary_text</item>
+    </style>
+</resources>

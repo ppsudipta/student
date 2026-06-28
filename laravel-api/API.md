@@ -113,3 +113,20 @@ These support pagination with `?page=1&per_page=20`.
 2. Store `access_token`.
 3. Send `Authorization: Bearer <access_token>` for protected endpoints.
 4. Use `GET /api/home` for the first dashboard payload.
+
+## Image URLs
+
+Legacy image paths in the database (e.g. `event/photo.jpg`, `../img/avatar.png`) are
+converted to full public URLs using `PUBLIC_ASSET_BASE` in `.env`:
+
+```
+PUBLIC_ASSET_BASE=http://localhost/admin
+```
+
+Production example:
+
+```
+PUBLIC_ASSET_BASE=http://187.127.187.70
+```
+
+Responses include `image_url` next to `image` on home events, promotions, gallery, and student profile.

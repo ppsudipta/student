@@ -111,7 +111,7 @@ $apiUrl = 'laravel-api/public/api/health';
       <li>Public/student app: <code>/admin/pages/</code></li>
       <li>Admin panel: <code>/admin/admin/</code></li>
       <li>Laravel API: <code>/admin/laravel-api/public/api/</code></li>
-      <li>Database configured in code: <code>a1773756_app</code></li>
+      <li>Database configured in code: <code>tea</code></li>
       <li>Local setup notes: <code>SETUP.md</code></li>
     </ul>
   </main>

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\StudentApiController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [StudentApiController::class, 'health']);
+Route::get('/ping', [StudentApiController::class, 'ping']);
 Route::post('/login', [StudentApiController::class, 'login']);
 Route::post('/register', [StudentApiController::class, 'register']);
 Route::post('/contact', [StudentApiController::class, 'contact']);
