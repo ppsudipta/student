@@ -1,7 +1,6 @@
 package com.deyeducation.app;
 
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -72,10 +71,13 @@ public class ListFragment extends Fragment {
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
         adapter = new ListAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        recyclerView.setHasFixedSize(false);
         recyclerView.setAdapter(adapter);
 
         swipeRefresh.setColorSchemeResources(R.color.primary);
         swipeRefresh.setOnRefreshListener(this::loadData);
+        swipeRefresh.setOnChildScrollUpCallback((parent, child) ->
+                recyclerView.canScrollVertically(-1));
         loadData();
     }
 
@@ -192,16 +194,29 @@ public class ListFragment extends Fragment {
             item.title = first(row, "material_title", "name", "title");
             item.subtitle = UrlHelper.cleanHtml(first(row, "material_description", "description", "subject", "material_category"));
             item.raw = row;
-            item.fileUrl = first(row, "file_url");
-            if (item.fileUrl.isEmpty()) {
-                String filePath = row.optString("file_path");
-                if (!filePath.isEmpty() && !"null".equals(filePath)) {
-                    item.fileUrl = UrlHelper.resolveImageUrl(baseUrl, filePath);
-                }
-            }
+
+            String materialType = row.optString("material_type", "").toLowerCase();
             JSONObject playback = row.optJSONObject("playback");
             if (playback != null) {
                 item.videoUrl = playback.optString("embed_url");
+            }
+
+            String filePath = row.optString("file_path", "");
+            if (item.videoUrl.isEmpty() && ("video".equals(materialType) || UrlHelper.isHostedVideoUrl(filePath))) {
+                item.videoUrl = UrlHelper.videoEmbedUrl(filePath);
+            }
+
+            if (item.videoUrl.isEmpty()) {
+                item.fileUrl = first(row, "file_url");
+                if (item.fileUrl.isEmpty() && !filePath.isEmpty() && !"null".equals(filePath)
+                        && !UrlHelper.isHostedVideoUrl(filePath)) {
+                    item.fileUrl = UrlHelper.resolveImageUrl(baseUrl, filePath);
+                }
+                if ("video".equals(materialType) && !item.fileUrl.isEmpty()
+                        && item.fileUrl.toLowerCase().contains(".mp4")) {
+                    item.videoUrl = item.fileUrl;
+                    item.fileUrl = "";
+                }
             }
             items.add(item);
         }
@@ -305,7 +320,7 @@ public class ListFragment extends Fragment {
             } else if (item.fileUrl != null && !item.fileUrl.isEmpty()) {
                 holder.action.setVisibility(View.VISIBLE);
                 holder.action.setText(R.string.open_material);
-                View.OnClickListener openFile = v -> openMaterial(item.fileUrl);
+                View.OnClickListener openFile = v -> openMaterial(item.title, item.fileUrl);
                 holder.action.setOnClickListener(openFile);
                 holder.itemView.setOnClickListener(openFile);
             } else {
@@ -332,13 +347,11 @@ public class ListFragment extends Fragment {
         }
     }
 
-    private void openMaterial(String url) {
-        try {
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            startActivity(Intent.createChooser(intent, getString(R.string.open_material)));
-        } catch (Exception e) {
-            UiUtils.toast(requireContext(), "Unable to open file");
-        }
+    private void openMaterial(String title, String url) {
+        Intent intent = new Intent(requireContext(), PdfActivity.class);
+        intent.putExtra(PdfActivity.EXTRA_URL, url);
+        intent.putExtra(PdfActivity.EXTRA_TITLE, title);
+        startActivity(intent);
     }
 
     private static class ListItem {

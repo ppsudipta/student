@@ -311,16 +311,16 @@ if (isset($_POST['submit'])) {
                 </select>
               </div>
 
-              <div class="form-group">
-                <label>Hosted Video Link</label>
-                <input type="url" name="material_url" id="material_url" class="form-control" placeholder="Paste Vimeo or YouTube link">
-                <p class="help-block">For app-only playback, prefer a private/unlisted Vimeo embed link.</p>
+              <div class="form-group" id="video_url_group">
+                <label>Hosted Video Link (Vimeo / YouTube)</label>
+                <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789 or https://youtu.be/...">
+                <p class="help-block">Select <strong>Video</strong> type, paste a Vimeo or YouTube link here, and leave file upload empty.</p>
               </div>
 
-              <div class="form-group">
+              <div class="form-group" id="file_upload_group">
                 <label>Upload File (Max 5MB)</label>
                 <input type="file" name="material_file" id="material_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.mp4">
-                <p class="help-block">Allowed types: PDF, Word, PowerPoint, Image, Video. For video, use either a hosted link or MP4 upload.</p>
+                <p class="help-block">For PDF/documents/images upload a file. For video you can upload MP4 instead of using a link.</p>
               </div>
 
               <div class="form-group">
@@ -373,6 +373,16 @@ if (isset($_POST['submit'])) {
     
     // Initialize select2
     $('.select2').select2();
+
+    function updateMaterialTypeFields() {
+      const type = $('select[name="material_type"]').val();
+      const isVideo = type === 'video';
+      $('#video_url_group').toggle(isVideo);
+      $('#material_file').prop('required', false);
+    }
+
+    $('select[name="material_type"]').on('change', updateMaterialTypeFields);
+    updateMaterialTypeFields();
   });
 
   function updateRecipientOptions() {

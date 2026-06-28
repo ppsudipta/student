@@ -36,6 +36,11 @@
             android:configChanges="orientation|screenSize" />
 
         <activity
+            android:name=".PdfActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".DetailActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />

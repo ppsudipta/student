@@ -313,16 +313,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                   </div>
                 </div>
 
-                <div class="form-group">
-                  <label>Hosted Video Link</label>
-                  <input type="url" name="material_url" class="form-control" placeholder="Paste Vimeo or YouTube link"
+                <div class="form-group" id="video_url_group">
+                  <label>Hosted Video Link (Vimeo / YouTube)</label>
+                  <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789 or https://youtu.be/..."
                          value="<?php echo filter_var($material['file_path'], FILTER_VALIDATE_URL) ? htmlspecialchars($material['file_path']) : ''; ?>">
-                  <p class="help-block">For video materials, this can replace the uploaded file.</p>
+                  <p class="help-block">For video materials, paste a Vimeo or YouTube link (or upload MP4 below).</p>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="file_upload_group">
                   <label>Replace File (optional)</label>
-                  <input type="file" name="new_file" class="form-control">
+                  <input type="file" name="new_file" id="new_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.mp4">
                   <p class="help-block">Allowed: PDF, Word, PowerPoint, JPG, PNG, MP4 (Max 10MB)</p>
                 </div>
 
@@ -400,6 +400,15 @@ $(document).ready(function() {
       reader.readAsDataURL(file);
     }
   });
+
+  function updateMaterialTypeFields() {
+    var type = $('select[name="material_type"]').val();
+    var isVideo = type === 'video';
+    $('#video_url_group').toggle(isVideo);
+  }
+
+  $('select[name="material_type"]').on('change', updateMaterialTypeFields);
+  updateMaterialTypeFields();
 });
 </script>
 </body>

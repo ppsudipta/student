@@ -22,6 +22,38 @@ $subject = $material['subject'];
 $related_query = "SELECT * FROM student_materials WHERE subject = '$subject' AND id != '$material_id' LIMIT 4";
 $related_result = mysqli_query($con, $related_query);
 $related_materials = mysqli_fetch_all($related_result, MYSQLI_ASSOC);
+
+function material_video_embed_url($file_path, $material_type) {
+    if (strtolower((string) $material_type) !== 'video' || empty($file_path)) {
+        return null;
+    }
+    if (!filter_var($file_path, FILTER_VALIDATE_URL)) {
+        return null;
+    }
+    if (preg_match('~vimeo\.com/(?:video/)?(\d+)(?:/([A-Za-z0-9]+))?~i', $file_path, $matches)) {
+        $embed = 'https://player.vimeo.com/video/' . $matches[1];
+        $query = parse_url($file_path, PHP_URL_QUERY);
+        if ($query) {
+            parse_str($query, $params);
+            if (!empty($params['h'])) {
+                $embed .= '?h=' . $params['h'];
+            }
+        } elseif (!empty($matches[2])) {
+            $embed .= '?h=' . $matches[2];
+        }
+        return $embed . (str_contains($embed, '?') ? '&' : '?') . 'title=0&byline=0&portrait=0';
+    }
+    if (preg_match('~(?:youtube\.com/(?:watch\?v=|embed/)|youtu\.be/)([A-Za-z0-9_-]+)~i', $file_path, $matches)) {
+        return 'https://www.youtube.com/embed/' . $matches[1] . '?rel=0&modestbranding=1';
+    }
+    if (preg_match('~player\.vimeo\.com~i', $file_path) || preg_match('~youtube\.com/embed~i', $file_path)) {
+        return $file_path;
+    }
+    return null;
+}
+
+$video_embed = material_video_embed_url($material['file_path'], $material['material_type']);
+$is_local_file = !empty($material['file_path']) && !filter_var($material['file_path'], FILTER_VALIDATE_URL);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -83,16 +115,21 @@ $related_materials = mysqli_fetch_all($related_result, MYSQLI_ASSOC);
   </div>
 
   <div class="mb-4">
-    <?php if ($material['permission'] === 'yes'): ?>
+    <?php if ($video_embed): ?>
+      <iframe src="<?php echo htmlspecialchars($video_embed); ?>" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+      <p class="text-danger mt-2"><strong>Note:</strong> This video plays in-app only. Sharing is disabled.</p>
+    <?php elseif ($material['permission'] === 'yes' && $is_local_file): ?>
       <a href="../admin/<?php echo htmlspecialchars($material['file_path']); ?>" class="btn btn-success" download>
         <i class="fas fa-download me-1"></i> Download
       </a>
       <a href="../admin/<?php echo htmlspecialchars($material['file_path']); ?>" class="btn btn-primary" target="_blank">
         <i class="fas fa-eye me-1"></i> View
       </a>
-    <?php else: ?>
+    <?php elseif ($is_local_file): ?>
       <iframe src="../admin/<?php echo htmlspecialchars($material['file_path']); ?>#toolbar=0" allowfullscreen sandbox></iframe>
       <p class="text-danger mt-2"><strong>Note:</strong> Download is disabled for this material.</p>
+    <?php else: ?>
+      <p class="text-muted">Preview is not available for this material.</p>
     <?php endif; ?>
   </div>
 
@@ -170,7 +207,8 @@ function get_file_icon($type) {
     case 'gif': return 'image';
     case 'mp4':
     case 'mov':
-    case 'avi': return 'video';
+    case 'avi':
+    case 'video': return 'video';
     case 'xls':
     case 'xlsx': return 'excel';
     case 'zip':

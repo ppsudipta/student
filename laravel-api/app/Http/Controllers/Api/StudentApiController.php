@@ -1143,7 +1143,11 @@ class StudentApiController extends Controller
 
     private function videoPlayback(?string $source, ?string $type): ?array
     {
-        if ($type !== 'video' || ! $source || ! filter_var($source, FILTER_VALIDATE_URL)) {
+        if (! $source || ! filter_var($source, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        if (strtolower((string) $type) !== 'video' && ! preg_match('/(vimeo\.com|youtube\.com|youtu\.be)/i', $source)) {
             return null;
         }
 

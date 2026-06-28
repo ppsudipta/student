@@ -128,4 +128,64 @@ public final class UrlHelper {
                 .replace("\\/", "/")
                 .trim();
     }
+
+    public static boolean isHostedVideoUrl(String url) {
+        if (TextUtils.isEmpty(url)) {
+            return false;
+        }
+        String lower = url.toLowerCase();
+        return lower.contains("vimeo.com") || lower.contains("youtube.com") || lower.contains("youtu.be");
+    }
+
+    /** Build embed URL for Vimeo/YouTube links (mirrors Laravel {@code videoPlayback}). */
+    public static String videoEmbedUrl(String source) {
+        if (TextUtils.isEmpty(source) || "null".equals(source)) {
+            return "";
+        }
+        String url = source.trim().replace("\\/", "/");
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            return "";
+        }
+
+        java.util.regex.Matcher vimeo = java.util.regex.Pattern
+                .compile("vimeo\\.com/(?:video/)?(\\d+)(?:/([A-Za-z0-9]+))?", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(url);
+        if (vimeo.find()) {
+            String embed = "https://player.vimeo.com/video/" + vimeo.group(1);
+            String hash = extractQueryParam(url, "h");
+            if (TextUtils.isEmpty(hash) && vimeo.group(2) != null) {
+                hash = vimeo.group(2);
+            }
+            if (!TextUtils.isEmpty(hash)) {
+                embed += "?h=" + hash;
+            }
+            return embed;
+        }
+
+        java.util.regex.Matcher youtube = java.util.regex.Pattern
+                .compile("(?:youtube\\.com/(?:watch\\?v=|embed/)|youtu\\.be/)([A-Za-z0-9_-]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                .matcher(url);
+        if (youtube.find()) {
+            return "https://www.youtube.com/embed/" + youtube.group(1);
+        }
+
+        if (url.contains("player.vimeo.com") || url.contains("youtube.com/embed")) {
+            return url;
+        }
+        return "";
+    }
+
+    private static String extractQueryParam(String url, String key) {
+        int q = url.indexOf('?');
+        if (q < 0) {
+            return "";
+        }
+        for (String part : url.substring(q + 1).split("&")) {
+            int eq = part.indexOf('=');
+            if (eq > 0 && key.equals(part.substring(0, eq))) {
+                return part.substring(eq + 1);
+            }
+        }
+        return "";
+    }
 }

@@ -294,7 +294,10 @@ function formatFileSize($bytes) {
             $is_favorite = $material['is_favorite'] ? 'favorite' : '';
             $file_type = strtolower($material['material_type']);
             $upload_date = date('M d, Y', strtotime($material['upload_date']));
-            $thumbnail = getThumbnailForType($file_type, '../admin/' . $material['file_path']);
+            $thumbnailPath = filter_var($material['file_path'], FILTER_VALIDATE_URL)
+                ? ''
+                : '../admin/' . $material['file_path'];
+            $thumbnail = getThumbnailForType($file_type, $thumbnailPath);
             $is_recent = (time() - strtotime($material['upload_date'])) < (7 * 24 * 60 * 60) ? 'recent' : '';
           ?>
           <div class="col-6 col-md-4 col-lg-3 mb-4 mix <?= $is_favorite ?> <?= $file_type ?> <?= $is_recent ?>">
