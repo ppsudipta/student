@@ -111,10 +111,16 @@ $is_local_file = !empty($material['file_path']) && !filter_var($material['file_p
     </div>
   </div>
 
-  <div class="mb-4">
+  <div class="mb-4" oncontextmenu="return false">
     <?php if ($video_embed): ?>
-      <iframe src="<?php echo htmlspecialchars($video_embed); ?>" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
-      <p class="text-danger mt-2"><strong>Note:</strong> This video plays in-app only. Sharing is disabled.</p>
+      <div class="ratio ratio-16x9" style="user-select:none;-webkit-user-select:none;">
+        <iframe src="<?php echo htmlspecialchars($video_embed); ?>"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowfullscreen
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <p class="text-danger mt-2"><strong>Note:</strong> This is a protected Vimeo video. Sharing, downloading, and copying the link are disabled.</p>
     <?php elseif ($material['permission'] === 'yes' && $is_local_file): ?>
       <a href="../admin/<?php echo htmlspecialchars($material['file_path']); ?>" class="btn btn-success" download>
         <i class="fas fa-download me-1"></i> Download

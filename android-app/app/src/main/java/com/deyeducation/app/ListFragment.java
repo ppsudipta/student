@@ -196,27 +196,13 @@ public class ListFragment extends Fragment {
             item.raw = row;
 
             String materialType = row.optString("material_type", "").toLowerCase();
-            String sourceUrl = first(row, "source_url", "file_path");
+            item.materialId = row.optInt("id", 0);
+            item.hasVideo = row.optBoolean("is_video") || "video".equals(materialType);
 
-            if (!row.isNull("playback")) {
-                JSONObject playback = row.optJSONObject("playback");
-                if (playback != null) {
-                    item.videoUrl = playback.optString("embed_url");
-                }
-            }
-
-            if (item.videoUrl.isEmpty() && UrlHelper.isVimeoUrl(sourceUrl)) {
-                item.videoUrl = UrlHelper.vimeoEmbedUrl(sourceUrl);
-            }
-
-            if (item.videoUrl.isEmpty() && "video".equals(materialType) && !sourceUrl.isEmpty()) {
-                item.videoUrl = UrlHelper.vimeoEmbedUrl(sourceUrl);
-            }
-
-            if (item.videoUrl.isEmpty()) {
+            String sourceUrl = first(row, "file_path");
+            if (!item.hasVideo) {
                 item.fileUrl = first(row, "file_url");
-                if (item.fileUrl.isEmpty() && !sourceUrl.isEmpty() && !"null".equals(sourceUrl)
-                        && !UrlHelper.isVimeoUrl(sourceUrl)) {
+                if (item.fileUrl.isEmpty() && !sourceUrl.isEmpty() && !"null".equals(sourceUrl)) {
                     item.fileUrl = UrlHelper.resolveImageUrl(baseUrl, sourceUrl);
                 }
             }
@@ -308,12 +294,12 @@ public class ListFragment extends Fragment {
             holder.action.setOnClickListener(null);
             holder.itemView.setOnClickListener(null);
 
-            if (item.videoUrl != null && !item.videoUrl.isEmpty()) {
+            if (item.hasVideo && item.materialId > 0) {
                 holder.action.setVisibility(View.VISIBLE);
                 holder.action.setText(R.string.play_video);
                 View.OnClickListener openVideo = v -> {
                     Intent intent = new Intent(requireContext(), VideoActivity.class);
-                    intent.putExtra(VideoActivity.EXTRA_URL, item.videoUrl);
+                    intent.putExtra(VideoActivity.EXTRA_MATERIAL_ID, item.materialId);
                     intent.putExtra(VideoActivity.EXTRA_TITLE, item.title);
                     startActivity(intent);
                 };
@@ -359,7 +345,8 @@ public class ListFragment extends Fragment {
     private static class ListItem {
         String title = "";
         String subtitle = "";
-        String videoUrl = "";
+        int materialId = 0;
+        boolean hasVideo = false;
         String fileUrl = "";
         JSONObject raw;
     }

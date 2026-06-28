@@ -265,8 +265,14 @@ class StudentApiController extends Controller
         $student = $this->studentFromRequest($request);
         $material = StudentMaterial::query()->findOrFail($id);
 
+        if (! $this->canAccessMaterial($student, $material)) {
+            return response()->json([
+                'message' => 'You do not have access to this material.',
+            ], 403);
+        }
+
         return response()->json([
-            'data' => $this->materialPayload($material),
+            'data' => $this->materialPayload($material, detailed: true),
             'related' => StudentMaterial::query()
                 ->where('id', '!=', $material->id)
                 ->where('subject', $material->subject)
@@ -274,7 +280,7 @@ class StudentApiController extends Controller
                 ->get()
                 ->map(fn (StudentMaterial $related) => $this->materialPayload($related))
                 ->values(),
-            'can_access' => $this->canAccessMaterial($student, $material),
+            'can_access' => true,
         ]);
     }
 
@@ -1126,15 +1132,20 @@ class StudentApiController extends Controller
         return $paginator;
     }
 
-    private function materialPayload(StudentMaterial $material): array
+    private function materialPayload(StudentMaterial $material, bool $detailed = false): array
     {
         $data = $material->toArray();
-        $data['playback'] = $this->videoPlayback($material->file_path, $material->material_type);
+        $playback = $this->videoPlayback($material->file_path, $material->material_type);
 
-        if (! empty($data['playback'])) {
-            $data['source_url'] = $material->file_path;
+        if (! empty($playback)) {
             unset($data['file_path']);
             $data['permission'] = 'no';
+            $data['is_video'] = true;
+            if ($detailed) {
+                $data['playback'] = [
+                    'embed_url' => $playback['embed_url'],
+                ];
+            }
         } elseif (! empty($material->file_path)) {
             $data['file_url'] = $this->assetUrl($material->file_path);
         }
@@ -1171,7 +1182,6 @@ class StudentApiController extends Controller
                 'provider' => 'vimeo',
                 'video_id' => $matches[1],
                 'embed_url' => $embedUrl,
-                'share_url' => null,
             ];
         }
 
@@ -1180,7 +1190,6 @@ class StudentApiController extends Controller
                 'provider' => 'vimeo',
                 'video_id' => $matches[1],
                 'embed_url' => $this->appendUrlParams($source, 'title=0&byline=0&portrait=0&sidedock=0'),
-                'share_url' => null,
             ];
         }
 
