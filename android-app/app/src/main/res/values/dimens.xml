@@ -8,6 +8,7 @@
     <dimen name="course_image_height">120dp</dimen>
     <dimen name="promo_card_width">280dp</dimen>
     <dimen name="promo_image_height">200dp</dimen>
+    <dimen name="slider_height">180dp</dimen>
     <dimen name="radius_12">12dp</dimen>
     <dimen name="radius_16">16dp</dimen>
     <dimen name="radius_24">24dp</dimen>
