@@ -66,23 +66,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $file_path = $material['file_path'];
     $material_url = trim($_POST['material_url'] ?? '');
 
-    // Handle hosted video link or file replacement
-    if ($type === 'video' && $material_url !== '') {
-        if (!filter_var($material_url, FILTER_VALIDATE_URL) || !preg_match('/(vimeo\.com|player\.vimeo\.com|youtube\.com|youtu\.be)/i', $material_url)) {
-            $_SESSION['error'] = "Please enter a valid Vimeo or YouTube video link.";
+    // Handle Vimeo video link or file replacement
+    if ($type === 'video') {
+        if ($material_url === '') {
+            $_SESSION['error'] = "Please enter a Vimeo video link.";
             header("Location: edit_material.php?id=$id");
             exit();
         }
-
+        if (!filter_var($material_url, FILTER_VALIDATE_URL) || !preg_match('/(vimeo\.com|player\.vimeo\.com)/i', $material_url)) {
+            $_SESSION['error'] = "Please enter a valid Vimeo video link.";
+            header("Location: edit_material.php?id=$id");
+            exit();
+        }
+        if (!empty($_FILES['new_file']['name'])) {
+            $_SESSION['error'] = "Video materials use Vimeo links only. Do not upload a file.";
+            header("Location: edit_material.php?id=$id");
+            exit();
+        }
         $file_path = $material_url;
     } elseif (!empty($_FILES['new_file']['name'])) {
         $file = $_FILES['new_file'];
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'mp4'];
+        $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'];
         $max_size = 10 * 1024 * 1024; // 10MB
 
         if (!in_array($ext, $allowed)) {
-            $_SESSION['error'] = "Invalid file type. Allowed types: PDF, DOC, PPT, JPG, PNG, MP4";
+            $_SESSION['error'] = "Invalid file type. Allowed types: PDF, DOC, PPT, JPG, PNG";
             header("Location: edit_material.php?id=$id");
             exit();
         }
@@ -314,16 +323,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                 </div>
 
                 <div class="form-group" id="video_url_group">
-                  <label>Hosted Video Link (Vimeo / YouTube)</label>
-                  <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789 or https://youtu.be/..."
+                  <label>Vimeo Video Link*</label>
+                  <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789"
                          value="<?php echo filter_var($material['file_path'], FILTER_VALIDATE_URL) ? htmlspecialchars($material['file_path']) : ''; ?>">
-                  <p class="help-block">For video materials, paste a Vimeo or YouTube link (or upload MP4 below).</p>
+                  <p class="help-block">Video materials must use a Vimeo link. File upload is not used for videos.</p>
                 </div>
 
                 <div class="form-group" id="file_upload_group">
                   <label>Replace File (optional)</label>
-                  <input type="file" name="new_file" id="new_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.mp4">
-                  <p class="help-block">Allowed: PDF, Word, PowerPoint, JPG, PNG, MP4 (Max 10MB)</p>
+                  <input type="file" name="new_file" id="new_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png">
+                  <p class="help-block">Allowed: PDF, Word, PowerPoint, JPG, PNG (Max 10MB). Not for video materials.</p>
                 </div>
 
                 <div class="row">
@@ -405,6 +414,11 @@ $(document).ready(function() {
     var type = $('select[name="material_type"]').val();
     var isVideo = type === 'video';
     $('#video_url_group').toggle(isVideo);
+    $('#file_upload_group').toggle(!isVideo);
+    $('#material_url').prop('disabled', !isVideo).prop('required', isVideo);
+    if (isVideo) {
+      $('#new_file').val('');
+    }
   }
 
   $('select[name="material_type"]').on('change', updateMaterialTypeFields);

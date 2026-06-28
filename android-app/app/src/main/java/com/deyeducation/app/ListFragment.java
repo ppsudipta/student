@@ -205,24 +205,19 @@ public class ListFragment extends Fragment {
                 }
             }
 
-            if (item.videoUrl.isEmpty() && UrlHelper.isHostedVideoUrl(sourceUrl)) {
-                item.videoUrl = UrlHelper.videoEmbedUrl(sourceUrl);
+            if (item.videoUrl.isEmpty() && UrlHelper.isVimeoUrl(sourceUrl)) {
+                item.videoUrl = UrlHelper.vimeoEmbedUrl(sourceUrl);
             }
 
             if (item.videoUrl.isEmpty() && "video".equals(materialType) && !sourceUrl.isEmpty()) {
-                item.videoUrl = UrlHelper.videoEmbedUrl(sourceUrl);
+                item.videoUrl = UrlHelper.vimeoEmbedUrl(sourceUrl);
             }
 
             if (item.videoUrl.isEmpty()) {
                 item.fileUrl = first(row, "file_url");
                 if (item.fileUrl.isEmpty() && !sourceUrl.isEmpty() && !"null".equals(sourceUrl)
-                        && !UrlHelper.isHostedVideoUrl(sourceUrl)) {
+                        && !UrlHelper.isVimeoUrl(sourceUrl)) {
                     item.fileUrl = UrlHelper.resolveImageUrl(baseUrl, sourceUrl);
-                }
-                if ("video".equals(materialType) && !item.fileUrl.isEmpty()
-                        && item.fileUrl.toLowerCase().contains(".mp4")) {
-                    item.videoUrl = item.fileUrl;
-                    item.fileUrl = "";
                 }
             }
             items.add(item);

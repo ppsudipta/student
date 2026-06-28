@@ -129,16 +129,16 @@ public final class UrlHelper {
                 .trim();
     }
 
-    public static boolean isHostedVideoUrl(String url) {
+    public static boolean isVimeoUrl(String url) {
         if (TextUtils.isEmpty(url)) {
             return false;
         }
         String lower = url.toLowerCase();
-        return lower.contains("vimeo.com") || lower.contains("youtube.com") || lower.contains("youtu.be");
+        return lower.contains("vimeo.com");
     }
 
-    /** Build embed URL for Vimeo/YouTube links (mirrors Laravel {@code videoPlayback}). */
-    public static String videoEmbedUrl(String source) {
+    /** Build Vimeo embed URL (mirrors Laravel {@code videoPlayback}). */
+    public static String vimeoEmbedUrl(String source) {
         if (TextUtils.isEmpty(source) || "null".equals(source)) {
             return "";
         }
@@ -162,14 +162,7 @@ public final class UrlHelper {
             return embed;
         }
 
-        java.util.regex.Matcher youtube = java.util.regex.Pattern
-                .compile("(?:youtube\\.com/(?:watch\\?v=|embed/)|youtu\\.be/)([A-Za-z0-9_-]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
-                .matcher(url);
-        if (youtube.find()) {
-            return "https://www.youtube-nocookie.com/embed/" + youtube.group(1);
-        }
-
-        if (url.contains("player.vimeo.com") || url.contains("youtube.com/embed")) {
+        if (url.contains("player.vimeo.com")) {
             return url;
         }
         return "";

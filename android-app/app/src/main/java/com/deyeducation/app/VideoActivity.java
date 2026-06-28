@@ -53,59 +53,26 @@ public class VideoActivity extends AppCompatActivity {
         webView.setHapticFeedbackEnabled(false);
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
-        loadSecureVideo(url);
+        loadVimeoVideo(url);
     }
 
-    private void loadSecureVideo(String url) {
+    private void loadVimeoVideo(String url) {
         if (url == null || url.isEmpty()) {
             finish();
             return;
         }
 
-        String normalized = UrlHelper.videoEmbedUrl(url);
-        if (!normalized.isEmpty()) {
-            url = normalized;
+        String embedUrl = UrlHelper.vimeoEmbedUrl(url);
+        if (embedUrl.isEmpty()) {
+            finish();
+            return;
         }
 
-        String lower = url.toLowerCase();
-        if (lower.contains("youtube.com") || lower.contains("youtu.be")) {
-            url = toNoCookieYouTube(url);
-            webView.loadUrl(appendQueryParams(url, "playsinline=1&rel=0&modestbranding=1&fs=1"));
-            return;
-        }
-        if (lower.contains("player.vimeo.com") || lower.contains("vimeo.com")) {
-            webView.loadUrl(appendQueryParams(url, "title=0&byline=0&portrait=0&sidedock=0&dnt=1"));
-            return;
-        }
-        if (lower.contains(".mp4")) {
-            String html = "<!DOCTYPE html><html><head>"
-                    + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-                    + "<style>html,body{margin:0;background:#000;height:100%}"
-                    + "video{width:100%;height:100%;object-fit:contain;background:#000}</style></head><body>"
-                    + "<video controls controlsList=\"nodownload noplaybackrate\" playsinline "
-                    + "src=\"" + escapeHtml(url) + "\"></video></body></html>";
-            webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
-            return;
-        }
-        webView.loadUrl(url);
-    }
-
-    private static String toNoCookieYouTube(String url) {
-        return url
-                .replace("https://www.youtube.com/embed/", "https://www.youtube-nocookie.com/embed/")
-                .replace("http://www.youtube.com/embed/", "https://www.youtube-nocookie.com/embed/")
-                .replace("https://youtube.com/embed/", "https://www.youtube-nocookie.com/embed/");
+        webView.loadUrl(appendQueryParams(embedUrl, "title=0&byline=0&portrait=0&sidedock=0&dnt=1"));
     }
 
     private static String appendQueryParams(String url, String params) {
         return url + (url.contains("?") ? "&" : "?") + params;
-    }
-
-    private static String escapeHtml(String value) {
-        return value.replace("&", "&amp;")
-                .replace("\"", "&quot;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;");
     }
 
     @Override

@@ -49,16 +49,25 @@ if (isset($_POST['submit'])) {
         $access_level = 'public';
     }
 
-    // Handle file upload or hosted video link
+    // Handle file upload or Vimeo video link
     $file_path = '';
     $material_url = trim($_POST['material_url'] ?? '');
-    if ($material_type === 'video' && $material_url !== '') {
-        if (!filter_var($material_url, FILTER_VALIDATE_URL) || !preg_match('/(vimeo\.com|player\.vimeo\.com|youtube\.com|youtu\.be)/i', $material_url)) {
-            $_SESSION['error'] = "Please enter a valid Vimeo or YouTube video link.";
+    if ($material_type === 'video') {
+        if ($material_url === '') {
+            $_SESSION['error'] = "Please enter a Vimeo video link.";
             header("Location: addevent.php");
             exit();
         }
-
+        if (!filter_var($material_url, FILTER_VALIDATE_URL) || !preg_match('/(vimeo\.com|player\.vimeo\.com)/i', $material_url)) {
+            $_SESSION['error'] = "Please enter a valid Vimeo video link.";
+            header("Location: addevent.php");
+            exit();
+        }
+        if (isset($_FILES['material_file']) && $_FILES['material_file']['error'] !== UPLOAD_ERR_NO_FILE) {
+            $_SESSION['error'] = "Video materials use Vimeo links only. Do not upload a file.";
+            header("Location: addevent.php");
+            exit();
+        }
         $file_path = $material_url;
     } elseif (isset($_FILES['material_file']) && $_FILES['material_file']['error'] !== UPLOAD_ERR_NO_FILE) {
         $file_name = $_FILES['material_file']['name'];
@@ -75,8 +84,7 @@ if (isset($_POST['submit'])) {
             'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
             'jpg' => 'image/jpeg',
             'jpeg' => 'image/jpeg',
-            'png' => 'image/png',
-            'mp4' => 'video/mp4'
+            'png' => 'image/png'
         ];
         
         $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
@@ -107,7 +115,7 @@ if (isset($_POST['submit'])) {
             exit();
         }
     } else {
-        $_SESSION['error'] = "Please upload a file or enter a hosted video link.";
+        $_SESSION['error'] = "Please upload a file or enter a Vimeo link for video materials.";
         header("Location: addevent.php");
         exit();
     }
@@ -312,15 +320,15 @@ if (isset($_POST['submit'])) {
               </div>
 
               <div class="form-group" id="video_url_group">
-                <label>Hosted Video Link (Vimeo / YouTube)</label>
-                <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789 or https://youtu.be/...">
-                <p class="help-block">Select <strong>Video</strong> type, paste a Vimeo or YouTube link here, and leave file upload empty.</p>
+                <label>Vimeo Video Link*</label>
+                <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789">
+                <p class="help-block">Select <strong>Video</strong> type and paste a Vimeo link. File upload is not used for videos.</p>
               </div>
 
               <div class="form-group" id="file_upload_group">
                 <label>Upload File (Max 5MB)</label>
-                <input type="file" name="material_file" id="material_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.mp4">
-                <p class="help-block">For PDF/documents/images upload a file. For video you can upload MP4 instead of using a link.</p>
+                <input type="file" name="material_file" id="material_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png">
+                <p class="help-block">For PDF, Word, PowerPoint, or image materials only.</p>
               </div>
 
               <div class="form-group">
@@ -378,11 +386,13 @@ if (isset($_POST['submit'])) {
       const type = $('select[name="material_type"]').val();
       const isVideo = type === 'video';
       $('#video_url_group').toggle(isVideo);
-      $('#material_url').prop('disabled', !isVideo);
+      $('#file_upload_group').toggle(!isVideo);
+      $('#material_url').prop('disabled', !isVideo).prop('required', isVideo);
       if (!isVideo) {
         $('#material_url').val('');
+      } else {
+        $('#material_file').val('');
       }
-      $('#material_file').prop('required', false);
     }
 
     $('select[name="material_type"]').on('change', updateMaterialTypeFields);

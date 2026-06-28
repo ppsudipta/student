@@ -1148,7 +1148,7 @@ class StudentApiController extends Controller
             return null;
         }
 
-        if (strtolower((string) $type) !== 'video' && ! preg_match('/(vimeo\.com|youtube\.com|youtu\.be)/i', $source)) {
+        if (strtolower((string) $type) !== 'video' && ! preg_match('/(vimeo\.com|player\.vimeo\.com)/i', $source)) {
             return null;
         }
 
@@ -1175,21 +1175,16 @@ class StudentApiController extends Controller
             ];
         }
 
-        if (preg_match('~(?:youtube\.com/(?:watch\?v=|embed/)|youtu\.be/)([A-Za-z0-9_-]+)~i', $source, $matches)) {
+        if (preg_match('~player\.vimeo\.com/video/(\d+)~i', $source, $matches)) {
             return [
-                'provider' => 'youtube',
+                'provider' => 'vimeo',
                 'video_id' => $matches[1],
-                'embed_url' => 'https://www.youtube-nocookie.com/embed/'.$matches[1].'?playsinline=1&rel=0&modestbranding=1',
+                'embed_url' => $this->appendUrlParams($source, 'title=0&byline=0&portrait=0&sidedock=0'),
                 'share_url' => null,
             ];
         }
 
-        return [
-            'provider' => 'external',
-            'video_id' => null,
-            'embed_url' => $source,
-            'share_url' => null,
-        ];
+        return null;
     }
 
     private function appendUrlParams(string $url, string $params): string
