@@ -378,6 +378,10 @@ if (isset($_POST['submit'])) {
       const type = $('select[name="material_type"]').val();
       const isVideo = type === 'video';
       $('#video_url_group').toggle(isVideo);
+      $('#material_url').prop('disabled', !isVideo);
+      if (!isVideo) {
+        $('#material_url').val('');
+      }
       $('#material_file').prop('required', false);
     }
 

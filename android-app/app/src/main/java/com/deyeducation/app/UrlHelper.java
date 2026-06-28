@@ -166,7 +166,7 @@ public final class UrlHelper {
                 .compile("(?:youtube\\.com/(?:watch\\?v=|embed/)|youtu\\.be/)([A-Za-z0-9_-]+)", java.util.regex.Pattern.CASE_INSENSITIVE)
                 .matcher(url);
         if (youtube.find()) {
-            return "https://www.youtube.com/embed/" + youtube.group(1);
+            return "https://www.youtube-nocookie.com/embed/" + youtube.group(1);
         }
 
         if (url.contains("player.vimeo.com") || url.contains("youtube.com/embed")) {

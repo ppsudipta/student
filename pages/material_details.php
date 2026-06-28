@@ -44,7 +44,7 @@ function material_video_embed_url($file_path, $material_type) {
         return $embed . (str_contains($embed, '?') ? '&' : '?') . 'title=0&byline=0&portrait=0';
     }
     if (preg_match('~(?:youtube\.com/(?:watch\?v=|embed/)|youtu\.be/)([A-Za-z0-9_-]+)~i', $file_path, $matches)) {
-        return 'https://www.youtube.com/embed/' . $matches[1] . '?rel=0&modestbranding=1';
+        return 'https://www.youtube-nocookie.com/embed/' . $matches[1] . '?rel=0&modestbranding=1&playsinline=1';
     }
     if (preg_match('~player\.vimeo\.com~i', $file_path) || preg_match('~youtube\.com/embed~i', $file_path)) {
         return $file_path;

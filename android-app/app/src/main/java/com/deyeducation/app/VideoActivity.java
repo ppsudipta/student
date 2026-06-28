@@ -17,6 +17,10 @@ public class VideoActivity extends AppCompatActivity {
     public static final String EXTRA_URL = "url";
     public static final String EXTRA_TITLE = "title";
 
+    private static final String USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 "
+                    + "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+
     private WebView webView;
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -41,6 +45,10 @@ public class VideoActivity extends AppCompatActivity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+        settings.setUserAgentString(USER_AGENT);
         webView.setLongClickable(false);
         webView.setHapticFeedbackEnabled(false);
         webView.setWebViewClient(new WebViewClient());
@@ -53,27 +61,20 @@ public class VideoActivity extends AppCompatActivity {
             finish();
             return;
         }
+
+        String normalized = UrlHelper.videoEmbedUrl(url);
+        if (!normalized.isEmpty()) {
+            url = normalized;
+        }
+
         String lower = url.toLowerCase();
-        if (lower.contains("player.vimeo.com") || lower.contains("youtube.com/embed")) {
-            String embed = url;
-            if (lower.contains("vimeo")) {
-                embed = appendQueryParams(url, "title=0&byline=0&portrait=0&sidedock=0&dnt=1");
-            } else if (lower.contains("youtube.com/embed")) {
-                embed = appendQueryParams(url, "rel=0&modestbranding=1");
-            }
-            String html = "<!DOCTYPE html><html><head>"
-                    + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1\">"
-                    + "<style>html,body{margin:0;padding:0;height:100%;background:#000;overflow:hidden}"
-                    + "iframe{position:fixed;top:0;left:0;width:100%;height:100%;border:0}</style></head><body>"
-                    + "<iframe src=\"" + escapeHtml(embed) + "\" allow=\"autoplay; fullscreen; picture-in-picture\" "
-                    + "allowfullscreen referrerpolicy=\"no-referrer-when-downgrade\"></iframe>"
-                    + "</body></html>";
-            webView.loadDataWithBaseURL(
-                    lower.contains("vimeo") ? "https://player.vimeo.com" : "https://www.youtube.com",
-                    html,
-                    "text/html",
-                    "UTF-8",
-                    null);
+        if (lower.contains("youtube.com") || lower.contains("youtu.be")) {
+            url = toNoCookieYouTube(url);
+            webView.loadUrl(appendQueryParams(url, "playsinline=1&rel=0&modestbranding=1&fs=1"));
+            return;
+        }
+        if (lower.contains("player.vimeo.com") || lower.contains("vimeo.com")) {
+            webView.loadUrl(appendQueryParams(url, "title=0&byline=0&portrait=0&sidedock=0&dnt=1"));
             return;
         }
         if (lower.contains(".mp4")) {
@@ -87,6 +88,13 @@ public class VideoActivity extends AppCompatActivity {
             return;
         }
         webView.loadUrl(url);
+    }
+
+    private static String toNoCookieYouTube(String url) {
+        return url
+                .replace("https://www.youtube.com/embed/", "https://www.youtube-nocookie.com/embed/")
+                .replace("http://www.youtube.com/embed/", "https://www.youtube-nocookie.com/embed/")
+                .replace("https://youtube.com/embed/", "https://www.youtube-nocookie.com/embed/");
     }
 
     private static String appendQueryParams(String url, String params) {

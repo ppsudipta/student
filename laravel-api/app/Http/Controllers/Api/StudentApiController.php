@@ -1132,6 +1132,7 @@ class StudentApiController extends Controller
         $data['playback'] = $this->videoPlayback($material->file_path, $material->material_type);
 
         if (! empty($data['playback'])) {
+            $data['source_url'] = $material->file_path;
             unset($data['file_path']);
             $data['permission'] = 'no';
         } elseif (! empty($material->file_path)) {
@@ -1164,6 +1165,8 @@ class StudentApiController extends Controller
                 $embedUrl .= '?h='.$matches[2];
             }
 
+            $embedUrl = $this->appendUrlParams($embedUrl, 'title=0&byline=0&portrait=0&sidedock=0');
+
             return [
                 'provider' => 'vimeo',
                 'video_id' => $matches[1],
@@ -1176,7 +1179,7 @@ class StudentApiController extends Controller
             return [
                 'provider' => 'youtube',
                 'video_id' => $matches[1],
-                'embed_url' => 'https://www.youtube.com/embed/'.$matches[1],
+                'embed_url' => 'https://www.youtube-nocookie.com/embed/'.$matches[1].'?playsinline=1&rel=0&modestbranding=1',
                 'share_url' => null,
             ];
         }
@@ -1187,5 +1190,10 @@ class StudentApiController extends Controller
             'embed_url' => $source,
             'share_url' => null,
         ];
+    }
+
+    private function appendUrlParams(string $url, string $params): string
+    {
+        return $url.(str_contains($url, '?') ? '&' : '?').$params;
     }
 }

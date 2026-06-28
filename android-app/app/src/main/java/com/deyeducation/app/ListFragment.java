@@ -196,21 +196,28 @@ public class ListFragment extends Fragment {
             item.raw = row;
 
             String materialType = row.optString("material_type", "").toLowerCase();
-            JSONObject playback = row.optJSONObject("playback");
-            if (playback != null) {
-                item.videoUrl = playback.optString("embed_url");
+            String sourceUrl = first(row, "source_url", "file_path");
+
+            if (!row.isNull("playback")) {
+                JSONObject playback = row.optJSONObject("playback");
+                if (playback != null) {
+                    item.videoUrl = playback.optString("embed_url");
+                }
             }
 
-            String filePath = row.optString("file_path", "");
-            if (item.videoUrl.isEmpty() && ("video".equals(materialType) || UrlHelper.isHostedVideoUrl(filePath))) {
-                item.videoUrl = UrlHelper.videoEmbedUrl(filePath);
+            if (item.videoUrl.isEmpty() && UrlHelper.isHostedVideoUrl(sourceUrl)) {
+                item.videoUrl = UrlHelper.videoEmbedUrl(sourceUrl);
+            }
+
+            if (item.videoUrl.isEmpty() && "video".equals(materialType) && !sourceUrl.isEmpty()) {
+                item.videoUrl = UrlHelper.videoEmbedUrl(sourceUrl);
             }
 
             if (item.videoUrl.isEmpty()) {
                 item.fileUrl = first(row, "file_url");
-                if (item.fileUrl.isEmpty() && !filePath.isEmpty() && !"null".equals(filePath)
-                        && !UrlHelper.isHostedVideoUrl(filePath)) {
-                    item.fileUrl = UrlHelper.resolveImageUrl(baseUrl, filePath);
+                if (item.fileUrl.isEmpty() && !sourceUrl.isEmpty() && !"null".equals(sourceUrl)
+                        && !UrlHelper.isHostedVideoUrl(sourceUrl)) {
+                    item.fileUrl = UrlHelper.resolveImageUrl(baseUrl, sourceUrl);
                 }
                 if ("video".equals(materialType) && !item.fileUrl.isEmpty()
                         && item.fileUrl.toLowerCase().contains(".mp4")) {
