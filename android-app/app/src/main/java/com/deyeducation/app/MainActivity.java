@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 return true;
             }
             if (id == R.id.nav_gallery) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_GALLERY), getString(R.string.gallery));
+                showFragment(new GalleryFragment(), getString(R.string.gallery));
                 return true;
             }
             if (id == R.id.nav_profile) {
@@ -108,7 +108,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 showFragment(ListFragment.newInstance(ListFragment.TYPE_NOTICES), getString(R.string.notices));
                 bottomNav.setSelectedItemId(R.id.nav_notices);
             } else if ("gallery".equals(screen)) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_GALLERY), getString(R.string.gallery));
+                showFragment(new GalleryFragment(), getString(R.string.gallery));
                 bottomNav.setSelectedItemId(R.id.nav_gallery);
             } else if ("profile".equals(screen)) {
                 showFragment(new ProfileFragment(), getString(R.string.profile));

@@ -50,4 +50,12 @@
     <string name="message">Message</string>
     <string name="network_error">Network error. Check connection and API URL.</string>
     <string name="login_failed">Invalid mobile number or password.</string>
+    <string name="materials_tab_all">All</string>
+    <string name="materials_tab_documents">Document</string>
+    <string name="materials_tab_videos">Video</string>
+    <string name="view_image">View image</string>
+    <string name="download_material">Download</string>
+    <string name="download_started">Saved to Downloads</string>
+    <string name="download_failed">Download failed. Please try again.</string>
+    <string name="material_view_only">View only — download not allowed</string>
 </resources>

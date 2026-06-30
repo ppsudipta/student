@@ -4,9 +4,10 @@ import android.graphics.Bitmap;
 import android.graphics.pdf.PdfRenderer;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -15,6 +16,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.widget.NestedScrollView;
 
+import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.appbar.MaterialToolbar;
 
 import java.io.BufferedInputStream;
@@ -32,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class PdfActivity extends AppCompatActivity {
     public static final String EXTRA_URL = "url";
     public static final String EXTRA_TITLE = "title";
+    public static final String EXTRA_CAN_DOWNLOAD = "can_download";
 
     private static final ExecutorService IO = Executors.newSingleThreadExecutor();
 
@@ -43,22 +46,35 @@ public class PdfActivity extends AppCompatActivity {
     private ParcelFileDescriptor fileDescriptor;
     private PdfRenderer pdfRenderer;
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
+    private File cachedFile;
+    private boolean canDownload;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setFlags(
-                WindowManager.LayoutParams.FLAG_SECURE,
-                WindowManager.LayoutParams.FLAG_SECURE);
-        setContentView(R.layout.activity_pdf);
 
         String title = getIntent().getStringExtra(EXTRA_TITLE);
         String url = getIntent().getStringExtra(EXTRA_URL);
+        canDownload = getIntent().getBooleanExtra(EXTRA_CAN_DOWNLOAD, false);
+
+        if (!canDownload) {
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_SECURE,
+                    WindowManager.LayoutParams.FLAG_SECURE);
+        }
+
+        setContentView(R.layout.activity_pdf);
 
         toolbar = findViewById(R.id.pdfToolbar);
         toolbar.setTitle(title == null || title.isEmpty() ? getString(R.string.read_material) : title);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+        if (!canDownload) {
+            toolbar.setSubtitle(getString(R.string.material_view_only));
+        }
+        toolbar.inflateMenu(R.menu.menu_material_viewer);
+        toolbar.setOnMenuItemClickListener(this::onToolbarMenuClick);
+        updateDownloadMenu(toolbar.getMenu());
 
         progressBar = findViewById(R.id.pdfProgress);
         errorView = findViewById(R.id.pdfError);
@@ -72,6 +88,36 @@ public class PdfActivity extends AppCompatActivity {
         loadPdf(url);
     }
 
+    private boolean onToolbarMenuClick(MenuItem item) {
+        if (item.getItemId() == R.id.action_download) {
+            downloadMaterial();
+            return true;
+        }
+        return false;
+    }
+
+    private void updateDownloadMenu(Menu menu) {
+        MenuItem download = menu.findItem(R.id.action_download);
+        if (download != null) {
+            download.setVisible(canDownload);
+        }
+    }
+
+    private void downloadMaterial() {
+        if (cachedFile == null || !cachedFile.exists()) {
+            UiUtils.toast(this, getString(R.string.download_failed));
+            return;
+        }
+        String title = getIntent().getStringExtra(EXTRA_TITLE);
+        IO.execute(() -> {
+            boolean ok = MaterialDownloadHelper.saveToDownloads(
+                    this, cachedFile, title == null ? "material" : title, "application/pdf");
+            runOnUiThread(() -> UiUtils.toast(
+                    PdfActivity.this,
+                    ok ? getString(R.string.download_started) : getString(R.string.download_failed)));
+        });
+    }
+
     private void loadPdf(String url) {
         progressBar.setVisibility(View.VISIBLE);
         errorView.setVisibility(View.GONE);
@@ -82,6 +128,7 @@ public class PdfActivity extends AppCompatActivity {
         IO.execute(() -> {
             try {
                 File file = downloadToCache(session, url);
+                cachedFile = file;
                 if (destroyed.get()) {
                     return;
                 }
@@ -153,7 +200,9 @@ public class PdfActivity extends AppCompatActivity {
             int pageWidth = getResources().getDisplayMetrics().widthPixels - UiUtils.dp(this, 16);
             scrollView.setVisibility(View.VISIBLE);
             progressBar.setVisibility(View.GONE);
-            toolbar.setSubtitle(getString(R.string.pdf_scroll_hint, pageCount));
+            toolbar.setSubtitle(canDownload
+                    ? getString(R.string.pdf_scroll_hint, pageCount)
+                    : getString(R.string.material_view_only));
 
             IO.execute(() -> renderPages(pageWidth, pageCount));
         } catch (Exception e) {
@@ -197,17 +246,17 @@ public class PdfActivity extends AppCompatActivity {
             bitmap.recycle();
             return;
         }
-        ImageView image = new ImageView(this);
-        image.setAdjustViewBounds(true);
-        image.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        image.setLongClickable(false);
-        image.setImageBitmap(bitmap);
-        image.setContentDescription(getString(R.string.pdf_page_label, pageNumber, pageCount));
+        PhotoView photoView = new PhotoView(this);
+        photoView.setAdjustViewBounds(true);
+        photoView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        photoView.setLongClickable(false);
+        photoView.setImageBitmap(bitmap);
+        photoView.setContentDescription(getString(R.string.pdf_page_label, pageNumber, pageCount));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = UiUtils.dp(this, 8);
-        pagesContainer.addView(image, lp);
+        pagesContainer.addView(photoView, lp);
     }
 
     private void showError(String message) {

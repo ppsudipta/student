@@ -35,9 +35,9 @@ public class LoginActivity extends AppCompatActivity {
         TextInputEditText password = findViewById(R.id.inputPassword);
         MaterialButton login = findViewById(R.id.btnLogin);
 
-        baseUrl.setText(session.getBaseUrl());
-        mobile.setText("9038495748");
-        password.setText("12345677");
+        baseUrl.setText(AppConfig.DEFAULT_BASE_URL);
+        mobile.setText("8100392691");
+        password.setText("123456");
 
         login.setOnClickListener(v -> {
             String base = baseUrl.getText() == null ? "" : baseUrl.getText().toString().trim();

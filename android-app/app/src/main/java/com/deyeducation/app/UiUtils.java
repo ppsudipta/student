@@ -33,6 +33,21 @@ public final class UiUtils {
                 .into(view);
     }
 
+    public static void loadZoomImage(Context context, String url, ImageView view) {
+        if (context == null || view == null) {
+            return;
+        }
+        int placeholder = R.drawable.bg_image_placeholder;
+        Object source = TextUtils.isEmpty(url) ? null : url;
+        Glide.with(context)
+                .load(source)
+                .placeholder(placeholder)
+                .error(placeholder)
+                .fallback(placeholder)
+                .fitCenter()
+                .into(view);
+    }
+
     public static int dp(Context context, int value) {
         return (int) (value * context.getResources().getDisplayMetrics().density + 0.5f);
     }

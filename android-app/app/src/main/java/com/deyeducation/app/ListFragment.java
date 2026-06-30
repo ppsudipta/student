@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -17,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.tabs.TabLayout;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -35,13 +35,20 @@ public class ListFragment extends Fragment {
     public static final String TYPE_ENQUIRIES = "enquiries";
     public static final String TYPE_COURSES = "courses";
 
+    private static final int MATERIAL_FILTER_ALL = 0;
+    private static final int MATERIAL_FILTER_DOCUMENT = 1;
+    private static final int MATERIAL_FILTER_VIDEO = 2;
+
     private ApiClient api;
     private SessionManager session;
     private String type;
     private SwipeRefreshLayout swipeRefresh;
     private ProgressBar progressBar;
     private TextView emptyView;
+    private TabLayout materialTabs;
     private ListAdapter adapter;
+    private final List<ListItem> allMaterialItems = new ArrayList<>();
+    private int materialFilter = MATERIAL_FILTER_ALL;
 
     public static ListFragment newInstance(String type) {
         ListFragment fragment = new ListFragment();
@@ -68,17 +75,67 @@ public class ListFragment extends Fragment {
         swipeRefresh = view.findViewById(R.id.swipeRefresh);
         progressBar = view.findViewById(R.id.listProgress);
         emptyView = view.findViewById(R.id.emptyView);
+        materialTabs = view.findViewById(R.id.materialTabs);
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
         adapter = new ListAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setHasFixedSize(false);
         recyclerView.setAdapter(adapter);
 
+        if (TYPE_MATERIALS.equals(type)) {
+            setupMaterialTabs();
+        }
+
         swipeRefresh.setColorSchemeResources(R.color.primary);
         swipeRefresh.setOnRefreshListener(this::loadData);
         swipeRefresh.setOnChildScrollUpCallback((parent, child) ->
                 recyclerView.canScrollVertically(-1));
         loadData();
+    }
+
+    private void setupMaterialTabs() {
+        materialTabs.setVisibility(View.VISIBLE);
+        materialTabs.removeAllTabs();
+        materialTabs.addTab(materialTabs.newTab().setText(R.string.materials_tab_all));
+        materialTabs.addTab(materialTabs.newTab().setText(R.string.materials_tab_documents));
+        materialTabs.addTab(materialTabs.newTab().setText(R.string.materials_tab_videos));
+        materialTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                materialFilter = tab.getPosition();
+                applyMaterialFilter();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
+    }
+
+    private void applyMaterialFilter() {
+        List<ListItem> filtered = new ArrayList<>();
+        for (ListItem item : allMaterialItems) {
+            if (matchesMaterialFilter(item)) {
+                filtered.add(item);
+            }
+        }
+        adapter.setItems(filtered);
+        emptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean matchesMaterialFilter(ListItem item) {
+        switch (materialFilter) {
+            case MATERIAL_FILTER_VIDEO:
+                return item.hasVideo;
+            case MATERIAL_FILTER_DOCUMENT:
+                return !item.hasVideo;
+            default:
+                return true;
+        }
     }
 
     private void loadData() {
@@ -97,8 +154,14 @@ public class ListFragment extends Fragment {
                     swipeRefresh.setRefreshing(false);
                     progressBar.setVisibility(View.GONE);
                     List<ListItem> items = parseItems(json);
-                    adapter.setItems(items);
-                    emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+                    if (TYPE_MATERIALS.equals(type)) {
+                        allMaterialItems.clear();
+                        allMaterialItems.addAll(items);
+                        applyMaterialFilter();
+                    } else {
+                        adapter.setItems(items);
+                        emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+                    }
                 });
             }
 
@@ -197,7 +260,9 @@ public class ListFragment extends Fragment {
 
             String materialType = row.optString("material_type", "").toLowerCase();
             item.materialId = row.optInt("id", 0);
+            item.materialType = materialType;
             item.hasVideo = row.optBoolean("is_video") || "video".equals(materialType);
+            item.canDownload = "yes".equalsIgnoreCase(row.optString("permission", "no"));
 
             String sourceUrl = first(row, "file_path");
             if (!item.hasVideo) {
@@ -308,7 +373,7 @@ public class ListFragment extends Fragment {
             } else if (item.fileUrl != null && !item.fileUrl.isEmpty()) {
                 holder.action.setVisibility(View.VISIBLE);
                 holder.action.setText(R.string.open_material);
-                View.OnClickListener openFile = v -> openMaterial(item.title, item.fileUrl);
+                View.OnClickListener openFile = v -> openMaterial(item);
                 holder.action.setOnClickListener(openFile);
                 holder.itemView.setOnClickListener(openFile);
             } else {
@@ -335,11 +400,34 @@ public class ListFragment extends Fragment {
         }
     }
 
-    private void openMaterial(String title, String url) {
+    private void openMaterial(ListItem item) {
+        if (isImageMaterial(item)) {
+            ImageViewerActivity.open(
+                    requireContext(),
+                    item.title,
+                    item.fileUrl,
+                    item.canDownload);
+            return;
+        }
         Intent intent = new Intent(requireContext(), PdfActivity.class);
-        intent.putExtra(PdfActivity.EXTRA_URL, url);
-        intent.putExtra(PdfActivity.EXTRA_TITLE, title);
+        intent.putExtra(PdfActivity.EXTRA_URL, item.fileUrl);
+        intent.putExtra(PdfActivity.EXTRA_TITLE, item.title);
+        intent.putExtra(PdfActivity.EXTRA_CAN_DOWNLOAD, item.canDownload);
         startActivity(intent);
+    }
+
+    private boolean isImageMaterial(ListItem item) {
+        if (item.materialType.equals("image")
+                || item.materialType.equals("jpg")
+                || item.materialType.equals("jpeg")
+                || item.materialType.equals("png")
+                || item.materialType.equals("gif")) {
+            return true;
+        }
+        String lower = item.fileUrl == null ? "" : item.fileUrl.toLowerCase();
+        return lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                || lower.endsWith(".png") || lower.endsWith(".gif")
+                || lower.endsWith(".webp");
     }
 
     private static class ListItem {
@@ -347,6 +435,8 @@ public class ListFragment extends Fragment {
         String subtitle = "";
         int materialId = 0;
         boolean hasVideo = false;
+        boolean canDownload = false;
+        String materialType = "";
         String fileUrl = "";
         JSONObject raw;
     }
