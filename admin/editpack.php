@@ -6,13 +6,19 @@ if (!isset($_SESSION['username'])) {
 }
 include('config.php');
 
-// Validate ID
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+$id = 0;
+if (isset($_GET['id']) && is_numeric($_GET['id'])) {
+  $id = intval($_GET['id']);
+} elseif (isset($_POST['id']) && is_numeric($_POST['id'])) {
+  $id = intval($_POST['id']);
+}
+
+if ($id <= 0) {
   header('location:allpack.php');
   exit();
 }
 
-$id = intval($_GET['id']);
+$msg = '';
 
 // Fetch course data
 $sql = "SELECT * FROM event WHERE id = $id";
@@ -23,6 +29,59 @@ if (!$res || $res->num_rows == 0) {
 }
 $row = $res->fetch_assoc();
 $img = $row['image'];
+
+if (isset($_POST['submit'])) {
+    $c_name = trim($_POST['c_name'] ?? '');
+    $event_details = $_POST['details'] ?? '';
+    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.00;
+    $date = trim($_POST['date'] ?? '');
+
+    if ($c_name === '' || $date === '') {
+        $msg = '<div class="alert alert-danger">Course name and date are required.</div>';
+    } else {
+        $path1 = $img;
+        if (!empty($_FILES['image1']['name'])) {
+            $targetDir = 'event/';
+            if (!is_dir($targetDir) && !mkdir($targetDir, 0775, true)) {
+                $msg = '<div class="alert alert-danger">Upload folder is not writable.</div>';
+            } else {
+                $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($_FILES['image1']['name']));
+                $path1 = $targetDir . $filename;
+                if (!move_uploaded_file($_FILES['image1']['tmp_name'], $path1)) {
+                    $msg = '<div class="alert alert-danger">Image upload failed. Check folder permissions.</div>';
+                    $path1 = $img;
+                }
+            }
+        }
+
+        if ($msg === '') {
+            $stmt = $con->prepare(
+                "UPDATE event SET name = ?, description = ?, price = ?, date = ?, image = ? WHERE id = ?"
+            );
+            if (!$stmt) {
+                $msg = '<div class="alert alert-danger">Database error: ' . htmlspecialchars($con->error) . '</div>';
+            } else {
+                $stmt->bind_param('ssdssi', $c_name, $event_details, $price, $date, $path1, $id);
+                if ($stmt->execute()) {
+                    $stmt->close();
+                    echo "<script>alert('Course updated successfully'); window.location.href='allpack.php';</script>";
+                    exit();
+                }
+                $msg = '<div class="alert alert-danger">Error updating course: ' . htmlspecialchars($stmt->error) . '</div>';
+                $stmt->close();
+            }
+        }
+    }
+
+    // Refresh form with submitted values after a failed update
+    $row['name'] = $c_name;
+    $row['description'] = $event_details;
+    $row['price'] = $price;
+    $row['date'] = $date;
+    if (!empty($path1)) {
+        $img = $path1;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -64,8 +123,10 @@ $img = $row['image'];
         <div class="box-header with-border">
           <h3 class="box-title">Edit Course Details</h3>
         </div>
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" action="editpack.php?id=<?= $id ?>" enctype="multipart/form-data">
+          <input type="hidden" name="id" value="<?= $id ?>">
           <div class="box-body">
+            <?= $msg ?>
             <div class="form-group">
               <label>Course Name</label>
               <input type="text" name="c_name" value="<?= htmlspecialchars($row['name']) ?>" class="form-control" required>
@@ -78,7 +139,7 @@ $img = $row['image'];
 
             <div class="form-group">
               <label>Package Cost</label>
-              <input type="number" name="price" value="<?= htmlspecialchars($row['price']) ?>" class="form-control">
+              <input type="number" name="price" value="<?= htmlspecialchars($row['price']) ?>" class="form-control" step="0.01">
             </div>
 
             <div class="form-group">
@@ -124,34 +185,3 @@ $img = $row['image'];
 </script>
 </body>
 </html>
-
-<?php
-if (isset($_POST['submit'])) {
-    $c_name = mysqli_real_escape_string($con, $_POST['c_name']);
-    $event_details = mysqli_real_escape_string($con, $_POST['details']);
-    $price = mysqli_real_escape_string($con, $_POST['price']);
-    $date = mysqli_real_escape_string($con, $_POST['date']);
-
-    $path1 = $img;
-    if (!empty($_FILES['image1']['name'])) {
-        $targetDir = "event/";
-        $filename = time() . '_' . basename($_FILES['image1']['name']);
-        $path1 = $targetDir . $filename;
-        move_uploaded_file($_FILES['image1']['tmp_name'], $path1);
-    }
-
-    $update = "UPDATE event SET 
-                name = '$c_name', 
-                description = '$event_details', 
-                price = '$price', 
-                date = '$date',
-                image = '$path1' 
-               WHERE id = $id";
-
-    if ($con->query($update)) {
-        echo "<script>alert('Course updated successfully'); window.location.href='allpack.php';</script>";
-    } else {
-        echo "<script>alert('Error updating course');</script>";
-    }
-}
-?>

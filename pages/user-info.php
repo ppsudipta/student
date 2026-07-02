@@ -1,7 +1,7 @@
 <?php
 session_start();
 include('./config.php');
-include('./header.php');
+require_once __DIR__ . '/student_image.php';
 
 if (!isset($_SESSION['username'])) {
     header('Location: ./auth/signin.php');
@@ -9,6 +9,7 @@ if (!isset($_SESSION['username'])) {
 }
 
 $use = $_SESSION['username'];
+$uploadError = '';
 
 // Get student info
 $stmt = $con->prepare("SELECT * FROM students WHERE name = ?");
@@ -22,7 +23,7 @@ if (!$row2) {
 $id = $row2['id'];
 $name = $row2['name'] ?? '';
 $email = $row2['email'] ?? '';
-$image = $row2['image'] ?? '../admin/user.png';
+$image = $row2['image'] ?? '';
 $dob = $row2['date'] ?? '';
 $gender = $row2['gender'] ?? '';
 $mobile_number = $row2['mobile_number'] ?? '';
@@ -35,6 +36,41 @@ $father_name = $row2['father_name'] ?? '';
 $school_name = $row2['school_name'] ?? '';
 $last_percentage = $row2['last_percentage'] ?? '';
 $total_fees = $row2['total_fees'] ?? 0;
+
+if (isset($_POST['upload_image']) && isset($_FILES['profile_image'])) {
+    $file = $_FILES['profile_image'];
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $uploadError = 'Upload failed. Please try again.';
+    } else {
+        $allowedExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $allowedMime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $mime = mime_content_type($file['tmp_name']) ?: '';
+
+        if (!in_array($ext, $allowedExt, true) || !in_array($mime, $allowedMime, true) || str_starts_with($mime, 'video/')) {
+            $uploadError = 'Only JPG, PNG, GIF, or WEBP image files are allowed.';
+        } else {
+            $uploadDir = dirname(__DIR__) . '/img/';
+            if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) {
+                $uploadError = 'Upload folder is not writable.';
+            } else {
+                $newName = $id . '_' . time() . '.' . $ext;
+                $uploadPath = $uploadDir . $newName;
+                $dbPath = '../img/' . $newName;
+
+                if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+                    $stmt = $con->prepare("UPDATE students SET image = ? WHERE id = ?");
+                    $stmt->bind_param("si", $dbPath, $id);
+                    $stmt->execute();
+                    header('Location: user-info.php?updated=1');
+                    exit();
+                }
+                $uploadError = 'Upload failed. Please try again.';
+            }
+        }
+    }
+}
 
 // Get total paid fees from donations table (only successful payments)
 $stmt = $con->prepare("SELECT SUM(amount) as total_paid FROM donations WHERE donor_email = ? AND status = 'success'");
@@ -57,33 +93,9 @@ $payment_history = $stmt->get_result();
 $sql = "SELECT * FROM company";
 $res = $con->query($sql);
 $rowm = $res->fetch_assoc();
-if (isset($_POST['upload_image']) && isset($_FILES['profile_image'])) {
-    $file = $_FILES['profile_image'];
-    $allowed = ['jpg', 'jpeg', 'png', 'gif'];
 
-    // Check extension
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    if (in_array($ext, $allowed)) {
-        $newName = $id . "_" . time() . "." . $ext;
-        $uploadPath = "../img/" . basename($newName);
-
-        if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-            // Save relative path in DB
-            $stmt = $con->prepare("UPDATE students SET image = ? WHERE id = ?");
-            $stmt->bind_param("si", $uploadPath, $id);
-            $stmt->execute();
-
-            // Refresh page to show new image
-            header("Location:user-info.php");
-            
-        } else {
-            echo "<script>alert('Upload failed! Please try again.');</script>";
-        }
-    } else {
-        echo "<script>alert('Only JPG, PNG, GIF files are allowed!');</script>";
-    }
-}
-
+$imageUrl = student_image_url($image);
+$uploadSuccess = isset($_GET['updated']);
 ?>
 
 <!DOCTYPE html>
@@ -135,7 +147,6 @@ if (isset($_POST['upload_image']) && isset($_FILES['profile_image'])) {
       flex: 1;
     }
     .fees-summary {
-    
       padding: 20px;
       border-radius: 8px;
       margin-top: 30px;
@@ -155,7 +166,6 @@ if (isset($_POST['upload_image']) && isset($_FILES['profile_image'])) {
       margin-top: 30px;
     }
     .payment-item {
-    
       border-radius: 8px;
       padding: 15px;
       margin-bottom: 15px;
@@ -184,14 +194,26 @@ if (isset($_POST['upload_image']) && isset($_FILES['profile_image'])) {
 <body>
 
 <div class="profile-container">
+  <div class="mb-3">
+    <a href="user-profile.php" class="btn btn-link">&larr; Back to Profile</a>
+  </div>
+
   <div class="profile-header">
     <h1>Student Profile</h1>
-    <img src="<?= $image ?>" alt="Profile Image" class="profile-image">
 
-<form action="" method="post" enctype="multipart/form-data" style="margin-top:15px;">
-  <input type="file" name="profile_image" accept="image/*" required>
-  <button type="submit" name="upload_image" class="btn btn-primary btn-sm mt-2">Upload Image</button>
-</form>
+    <?php if ($uploadSuccess): ?>
+      <div class="alert alert-success">Profile image updated successfully.</div>
+    <?php endif; ?>
+    <?php if ($uploadError !== ''): ?>
+      <div class="alert alert-danger"><?= htmlspecialchars($uploadError) ?></div>
+    <?php endif; ?>
+
+    <img src="<?= htmlspecialchars($imageUrl) ?>" alt="Profile Image" class="profile-image">
+
+    <form action="user-info.php" method="post" enctype="multipart/form-data" style="margin-top:15px;">
+      <input type="file" name="profile_image" accept="image/jpeg,image/png,image/gif,image/webp" required>
+      <button type="submit" name="upload_image" class="btn btn-primary btn-sm mt-2">Upload Image</button>
+    </form>
 
     <h2><?= htmlspecialchars($name) ?></h2>
     <p class="text-muted"><?= htmlspecialchars($registration_code) ?></p>
@@ -220,8 +242,6 @@ if (isset($_POST['upload_image']) && isset($_FILES['profile_image'])) {
       <div class="detail-value"><?= htmlspecialchars($dob) ?></div>
     </div>
     
-   
-    
     <div class="detail-row">
       <div class="detail-label">Address:</div>
       <div class="detail-value"><?= htmlspecialchars($address) ?></div>
@@ -248,8 +268,6 @@ if (isset($_POST['upload_image']) && isset($_FILES['profile_image'])) {
       <div class="detail-label">Registration Code:</div>
       <div class="detail-value"><?= htmlspecialchars($registration_code) ?></div>
     </div>
-    
-   
     
     <div class="detail-row">
       <div class="detail-label">Class:</div>
@@ -316,6 +334,3 @@ if (isset($_POST['upload_image']) && isset($_FILES['profile_image'])) {
   <a class="btn btn-primary btn-sm mt-2" href="../admin/view_idcard.php?id=<?= $id ?>">View Id Card</a>
 </div>
 <?php include('./footer.php');?>
-<script src="../assets/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>

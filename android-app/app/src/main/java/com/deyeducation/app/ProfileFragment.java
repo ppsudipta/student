@@ -1,6 +1,7 @@
 package com.deyeducation.app;
 
 import android.content.Intent;
+import android.content.ContentResolver;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -11,6 +12,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,13 +29,13 @@ public class ProfileFragment extends Fragment {
     private SessionManager session;
     private ProgressBar progressBar;
     private ImageView profileImage;
-    private ActivityResultLauncher<String> pickImageLauncher;
+    private ActivityResultLauncher<PickVisualMediaRequest> pickImageLauncher;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         pickImageLauncher = registerForActivityResult(
-                new ActivityResultContracts.GetContent(),
+                new ActivityResultContracts.PickVisualMedia(),
                 this::uploadProfilePhoto);
     }
 
@@ -55,7 +57,10 @@ public class ProfileFragment extends Fragment {
         profileImage = view.findViewById(R.id.profileImage);
         MaterialButton logout = view.findViewById(R.id.btnLogout);
 
-        profileImage.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
+        profileImage.setOnClickListener(v -> pickImageLauncher.launch(
+                new PickVisualMediaRequest.Builder()
+                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                        .build()));
 
         setupMenuRow(view.findViewById(R.id.menuAccountDetails), R.drawable.ic_edit_profile,
                 getString(R.string.my_account_details),
@@ -107,8 +112,23 @@ public class ProfileFragment extends Fragment {
                 UiUtils.toast(requireContext(), getString(R.string.network_error));
                 return;
             }
+            ContentResolver resolver = requireContext().getContentResolver();
+            String mimeType = resolver.getType(uri);
+            if (mimeType == null || !mimeType.startsWith("image/")) {
+                progressBar.setVisibility(View.GONE);
+                UiUtils.toast(requireContext(), getString(R.string.network_error));
+                return;
+            }
+            String extension = "jpg";
+            if ("image/png".equals(mimeType)) {
+                extension = "png";
+            } else if ("image/webp".equals(mimeType)) {
+                extension = "webp";
+            } else if ("image/gif".equals(mimeType)) {
+                extension = "gif";
+            }
             byte[] bytes = ApiClient.readAllBytes(input);
-            api.postMultipart("/me/photo", null, "image", bytes, "profile.jpg", "image/jpeg", true,
+            api.postMultipart("/me/photo", null, "image", bytes, "profile." + extension, mimeType, true,
                     new ApiClient.Callback() {
                         @Override
                         public void onSuccess(JSONObject json) {
@@ -123,6 +143,9 @@ public class ProfileFragment extends Fragment {
                                     UiUtils.loadImage(requireContext(),
                                             UrlHelper.imageFromJson(session.getBaseUrl(), student),
                                             profileImage, 36);
+                                    if (requireActivity() instanceof MainActivity) {
+                                        ((MainActivity) requireActivity()).refreshNavProfileImage(student);
+                                    }
                                 }
                             });
                         }

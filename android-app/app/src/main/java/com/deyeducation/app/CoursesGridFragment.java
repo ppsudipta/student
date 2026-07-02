@@ -21,17 +21,18 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GalleryFragment extends Fragment {
+public class CoursesGridFragment extends Fragment {
     private ApiClient api;
     private SessionManager session;
     private SwipeRefreshLayout swipeRefresh;
     private ProgressBar progressBar;
     private TextView emptyView;
-    private GalleryAdapter adapter;
+    private CourseAdapter adapter;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_gallery, container, false);
     }
 
@@ -46,7 +47,7 @@ public class GalleryFragment extends Fragment {
         progressBar = view.findViewById(R.id.galleryProgress);
         emptyView = view.findViewById(R.id.galleryEmpty);
         RecyclerView grid = view.findViewById(R.id.galleryGrid);
-        adapter = new GalleryAdapter();
+        adapter = new CourseAdapter();
         grid.setLayoutManager(new GridLayoutManager(requireContext(), 2));
         grid.setHasFixedSize(false);
         grid.setAdapter(adapter);
@@ -61,7 +62,7 @@ public class GalleryFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (getActivity() instanceof MainActivity) {
-            ((MainActivity) getActivity()).setScreenTitle(getString(R.string.gallery));
+            ((MainActivity) getActivity()).setScreenTitle(getString(R.string.courses));
         }
     }
 
@@ -71,14 +72,16 @@ public class GalleryFragment extends Fragment {
         }
         emptyView.setVisibility(View.GONE);
 
-        api.get("/gallery?per_page=60", true, new ApiClient.Callback() {
+        api.get("/events?per_page=60", false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
-                if (!isAdded()) return;
+                if (!isAdded()) {
+                    return;
+                }
                 requireActivity().runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
                     progressBar.setVisibility(View.GONE);
-                    List<GalleryItem> items = parseGallery(json);
+                    List<CourseItem> items = parseCourses(json);
                     adapter.setItems(items);
                     emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
                 });
@@ -86,7 +89,9 @@ public class GalleryFragment extends Fragment {
 
             @Override
             public void onError(String message) {
-                if (!isAdded()) return;
+                if (!isAdded()) {
+                    return;
+                }
                 requireActivity().runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
                     progressBar.setVisibility(View.GONE);
@@ -96,15 +101,18 @@ public class GalleryFragment extends Fragment {
         });
     }
 
-    private List<GalleryItem> parseGallery(JSONObject json) {
-        List<GalleryItem> items = new ArrayList<>();
+    private List<CourseItem> parseCourses(JSONObject json) {
+        List<CourseItem> items = new ArrayList<>();
         String baseUrl = session.getBaseUrl();
         JSONArray rows = extractRows(json);
         for (int i = 0; i < rows.length(); i++) {
             JSONObject row = rows.optJSONObject(i);
-            if (row == null) continue;
-            GalleryItem item = new GalleryItem();
-            item.title = row.optString("name", row.optString("title", "Gallery"));
+            if (row == null) {
+                continue;
+            }
+            CourseItem item = new CourseItem();
+            item.id = row.optInt("id", 0);
+            item.title = row.optString("name", row.optString("title", getString(R.string.courses)));
             item.imageUrl = UrlHelper.imageFromJson(baseUrl, row);
             items.add(item);
         }
@@ -125,10 +133,10 @@ public class GalleryFragment extends Fragment {
         return new JSONArray();
     }
 
-    private class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.Holder> {
-        private final List<GalleryItem> items = new ArrayList<>();
+    private class CourseAdapter extends RecyclerView.Adapter<CourseAdapter.Holder> {
+        private final List<CourseItem> items = new ArrayList<>();
 
-        void setItems(List<GalleryItem> next) {
+        void setItems(List<CourseItem> next) {
             items.clear();
             items.addAll(next);
             notifyDataSetChanged();
@@ -137,17 +145,24 @@ public class GalleryFragment extends Fragment {
         @NonNull
         @Override
         public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_gallery_card, parent, false);
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_gallery_card, parent, false);
             return new Holder(view);
         }
 
         @Override
         public void onBindViewHolder(@NonNull Holder holder, int position) {
-            GalleryItem item = items.get(position);
-            holder.title.setText(item.title.isEmpty() ? getString(R.string.gallery) : item.title);
+            CourseItem item = items.get(position);
+            holder.title.setText(item.title.isEmpty() ? getString(R.string.courses) : item.title);
             UiUtils.loadImage(holder.itemView.getContext(), item.imageUrl, holder.image, 12);
-            holder.itemView.setOnClickListener(v ->
-                    ImageViewerActivity.open(requireContext(), item.title, item.imageUrl));
+            holder.itemView.setOnClickListener(v -> {
+                if (item.id > 0 && getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).showFragment(
+                            CourseDetailFragment.newInstance(item.id, item.title),
+                            item.title,
+                            true);
+                }
+            });
         }
 
         @Override
@@ -167,7 +182,8 @@ public class GalleryFragment extends Fragment {
         }
     }
 
-    private static class GalleryItem {
+    private static class CourseItem {
+        int id;
         String title = "";
         String imageUrl;
     }

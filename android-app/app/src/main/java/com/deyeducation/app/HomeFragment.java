@@ -78,9 +78,15 @@ public class HomeFragment extends Fragment {
         LinearLayout promoDots = view.findViewById(R.id.promoDots);
 
         addServiceItem(serviceGrid, R.drawable.ic_service_academy, getString(R.string.academy_details), v ->
-                AboutActivity.open(requireContext()));
+                activity.showFragment(
+                        AboutContentFragment.newInstance(AboutContentFragment.MODE_ACADEMY),
+                        getString(R.string.academy_details),
+                        true));
         addServiceItem(serviceGrid, R.drawable.ic_service_about, getString(R.string.about_us), v ->
-                AboutActivity.open(requireContext()));
+                activity.showFragment(
+                        AboutContentFragment.newInstance(AboutContentFragment.MODE_ABOUT),
+                        getString(R.string.about_us_title),
+                        true));
         addServiceItem(serviceGrid, R.drawable.ic_service_gallery, getString(R.string.gallery), v ->
                 activity.selectBottomNav(R.id.nav_gallery));
         addServiceItem(serviceGrid, R.drawable.ic_service_more, getString(R.string.more), v -> showMoreSheet(activity));
@@ -99,6 +105,7 @@ public class HomeFragment extends Fragment {
             promoPager.post(this::startPromoAutoScroll);
         }
         if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).setScreenTitle(getString(R.string.home));
             ((MainActivity) getActivity()).refreshUnreadNoticesBadge();
         }
     }
@@ -165,7 +172,7 @@ public class HomeFragment extends Fragment {
         });
         addServiceItem(moreGrid, R.drawable.ic_service_academy, getString(R.string.courses), v -> {
             dialog.dismiss();
-            activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_COURSES), getString(R.string.courses));
+            activity.showFragment(new CoursesGridFragment(), getString(R.string.courses), true);
         });
         addServiceItem(moreGrid, R.drawable.ic_whatsapp, getString(R.string.contact), v -> {
             dialog.dismiss();
@@ -312,6 +319,7 @@ public class HomeFragment extends Fragment {
     private void bindCourses(LinearLayout container, JSONArray rows) {
         container.removeAllViews();
         if (rows == null) return;
+        MainActivity activity = (MainActivity) requireActivity();
         LayoutInflater inflater = LayoutInflater.from(requireContext());
         for (int i = 0; i < rows.length(); i++) {
             JSONObject row = rows.optJSONObject(i);
@@ -325,7 +333,10 @@ public class HomeFragment extends Fragment {
             UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(session.getBaseUrl(), row), image, 12);
             card.setOnClickListener(v -> {
                 if (eventId > 0) {
-                    CourseDetailActivity.open(requireContext(), eventId, courseName);
+                    activity.showFragment(
+                            CourseDetailFragment.newInstance(eventId, courseName),
+                            courseName,
+                            true);
                 }
             });
             container.addView(card);

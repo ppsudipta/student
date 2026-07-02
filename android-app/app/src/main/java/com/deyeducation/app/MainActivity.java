@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -21,6 +22,8 @@ import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationView;
 
+import org.json.JSONObject;
+
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
     public static final String EXTRA_SCREEN = "screen";
 
@@ -29,6 +32,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private SessionManager session;
     private ApiClient api;
     private String whatsappPhone = "";
+    private ImageView navAvatar;
+    private ImageButton toolbarProfileBtn;
+    private TextView navUserName;
+    private ActionBarDrawerToggle drawerToggle;
+    private MaterialToolbar toolbar;
+    private String rootTitle = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,19 +54,32 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         setContentView(R.layout.activity_main);
         drawerLayout = findViewById(R.id.drawerLayout);
         bottomNav = findViewById(R.id.bottomNav);
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.toolbar);
         NavigationView navigationView = findViewById(R.id.navigationView);
         ImageButton profileBtn = findViewById(R.id.btnToolbarProfile);
 
         setSupportActionBar(toolbar);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+        drawerToggle = new ActionBarDrawerToggle(
                 this, drawerLayout, toolbar, R.string.menu, R.string.menu);
-        drawerLayout.addDrawerListener(toggle);
-        toggle.syncState();
+        drawerLayout.addDrawerListener(drawerToggle);
+        drawerToggle.syncState();
+        toolbar.setNavigationOnClickListener(v -> {
+            if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+                popBackStackIfPossible();
+            } else {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
+
+        getSupportFragmentManager().addOnBackStackChangedListener(this::updateToolbarNavigation);
 
         navigationView.setNavigationItemSelectedListener(this);
-        TextView navUserName = navigationView.getHeaderView(0).findViewById(R.id.navUserName);
+        View navHeader = navigationView.getHeaderView(0);
+        navUserName = navHeader.findViewById(R.id.navUserName);
+        navAvatar = navHeader.findViewById(R.id.navAvatar);
         navUserName.setText(session.getStudentName());
+        toolbarProfileBtn = profileBtn;
+        loadNavProfileImage();
 
         profileBtn.setOnClickListener(v -> showFragment(new ProfileFragment(), getString(R.string.profile)));
 
@@ -132,6 +154,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             public void handleOnBackPressed() {
                 if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                     drawerLayout.closeDrawer(GravityCompat.START);
+                } else if (popBackStackIfPossible()) {
+                    // handled
                 } else {
                     setEnabled(false);
                     getOnBackPressedDispatcher().onBackPressed();
@@ -158,13 +182,56 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     public void showFragment(Fragment fragment, String title) {
+        showFragment(fragment, title, false);
+    }
+
+    public void showFragment(Fragment fragment, String title, boolean addToBackStack) {
+        setScreenTitle(title);
+        if (!addToBackStack) {
+            rootTitle = title;
+        }
+        var transaction = getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragmentContainer, fragment);
+        if (addToBackStack) {
+            transaction.addToBackStack(title);
+        } else {
+            getSupportFragmentManager().popBackStackImmediate(null,
+                    androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        }
+        transaction.commit();
+        updateToolbarNavigation();
+    }
+
+    public void setScreenTitle(String title) {
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle(title);
         }
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.fragmentContainer, fragment)
-                .commit();
+    }
+
+    public boolean popBackStackIfPossible() {
+        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+            getSupportFragmentManager().popBackStack();
+            return true;
+        }
+        return false;
+    }
+
+    private void updateToolbarNavigation() {
+        if (toolbar == null || drawerToggle == null) {
+            return;
+        }
+        boolean hasBackStack = getSupportFragmentManager().getBackStackEntryCount() > 0;
+        drawerToggle.setDrawerIndicatorEnabled(!hasBackStack);
+        if (hasBackStack) {
+            toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
+            toolbar.setNavigationContentDescription(R.string.back);
+        } else {
+            drawerToggle.syncState();
+            if (getSupportActionBar() != null && rootTitle != null && !rootTitle.isEmpty()) {
+                getSupportActionBar().setTitle(rootTitle);
+            }
+        }
     }
 
     public void selectBottomNav(int itemId) {
@@ -196,6 +263,47 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             public void onError(String message) {
             }
         });
+    }
+
+    public void refreshNavProfileImage(JSONObject student) {
+        if (student == null) {
+            loadNavProfileImage();
+            return;
+        }
+        applyNavProfileImage(student);
+    }
+
+    private void loadNavProfileImage() {
+        api.get("/me", true, new ApiClient.Callback() {
+            @Override
+            public void onSuccess(JSONObject json) {
+                JSONObject student = json.optJSONObject("student");
+                if (student == null) {
+                    return;
+                }
+                runOnUiThread(() -> {
+                    session.setStudentName(student.optString("name"));
+                    if (navUserName != null) {
+                        navUserName.setText(student.optString("name"));
+                    }
+                    applyNavProfileImage(student);
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+            }
+        });
+    }
+
+    private void applyNavProfileImage(JSONObject student) {
+        String imageUrl = UrlHelper.imageFromJson(session.getBaseUrl(), student);
+        if (navAvatar != null) {
+            UiUtils.loadImage(this, imageUrl, navAvatar, 28);
+        }
+        if (toolbarProfileBtn != null) {
+            UiUtils.loadImage(this, imageUrl, toolbarProfileBtn, 20);
+        }
     }
 
     @Override

@@ -10,6 +10,7 @@ ini_set('error_log', __DIR__ . '/error_log.log'); // log file in same folder
 <?php
 session_start();
 include('config.php');
+require_once __DIR__ . '/student_image.php';
 
 if (!isset($_SESSION['username'])) {
     header('Location: ./auth/signin.php');
@@ -124,7 +125,7 @@ error_reporting(1);
             <img src="../assets/svg/menu/close-white.svg" alt="icon">
           </button>
           <div class="menu-user">
-            <img src="../admin/<?= $img ?>" alt="avatar">
+            <img src="<?= htmlspecialchars(student_image_url($img)) ?>" alt="avatar">
             <div >
               <a href="#!"><?= $name?></a>
               <h3>

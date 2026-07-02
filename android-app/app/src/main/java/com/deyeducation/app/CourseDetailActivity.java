@@ -81,7 +81,10 @@ public class CourseDetailActivity extends AppCompatActivity {
                     meta.setText(metaText.toString());
 
                     UiUtils.bindHtml(description, data.optString("description", ""));
-                    UiUtils.loadImage(CourseDetailActivity.this, data.optString("image_url"), image, 0);
+                    UiUtils.loadImage(CourseDetailActivity.this,
+                            UrlHelper.imageFromJson(
+                                    new SessionManager(CourseDetailActivity.this).getBaseUrl(), data),
+                            image, 0);
                 });
             }
 

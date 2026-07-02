@@ -131,7 +131,9 @@ public class AboutActivity extends AppCompatActivity {
         if (about != null) {
             titleView.setText(about.optString("title", getString(R.string.about_us_title)));
             UiUtils.bindHtml(descriptionView, about.optString("details", ""));
-            UiUtils.loadImage(AboutActivity.this, about.optString("image_url"), heroView, 0);
+            SessionManager session = new SessionManager(this);
+            UiUtils.loadImage(AboutActivity.this,
+                    UrlHelper.imageFromJson(session.getBaseUrl(), about), heroView, 0);
         } else if (company != null) {
             titleView.setText(company.optString("name", getString(R.string.about_us_title)));
         }
@@ -154,7 +156,9 @@ public class AboutActivity extends AppCompatActivity {
         }
 
         if (about == null) {
-            UiUtils.loadImage(AboutActivity.this, company.optString("image_url"), heroView, 0);
+            SessionManager session = new SessionManager(this);
+            UiUtils.loadImage(AboutActivity.this,
+                    UrlHelper.imageFromJson(session.getBaseUrl(), company), heroView, 0);
         }
         mapsButton.setVisibility(mapUrl == null || mapUrl.isEmpty() ? View.GONE : View.VISIBLE);
     }

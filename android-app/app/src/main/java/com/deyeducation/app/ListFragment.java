@@ -644,8 +644,14 @@ public class ListFragment extends Fragment {
                 holder.action.setVisibility(View.VISIBLE);
                 holder.action.setIconResource(R.drawable.ic_chevron_right);
                 holder.action.setContentDescription(getString(R.string.view_course));
-                View.OnClickListener openCourse = v -> CourseDetailActivity.open(
-                        requireContext(), item.eventId, item.title);
+                View.OnClickListener openCourse = v -> {
+                    if (getActivity() instanceof MainActivity) {
+                        ((MainActivity) getActivity()).showFragment(
+                                CourseDetailFragment.newInstance(item.eventId, item.title),
+                                item.title,
+                                true);
+                    }
+                };
                 holder.action.setOnClickListener(openCourse);
                 holder.itemView.setOnClickListener(openCourse);
             } else {

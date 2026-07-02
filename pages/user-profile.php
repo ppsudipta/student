@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('./config.php');
+require_once __DIR__ . '/student_image.php';
 
 if (!isset($_SESSION['username'])) {
     header('Location: ./auth/signin.php');
@@ -122,7 +123,7 @@ $rowm = $res->fetch_assoc();
     <section class="user-profile-heading d-flex align-items-center justify-content-between">
       <div class="d-flex align-items-center gap-12">
         <div class="image rounded-full overflow-hidden shrink-0">
-          <img src="../admin/<?= $img ? $img :'user.png';  ?>" alt="avatar" class="img-fluid w-100 h-100 object-fit-cover">
+          <img src="<?= htmlspecialchars(student_image_url($img)) ?>" alt="avatar" class="img-fluid w-100 h-100 object-fit-cover">
         </div>
         <div>
           <h3> <?= $name ?></h3>

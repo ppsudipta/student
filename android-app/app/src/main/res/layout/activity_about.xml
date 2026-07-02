@@ -9,9 +9,9 @@
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/aboutToolbar"
+        style="@style/Widget.DeyEducation.Toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/surface" />
+        android:layout_height="?attr/actionBarSize" />
 
     <FrameLayout
         android:layout_width="match_parent"
