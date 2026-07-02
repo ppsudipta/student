@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Html;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -24,6 +23,15 @@ public class AboutActivity extends AppCompatActivity {
     }
 
     private String mapUrl;
+    private ApiClient api;
+    private ProgressBar progress;
+    private TextView titleView;
+    private TextView descriptionView;
+    private TextView phoneView;
+    private TextView emailView;
+    private TextView addressView;
+    private ImageView heroView;
+    private MaterialButton mapsButton;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -35,54 +43,69 @@ public class AboutActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
 
-        ImageView hero = findViewById(R.id.aboutHero);
-        TextView title = findViewById(R.id.aboutTitle);
-        TextView description = findViewById(R.id.aboutDescription);
-        TextView phone = findViewById(R.id.aboutPhone);
-        TextView email = findViewById(R.id.aboutEmail);
-        TextView address = findViewById(R.id.aboutAddress);
-        MaterialButton maps = findViewById(R.id.btnOpenMaps);
-        ProgressBar progress = findViewById(R.id.aboutProgress);
+        heroView = findViewById(R.id.aboutHero);
+        titleView = findViewById(R.id.aboutTitle);
+        descriptionView = findViewById(R.id.aboutDescription);
+        phoneView = findViewById(R.id.aboutPhone);
+        emailView = findViewById(R.id.aboutEmail);
+        addressView = findViewById(R.id.aboutAddress);
+        mapsButton = findViewById(R.id.btnOpenMaps);
+        progress = findViewById(R.id.aboutProgress);
 
+        api = new ApiClient(new SessionManager(this));
+        mapsButton.setOnClickListener(v -> {
+            if (mapUrl != null && !mapUrl.isEmpty()) {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(mapUrl)));
+            }
+        });
+
+        loadAbout();
+    }
+
+    private void loadAbout() {
         progress.setVisibility(View.VISIBLE);
-        SessionManager session = new SessionManager(this);
-        new ApiClient(session).get("/about", false, new ApiClient.Callback() {
+        api.get("/about", false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
                 runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
-                    JSONObject data = json.optJSONObject("data");
-                    if (data == null) {
+                    if (!UiUtils.isContextValid(AboutActivity.this)) {
                         return;
                     }
-                    JSONObject company = data.optJSONObject("company");
-                    JSONObject about = data.optJSONObject("about");
-
-                    if (about != null) {
-                        title.setText(about.optString("title", getString(R.string.about_us_title)));
-                        String details = about.optString("details", "");
-                        description.setText(Html.fromHtml(details, Html.FROM_HTML_MODE_COMPACT));
-                        UiUtils.loadImage(AboutActivity.this, about.optString("image_url"), hero, 0);
-                    } else if (company != null) {
-                        title.setText(company.optString("name", getString(R.string.about_us_title)));
+                    progress.setVisibility(View.GONE);
+                    JSONObject data = json.optJSONObject("data");
+                    if (data != null) {
+                        bindAbout(data);
+                    } else {
+                        loadCompanyFallback();
                     }
+                });
+            }
 
+            @Override
+            public void onError(String message) {
+                runOnUiThread(() -> {
+                    if (!UiUtils.isContextValid(AboutActivity.this)) {
+                        return;
+                    }
+                    loadCompanyFallback();
+                });
+            }
+        });
+    }
+
+    private void loadCompanyFallback() {
+        api.get("/company", false, new ApiClient.Callback() {
+            @Override
+            public void onSuccess(JSONObject json) {
+                runOnUiThread(() -> {
+                    if (!UiUtils.isContextValid(AboutActivity.this)) {
+                        return;
+                    }
+                    progress.setVisibility(View.GONE);
+                    JSONObject company = json.optJSONObject("data");
                     if (company != null) {
-                        phone.setText(getString(R.string.phone_label) + ": " + company.optString("ph1", "-"));
-                        email.setText(getString(R.string.email_label) + ": " + company.optString("email", "-"));
-                        address.setText(getString(R.string.address_label) + ": " + company.optString("address", "-"));
-                        mapUrl = company.optString("map_url");
-                        if (mapUrl == null || mapUrl.isEmpty()) {
-                            String addr = company.optString("address");
-                            if (!addr.isEmpty()) {
-                                mapUrl = "https://www.google.com/maps/search/?api=1&query=" + Uri.encode(addr);
-                            }
-                        }
-                        if (company.optString("image_url").isEmpty() && about == null) {
-                            UiUtils.loadImage(AboutActivity.this, company.optString("image_url"), hero, 0);
-                        }
+                        bindCompany(company, null);
                     }
-                    maps.setVisibility(mapUrl == null || mapUrl.isEmpty() ? View.GONE : View.VISIBLE);
                 });
             }
 
@@ -90,15 +113,56 @@ public class AboutActivity extends AppCompatActivity {
             public void onError(String message) {
                 runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
-                    UiUtils.toast(AboutActivity.this, message);
+                    if (UiUtils.isContextValid(AboutActivity.this)) {
+                        UiUtils.toast(AboutActivity.this, message);
+                    }
                 });
             }
         });
+    }
 
-        maps.setOnClickListener(v -> {
-            if (mapUrl != null && !mapUrl.isEmpty()) {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(mapUrl)));
+    private void bindAbout(JSONObject data) {
+        JSONObject company = data.optJSONObject("company");
+        JSONObject about = data.optJSONObject("about");
+        bindCompany(company, about);
+    }
+
+    private void bindCompany(JSONObject company, JSONObject about) {
+        if (about != null) {
+            titleView.setText(about.optString("title", getString(R.string.about_us_title)));
+            UiUtils.bindHtml(descriptionView, about.optString("details", ""));
+            UiUtils.loadImage(AboutActivity.this, about.optString("image_url"), heroView, 0);
+        } else if (company != null) {
+            titleView.setText(company.optString("name", getString(R.string.about_us_title)));
+        }
+
+        if (company == null) {
+            mapsButton.setVisibility(View.GONE);
+            return;
+        }
+
+        phoneView.setText(getString(R.string.phone_label) + ": " + safe(company.optString("ph1")));
+        emailView.setText(getString(R.string.email_label) + ": " + safe(company.optString("email")));
+        addressView.setText(getString(R.string.address_label) + ": " + safe(company.optString("address")));
+
+        mapUrl = company.optString("map_url");
+        if (mapUrl == null || mapUrl.isEmpty()) {
+            String addr = company.optString("address");
+            if (!addr.isEmpty() && !"null".equals(addr)) {
+                mapUrl = "https://www.google.com/maps/search/?api=1&query=" + Uri.encode(addr);
             }
-        });
+        }
+
+        if (about == null) {
+            UiUtils.loadImage(AboutActivity.this, company.optString("image_url"), heroView, 0);
+        }
+        mapsButton.setVisibility(mapUrl == null || mapUrl.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+
+    private String safe(String value) {
+        if (value == null || value.isEmpty() || "null".equals(value)) {
+            return "-";
+        }
+        return value;
     }
 }

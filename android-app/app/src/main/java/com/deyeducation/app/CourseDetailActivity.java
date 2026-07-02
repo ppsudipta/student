@@ -3,7 +3,6 @@ package com.deyeducation.app;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.Html;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -36,7 +35,8 @@ public class CourseDetailActivity extends AppCompatActivity {
         String fallbackTitle = getIntent().getStringExtra(EXTRA_TITLE);
 
         MaterialToolbar toolbar = findViewById(R.id.courseToolbar);
-        toolbar.setTitle(fallbackTitle == null ? getString(R.string.course_details) : fallbackTitle);
+        String initialTitle = fallbackTitle == null ? getString(R.string.course_details) : fallbackTitle;
+        toolbar.setTitle(initialTitle);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
 
@@ -46,25 +46,41 @@ public class CourseDetailActivity extends AppCompatActivity {
         TextView description = findViewById(R.id.courseDescription);
         ProgressBar progress = findViewById(R.id.courseProgress);
 
+        title.setText(initialTitle);
+
+        if (id <= 0) {
+            UiUtils.toast(this, getString(R.string.no_records));
+            finish();
+            return;
+        }
+
         progress.setVisibility(View.VISIBLE);
         new ApiClient(new SessionManager(this)).get("/events/" + id, false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
                 runOnUiThread(() -> {
+                    if (!UiUtils.isContextValid(CourseDetailActivity.this)) {
+                        return;
+                    }
                     progress.setVisibility(View.GONE);
                     JSONObject data = json.optJSONObject("data");
                     if (data == null) {
+                        UiUtils.toast(CourseDetailActivity.this, getString(R.string.no_records));
                         return;
                     }
-                    String name = data.optString("name");
+                    String name = data.optString("name", initialTitle);
                     title.setText(name);
                     toolbar.setTitle(name);
+
                     String price = data.optString("price", "0");
                     String date = data.optString("date", "");
-                    meta.setText(getString(R.string.course_price, price)
-                            + (date.isEmpty() ? "" : "\n" + getString(R.string.course_date, date)));
-                    description.setText(Html.fromHtml(
-                            data.optString("description", ""), Html.FROM_HTML_MODE_COMPACT));
+                    StringBuilder metaText = new StringBuilder("Price: ₹").append(price);
+                    if (!date.isEmpty() && !"null".equals(date)) {
+                        metaText.append("\nStarts: ").append(date);
+                    }
+                    meta.setText(metaText.toString());
+
+                    UiUtils.bindHtml(description, data.optString("description", ""));
                     UiUtils.loadImage(CourseDetailActivity.this, data.optString("image_url"), image, 0);
                 });
             }
@@ -73,7 +89,9 @@ public class CourseDetailActivity extends AppCompatActivity {
             public void onError(String message) {
                 runOnUiThread(() -> {
                     progress.setVisibility(View.GONE);
-                    UiUtils.toast(CourseDetailActivity.this, message);
+                    if (UiUtils.isContextValid(CourseDetailActivity.this)) {
+                        UiUtils.toast(CourseDetailActivity.this, message);
+                    }
                 });
             }
         });
