@@ -104,31 +104,6 @@
             android:columnCount="4"
             android:useDefaultMargins="true" />
 
-        <LinearLayout
-            android:id="@+id/sliderSection"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/sliderPager"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/slider_height"
-                android:nestedScrollingEnabled="false"
-                android:clipToPadding="false"
-                android:clipChildren="false" />
-
-            <LinearLayout
-                android:id="@+id/sliderDots"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:orientation="horizontal" />
-        </LinearLayout>
-
         <TextView
             android:id="@+id/feeAlertBanner"
             android:layout_width="match_parent"
@@ -171,18 +146,29 @@
             android:layout_marginBottom="8dp"
             android:text="@string/promotional_images" />
 
-        <HorizontalScrollView
+        <LinearLayout
+            android:id="@+id/promoSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:scrollbars="none">
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/promoPager"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/promo_image_height"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false" />
 
             <LinearLayout
-                android:id="@+id/promotionsContainer"
-                android:layout_width="wrap_content"
+                android:id="@+id/promoDots"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingBottom="4dp" />
-        </HorizontalScrollView>
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:orientation="horizontal" />
+        </LinearLayout>
 
         <ProgressBar
             android:id="@+id/homeProgress"

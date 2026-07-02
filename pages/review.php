@@ -29,8 +29,8 @@ $res = $con->query($sql);
 $rowm = $res->fetch_assoc();
 
 // Get previous enquiries for this student
-$enquiries_stmt = $con->prepare("SELECT * FROM enquiries WHERE student_id = ? ORDER BY created_at DESC");
-$enquiries_stmt->bind_param("s", $sid);
+$enquiries_stmt = $con->prepare("SELECT * FROM enquiries WHERE student_id = ? OR student_id = ? ORDER BY created_at DESC");
+$enquiries_stmt->bind_param("ss", $sid, $id);
 $enquiries_stmt->execute();
 $enquiries_result = $enquiries_stmt->get_result();
 $enquiries = [];
@@ -38,7 +38,48 @@ while($row = $enquiries_result->fetch_assoc()) {
     $enquiries[] = $row;
 }
 
+function load_enquiry_messages($con, $enquiry_id) {
+    $messages = [];
+    $tableCheck = $con->query("SHOW TABLES LIKE 'enquiry_messages'");
+    if ($tableCheck && $tableCheck->num_rows > 0) {
+        $stmt = $con->prepare("SELECT * FROM enquiry_messages WHERE enquiry_id = ? ORDER BY created_at ASC");
+        $stmt->bind_param("i", $enquiry_id);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $messages[] = $row;
+        }
+        $stmt->close();
+    }
+    return $messages;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['followup_enquiry_id'])) {
+        $enquiry_id = intval($_POST['followup_enquiry_id']);
+        $followup_message = trim($_POST['followup_message'] ?? '');
+        if ($enquiry_id > 0 && $followup_message !== '') {
+            $check = $con->prepare("SELECT id FROM enquiries WHERE id = ? AND (student_id = ? OR student_id = ?)");
+            $check->bind_param("iss", $enquiry_id, $sid, $id);
+            $check->execute();
+            $owned = $check->get_result()->fetch_assoc();
+            $check->close();
+            if ($owned) {
+                $tableCheck = $con->query("SHOW TABLES LIKE 'enquiry_messages'");
+                if ($tableCheck && $tableCheck->num_rows > 0) {
+                    $msgStmt = $con->prepare("INSERT INTO enquiry_messages (enquiry_id, sender_type, sender_name, message, created_at) VALUES (?, 'student', ?, ?, NOW())");
+                    $msgStmt->bind_param("iss", $enquiry_id, $name, $followup_message);
+                    $msgStmt->execute();
+                    $msgStmt->close();
+                }
+                echo "<script>alert('Message sent.'); window.location.href='review.php';</script>";
+                exit();
+            }
+        }
+        echo "<script>alert('Unable to send message.'); window.history.back();</script>";
+        exit();
+    }
+
     $name = $_POST['name'];
     $student_id = $_POST['student_id'];
     $email = $_POST['email'];
@@ -67,6 +108,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param("sssssssss", $student_id, $name, $email, $phone, $enquiry_type, $subject, $message, $attachment, $created_at);
 
     if ($stmt->execute()) {
+        $newId = $con->insert_id;
+        $tableCheck = $con->query("SHOW TABLES LIKE 'enquiry_messages'");
+        if ($tableCheck && $tableCheck->num_rows > 0 && $newId) {
+            $msgStmt = $con->prepare("INSERT INTO enquiry_messages (enquiry_id, sender_type, sender_name, message, attachment, created_at) VALUES (?, 'student', ?, ?, ?, ?)");
+            $msgStmt->bind_param("issss", $newId, $name, $message, $attachment, $created_at);
+            $msgStmt->execute();
+            $msgStmt->close();
+        }
         echo "<script>alert('Enquiry submitted successfully.'); window.location.href='review.php';</script>";
     } else {
         echo "<script>alert('Failed to submit enquiry.'); window.history.back();</script>";
@@ -325,7 +374,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="reply-section">
         <h3>Your Previous Enquiries and Replies</h3>
         
-        <?php foreach ($enquiries as $enquiry): ?>
+        <?php foreach ($enquiries as $enquiry):
+          $thread = load_enquiry_messages($con, (int)$enquiry['id']);
+          if (empty($thread)) {
+              $thread = [['sender_type' => 'student', 'sender_name' => $enquiry['name'], 'message' => $enquiry['message'], 'created_at' => $enquiry['created_at']]];
+              if (!empty($enquiry['reply_message'])) {
+                  $thread[] = ['sender_type' => 'admin', 'sender_name' => $enquiry['replied_by'] ?? 'Admin', 'message' => $enquiry['reply_message'], 'created_at' => $enquiry['replied_at']];
+              }
+          }
+        ?>
         <div class="enquiry-item">
           <div class="enquiry-header">
             <div>
@@ -336,31 +393,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <?= date('M j, Y g:i A', strtotime($enquiry['created_at'])) ?>
             </div>
           </div>
-          
-          <p><?= nl2br(htmlspecialchars($enquiry['message'])) ?></p>
-          
-          <?php if ($enquiry['attachment']): ?>
-          <div class="mt-2">
-            <strong>Attachment:</strong> 
-            <a href="../admin/<?= htmlspecialchars($enquiry['attachment']) ?>" target="_blank">View File</a>
-          </div>
-          <?php endif; ?>
-          
-          <?php if (!empty($enquiry['reply_message'])): ?>
-          <div class="reply-item">
+
+          <?php foreach ($thread as $msg): ?>
+          <div class="reply-item <?= ($msg['sender_type'] ?? '') === 'admin' ? '' : 'student-msg' ?>">
             <div class="reply-header">
-              <span>Admin Reply</span>
-              <span class="enquiry-date">
-                <?= date('M j, Y g:i A', strtotime($enquiry['replied_at'])) ?>
-              </span>
+              <span><?= ($msg['sender_type'] ?? '') === 'admin' ? 'Admin' : 'You' ?><?= !empty($msg['sender_name']) ? ' · ' . htmlspecialchars($msg['sender_name']) : '' ?></span>
+              <span class="enquiry-date"><?= date('M j, Y g:i A', strtotime($msg['created_at'])) ?></span>
             </div>
-            <p><?= nl2br(htmlspecialchars($enquiry['reply_message'])) ?></p>
+            <p><?= nl2br(htmlspecialchars($msg['message'])) ?></p>
           </div>
-          <?php else: ?>
-          <div class="reply-item no-replies">
-            <p>No reply yet. We'll get back to you soon.</p>
-          </div>
-          <?php endif; ?>
+          <?php endforeach; ?>
+
+          <form method="POST" class="mt-3">
+            <input type="hidden" name="followup_enquiry_id" value="<?= (int)$enquiry['id'] ?>">
+            <div class="mb-2">
+              <label class="form-label">Reply to this thread</label>
+              <textarea class="form-control" name="followup_message" rows="3" required placeholder="Type your follow-up message..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-outline-primary btn-sm">Send Reply</button>
+          </form>
         </div>
         <?php endforeach; ?>
       </div>

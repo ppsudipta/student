@@ -17,6 +17,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationView;
 
@@ -67,7 +68,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 return true;
             }
             if (id == R.id.nav_explore) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_MATERIALS), getString(R.string.explore));
+                showFragment(ListFragment.newInstance(ListFragment.TYPE_MATERIALS), getString(R.string.materials));
                 return true;
             }
             if (id == R.id.nav_notices) {
@@ -102,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (savedInstanceState == null) {
             String screen = getIntent().getStringExtra(EXTRA_SCREEN);
             if ("materials".equals(screen)) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_MATERIALS), getString(R.string.explore));
+                showFragment(ListFragment.newInstance(ListFragment.TYPE_MATERIALS), getString(R.string.materials));
                 bottomNav.setSelectedItemId(R.id.nav_explore);
             } else if ("notices".equals(screen)) {
                 showFragment(ListFragment.newInstance(ListFragment.TYPE_NOTICES), getString(R.string.notices));
@@ -123,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 showFragment(new HomeFragment(), getString(R.string.home));
                 bottomNav.setSelectedItemId(R.id.nav_home);
             }
+            refreshUnreadNoticesBadge();
         }
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -167,6 +169,33 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     public void selectBottomNav(int itemId) {
         bottomNav.setSelectedItemId(itemId);
+    }
+
+    public void updateNoticesBadge(int count) {
+        if (count > 0) {
+            BadgeDrawable badge = bottomNav.getOrCreateBadge(R.id.nav_notices);
+            badge.setVisible(true);
+            badge.setNumber(Math.min(count, 99));
+        } else {
+            bottomNav.removeBadge(R.id.nav_notices);
+        }
+        Fragment current = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+        if (current instanceof HomeFragment) {
+            ((HomeFragment) current).updateNotificationDot(count);
+        }
+    }
+
+    public void refreshUnreadNoticesBadge() {
+        api.get("/home", true, new ApiClient.Callback() {
+            @Override
+            public void onSuccess(org.json.JSONObject json) {
+                runOnUiThread(() -> updateNoticesBadge(json.optInt("notices_count", 0)));
+            }
+
+            @Override
+            public void onError(String message) {
+            }
+        });
     }
 
     @Override

@@ -334,12 +334,10 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
               <div class="well well-sm" id="view_message"></div>
             </div>
           </div>
-          <div class="row" id="reply_section">
+          <div class="row">
             <div class="col-md-12">
-              <h4>Your Reply</h4>
-              <div class="well well-sm" id="view_reply">No reply yet</div>
-              <p><small>Replied on: <span id="view_replied_date"></span></small></p>
-              <p><small>Replied by: <span id="view_replied_by"></span></small></p>
+              <h4>Conversation</h4>
+              <div id="view_thread" class="well well-sm" style="max-height:320px;overflow-y:auto;"></div>
             </div>
           </div>
         </div>
@@ -425,16 +423,28 @@ $(function () {
       $('#view_subject').text(subject);
       $('#view_date').text(date);
       $('#view_message').text(message);
-      
-      if (replyMessage) {
-        $('#view_reply').text(replyMessage);
-        $('#view_replied_date').text(repliedDate);
-        $('#view_replied_by').text(repliedBy || 'Admin');
-      } else {
-        $('#view_reply').text('No reply yet');
-        $('#view_replied_date').text('');
-        $('#view_replied_by').text('');
-      }
+      $('#view_thread').html('<p class="text-muted">Loading conversation...</p>');
+
+      $.get('get_enquiry_messages.php', { enquiry_id: id }, function(resp) {
+        if (!resp.success) {
+          $('#view_thread').html('<p class="text-danger">Unable to load messages.</p>');
+          return;
+        }
+        if (!resp.messages || resp.messages.length === 0) {
+          $('#view_thread').html('<p class="text-muted">No messages yet.</p>');
+          return;
+        }
+        var html = '';
+        resp.messages.forEach(function(msg) {
+          var who = msg.sender_type === 'admin' ? 'Admin' : 'Student';
+          var when = msg.created_at ? msg.created_at : '';
+          html += '<div style="margin-bottom:12px;padding:8px;border-left:4px solid ' + (msg.sender_type === 'admin' ? '#5cb85c' : '#3c8dbc') + ';background:#f9f9f9;">';
+          html += '<strong>' + who + '</strong> <small class="text-muted">' + when + '</small><br>';
+          html += $('<div/>').text(msg.message).html().replace(/\n/g, '<br>');
+          html += '</div>';
+        });
+        $('#view_thread').html(html);
+      }, 'json');
       
       $('#viewEnquiryModalLabel').text('Enquiry Details #' + id);
     });

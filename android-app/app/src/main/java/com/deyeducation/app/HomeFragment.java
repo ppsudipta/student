@@ -27,31 +27,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
-    private static final long SLIDER_INTERVAL_MS = 4000L;
+    private static final long PROMO_INTERVAL_MS = 4000L;
 
     private ApiClient api;
     private SessionManager session;
     private ProgressBar progressBar;
     private TextView feeBanner;
     private View notificationDot;
-    private ViewPager2 sliderPager;
-    private ViewPager2.OnPageChangeCallback sliderPageCallback;
-    private final Handler sliderHandler = new Handler(Looper.getMainLooper());
-    private boolean sliderAutoScrollEnabled;
-    private boolean sliderUserDragging;
-    private final Runnable sliderAutoTick = new Runnable() {
+    private ViewPager2 promoPager;
+    private ViewPager2.OnPageChangeCallback promoPageCallback;
+    private final Handler promoHandler = new Handler(Looper.getMainLooper());
+    private boolean promoAutoScrollEnabled;
+    private boolean promoUserDragging;
+    private final Runnable promoAutoTick = new Runnable() {
         @Override
         public void run() {
-            if (!sliderAutoScrollEnabled || sliderPager == null || !isResumed()) {
+            if (!promoAutoScrollEnabled || promoPager == null || !isResumed()) {
                 return;
             }
-            RecyclerView.Adapter<?> adapter = sliderPager.getAdapter();
+            RecyclerView.Adapter<?> adapter = promoPager.getAdapter();
             if (adapter == null || adapter.getItemCount() <= 1) {
                 return;
             }
-            int next = (sliderPager.getCurrentItem() + 1) % adapter.getItemCount();
-            sliderPager.setCurrentItem(next, true);
-            sliderHandler.postDelayed(this, SLIDER_INTERVAL_MS);
+            int next = (promoPager.getCurrentItem() + 1) % adapter.getItemCount();
+            promoPager.setCurrentItem(next, true);
+            promoHandler.postDelayed(this, PROMO_INTERVAL_MS);
         }
     };
 
@@ -73,15 +73,14 @@ public class HomeFragment extends Fragment {
         notificationDot = view.findViewById(R.id.notificationDot);
         GridLayout serviceGrid = view.findViewById(R.id.serviceGrid);
         LinearLayout coursesContainer = view.findViewById(R.id.coursesContainer);
-        LinearLayout promotionsContainer = view.findViewById(R.id.promotionsContainer);
-        View sliderSection = view.findViewById(R.id.sliderSection);
-        sliderPager = view.findViewById(R.id.sliderPager);
-        LinearLayout sliderDots = view.findViewById(R.id.sliderDots);
+        View promoSection = view.findViewById(R.id.promoSection);
+        promoPager = view.findViewById(R.id.promoPager);
+        LinearLayout promoDots = view.findViewById(R.id.promoDots);
 
         addServiceItem(serviceGrid, R.drawable.ic_service_academy, getString(R.string.academy_details), v ->
-                DetailActivity.open(requireContext(), getString(R.string.academy_details), "/company"));
+                AboutActivity.open(requireContext()));
         addServiceItem(serviceGrid, R.drawable.ic_service_about, getString(R.string.about_us), v ->
-                DetailActivity.open(requireContext(), getString(R.string.about_us), "/company"));
+                AboutActivity.open(requireContext()));
         addServiceItem(serviceGrid, R.drawable.ic_service_gallery, getString(R.string.gallery), v ->
                 activity.selectBottomNav(R.id.nav_gallery));
         addServiceItem(serviceGrid, R.drawable.ic_service_more, getString(R.string.more), v -> showMoreSheet(activity));
@@ -90,49 +89,58 @@ public class HomeFragment extends Fragment {
                 activity.selectBottomNav(R.id.nav_notices));
         view.findViewById(R.id.btnWhatsapp).setOnClickListener(v -> activity.openWhatsapp());
 
-        loadHome(view, coursesContainer, promotionsContainer, sliderSection, sliderDots);
+        loadHome(view, coursesContainer, promoSection, promoDots);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if (sliderPager != null) {
-            sliderPager.post(this::startSliderAutoScroll);
+        if (promoPager != null) {
+            promoPager.post(this::startPromoAutoScroll);
+        }
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).refreshUnreadNoticesBadge();
+        }
+    }
+
+    public void updateNotificationDot(int count) {
+        if (notificationDot != null) {
+            notificationDot.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
         }
     }
 
     @Override
     public void onPause() {
-        stopSliderAutoScroll();
+        stopPromoAutoScroll();
         super.onPause();
     }
 
     @Override
     public void onDestroyView() {
-        stopSliderAutoScroll();
-        if (sliderPager != null && sliderPageCallback != null) {
-            sliderPager.unregisterOnPageChangeCallback(sliderPageCallback);
+        stopPromoAutoScroll();
+        if (promoPager != null && promoPageCallback != null) {
+            promoPager.unregisterOnPageChangeCallback(promoPageCallback);
         }
-        sliderPageCallback = null;
-        sliderPager = null;
+        promoPageCallback = null;
+        promoPager = null;
         super.onDestroyView();
     }
 
-    private void startSliderAutoScroll() {
-        stopSliderAutoScroll();
-        if (sliderPager == null || sliderPager.getAdapter() == null) {
+    private void startPromoAutoScroll() {
+        stopPromoAutoScroll();
+        if (promoPager == null || promoPager.getAdapter() == null) {
             return;
         }
-        if (sliderPager.getAdapter().getItemCount() <= 1) {
+        if (promoPager.getAdapter().getItemCount() <= 1) {
             return;
         }
-        sliderAutoScrollEnabled = true;
-        sliderHandler.postDelayed(sliderAutoTick, SLIDER_INTERVAL_MS);
+        promoAutoScrollEnabled = true;
+        promoHandler.postDelayed(promoAutoTick, PROMO_INTERVAL_MS);
     }
 
-    private void stopSliderAutoScroll() {
-        sliderAutoScrollEnabled = false;
-        sliderHandler.removeCallbacks(sliderAutoTick);
+    private void stopPromoAutoScroll() {
+        promoAutoScrollEnabled = false;
+        promoHandler.removeCallbacks(promoAutoTick);
     }
 
     private void addServiceItem(GridLayout grid, int iconRes, String label, View.OnClickListener click) {
@@ -167,7 +175,7 @@ public class HomeFragment extends Fragment {
             dialog.dismiss();
             activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry));
         });
-        addServiceItem(moreGrid, R.drawable.ic_nav_explore, getString(R.string.materials), v -> {
+        addServiceItem(moreGrid, R.drawable.ic_nav_materials, getString(R.string.materials), v -> {
             dialog.dismiss();
             activity.selectBottomNav(R.id.nav_explore);
         });
@@ -183,8 +191,7 @@ public class HomeFragment extends Fragment {
         dialog.show();
     }
 
-    private void loadHome(View root, LinearLayout coursesContainer, LinearLayout promotionsContainer,
-                          View sliderSection, LinearLayout sliderDots) {
+    private void loadHome(View root, LinearLayout coursesContainer, View promoSection, LinearLayout promoDots) {
         progressBar.setVisibility(View.VISIBLE);
         api.get("/home", true, new ApiClient.Callback() {
             @Override
@@ -205,9 +212,8 @@ public class HomeFragment extends Fragment {
                     }
                     feeBanner.setVisibility(json.optBoolean("has_pending_fees") ? View.VISIBLE : View.GONE);
                     notificationDot.setVisibility(json.optInt("notices_count") > 0 ? View.VISIBLE : View.GONE);
-                    bindSliders(sliderSection, sliderDots, json.optJSONArray("sliders"));
                     bindCourses(coursesContainer, json.optJSONArray("events"));
-                    bindPromotions(promotionsContainer, json.optJSONArray("promotions"));
+                    bindPromotions(promoSection, promoDots, json.optJSONArray("promotions"));
                 });
             }
 
@@ -222,11 +228,11 @@ public class HomeFragment extends Fragment {
         });
     }
 
-    private void bindSliders(View sliderSection, LinearLayout dotsContainer, JSONArray rows) {
-        if (sliderSection == null || sliderPager == null) {
+    private void bindPromotions(View promoSection, LinearLayout dotsContainer, JSONArray rows) {
+        if (promoSection == null || promoPager == null) {
             return;
         }
-        stopSliderAutoScroll();
+        stopPromoAutoScroll();
         List<JSONObject> items = new ArrayList<>();
         String baseUrl = session.getBaseUrl();
         if (rows != null) {
@@ -238,17 +244,17 @@ public class HomeFragment extends Fragment {
             }
         }
         if (items.isEmpty()) {
-            sliderSection.setVisibility(View.GONE);
+            promoSection.setVisibility(View.GONE);
             return;
         }
-        sliderSection.setVisibility(View.VISIBLE);
-        sliderPager.setOffscreenPageLimit(Math.min(items.size() - 1, 3));
-        sliderPager.setAdapter(new SliderAdapter(items, baseUrl));
-        bindSliderDots(sliderPager, dotsContainer, items.size());
-        sliderPager.post(this::startSliderAutoScroll);
+        promoSection.setVisibility(View.VISIBLE);
+        promoPager.setOffscreenPageLimit(Math.min(items.size() - 1, 3));
+        promoPager.setAdapter(new PromoAdapter(items, baseUrl));
+        bindPromoDots(promoPager, dotsContainer, items.size());
+        promoPager.post(this::startPromoAutoScroll);
     }
 
-    private void bindSliderDots(ViewPager2 pager, LinearLayout dotsContainer, int count) {
+    private void bindPromoDots(ViewPager2 pager, LinearLayout dotsContainer, int count) {
         if (dotsContainer == null) {
             return;
         }
@@ -270,31 +276,31 @@ public class HomeFragment extends Fragment {
             dots.add(dot);
             dotsContainer.addView(dot);
         }
-        updateSliderDot(dots, 0);
-        if (sliderPageCallback != null) {
-            pager.unregisterOnPageChangeCallback(sliderPageCallback);
+        updatePromoDot(dots, 0);
+        if (promoPageCallback != null) {
+            pager.unregisterOnPageChangeCallback(promoPageCallback);
         }
-        sliderPageCallback = new ViewPager2.OnPageChangeCallback() {
+        promoPageCallback = new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
-                updateSliderDot(dots, position);
+                updatePromoDot(dots, position);
             }
 
             @Override
             public void onPageScrollStateChanged(int state) {
                 if (state == ViewPager2.SCROLL_STATE_DRAGGING) {
-                    sliderUserDragging = true;
-                    stopSliderAutoScroll();
-                } else if (state == ViewPager2.SCROLL_STATE_IDLE && sliderUserDragging) {
-                    sliderUserDragging = false;
-                    startSliderAutoScroll();
+                    promoUserDragging = true;
+                    stopPromoAutoScroll();
+                } else if (state == ViewPager2.SCROLL_STATE_IDLE && promoUserDragging) {
+                    promoUserDragging = false;
+                    startPromoAutoScroll();
                 }
             }
         };
-        pager.registerOnPageChangeCallback(sliderPageCallback);
+        pager.registerOnPageChangeCallback(promoPageCallback);
     }
 
-    private void updateSliderDot(List<View> dots, int selected) {
+    private void updatePromoDot(List<View> dots, int selected) {
         for (int i = 0; i < dots.size(); i++) {
             View dot = dots.get(i);
             dot.setAlpha(i == selected ? 1f : 0.35f);
@@ -313,33 +319,24 @@ public class HomeFragment extends Fragment {
             View card = inflater.inflate(R.layout.item_course_card, container, false);
             TextView title = card.findViewById(R.id.courseTitle);
             ImageView image = card.findViewById(R.id.courseImage);
-            title.setText(row.optString("name", row.optString("title", "Course")));
+            String courseName = row.optString("name", row.optString("title", "Course"));
+            title.setText(courseName);
+            int eventId = row.optInt("id", 0);
             UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(session.getBaseUrl(), row), image, 12);
+            card.setOnClickListener(v -> {
+                if (eventId > 0) {
+                    CourseDetailActivity.open(requireContext(), eventId, courseName);
+                }
+            });
             container.addView(card);
         }
     }
 
-    private void bindPromotions(LinearLayout container, JSONArray rows) {
-        container.removeAllViews();
-        if (rows == null) return;
-        LayoutInflater inflater = LayoutInflater.from(requireContext());
-        for (int i = 0; i < rows.length(); i++) {
-            JSONObject row = rows.optJSONObject(i);
-            if (row == null) continue;
-            View card = inflater.inflate(R.layout.item_promo_card, container, false);
-            TextView title = card.findViewById(R.id.promoTitle);
-            ImageView image = card.findViewById(R.id.promoImage);
-            title.setText(row.optString("name", "Promotion"));
-            UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(session.getBaseUrl(), row), image, 12);
-            container.addView(card);
-        }
-    }
-
-    private static class SliderAdapter extends RecyclerView.Adapter<SliderAdapter.Holder> {
+    private static class PromoAdapter extends RecyclerView.Adapter<PromoAdapter.Holder> {
         private final List<JSONObject> items;
         private final String baseUrl;
 
-        SliderAdapter(List<JSONObject> items, String baseUrl) {
+        PromoAdapter(List<JSONObject> items, String baseUrl) {
             this.items = items;
             this.baseUrl = baseUrl;
         }

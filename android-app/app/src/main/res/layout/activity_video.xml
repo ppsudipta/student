@@ -5,6 +5,7 @@
     android:layout_height="match_parent">
 
     <LinearLayout
+        android:id="@+id/videoContent"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
@@ -22,6 +23,13 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/videoFullscreenContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:visibility="gone" />
 
     <ProgressBar
         android:id="@+id/videoProgress"

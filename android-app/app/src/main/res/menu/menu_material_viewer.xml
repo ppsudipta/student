@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_download"
-        android:icon="@android:drawable/stat_sys_download"
+        android:icon="@drawable/ic_download"
         android:title="@string/download_material"
+        app:iconTint="@android:color/white"
         app:showAsAction="ifRoom" />
 </menu>

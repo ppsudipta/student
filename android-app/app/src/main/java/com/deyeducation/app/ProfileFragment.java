@@ -1,35 +1,46 @@
 package com.deyeducation.app;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
 
 import org.json.JSONObject;
 
-import java.util.Iterator;
+import java.io.InputStream;
 
 public class ProfileFragment extends Fragment {
     private ApiClient api;
     private SessionManager session;
     private ProgressBar progressBar;
-    private LinearLayout detailsContainer;
+    private ImageView profileImage;
+    private ActivityResultLauncher<String> pickImageLauncher;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        pickImageLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                this::uploadProfilePhoto);
+    }
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_profile, container, false);
     }
 
@@ -41,8 +52,34 @@ public class ProfileFragment extends Fragment {
         session = activity.getSession();
 
         progressBar = view.findViewById(R.id.profileProgress);
-        detailsContainer = view.findViewById(R.id.profileDetails);
+        profileImage = view.findViewById(R.id.profileImage);
         MaterialButton logout = view.findViewById(R.id.btnLogout);
+
+        profileImage.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
+
+        setupMenuRow(view.findViewById(R.id.menuAccountDetails), R.drawable.ic_edit_profile,
+                getString(R.string.my_account_details),
+                v -> ProfileAccountActivity.open(requireContext()));
+
+        view.findViewById(R.id.btnPaymentMethod).setOnClickListener(v ->
+                activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees)));
+
+        setupMenuRow(view.findViewById(R.id.menuChangePassword), R.drawable.ic_lock,
+                getString(R.string.change_password),
+                v -> startActivity(new Intent(requireContext(), ChangePasswordActivity.class)));
+
+        setupMenuRow(view.findViewById(R.id.menuNotifications), R.drawable.ic_bell,
+                getString(R.string.notifications_menu),
+                v -> activity.selectBottomNav(R.id.nav_notices));
+
+        setupMenuRow(view.findViewById(R.id.menuProgressReport), R.drawable.ic_progress,
+                getString(R.string.progress_report),
+                v -> activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_PROGRESS),
+                        getString(R.string.progress_report)));
+
+        setupMenuRow(view.findViewById(R.id.menuLegal), R.drawable.ic_shield,
+                getString(R.string.legal_policies),
+                v -> LegalPoliciesActivity.open(requireContext()));
 
         logout.setOnClickListener(v -> {
             session.clear();
@@ -53,79 +90,97 @@ public class ProfileFragment extends Fragment {
         loadProfile(view);
     }
 
+    private void setupMenuRow(View row, int iconRes, String label, View.OnClickListener click) {
+        ((ImageView) row.findViewById(R.id.menuIcon)).setImageResource(iconRes);
+        ((TextView) row.findViewById(R.id.menuLabel)).setText(label);
+        row.setOnClickListener(click);
+    }
+
+    private void uploadProfilePhoto(Uri uri) {
+        if (uri == null || !isAdded()) {
+            return;
+        }
+        progressBar.setVisibility(View.VISIBLE);
+        try (InputStream input = requireContext().getContentResolver().openInputStream(uri)) {
+            if (input == null) {
+                progressBar.setVisibility(View.GONE);
+                UiUtils.toast(requireContext(), getString(R.string.network_error));
+                return;
+            }
+            byte[] bytes = ApiClient.readAllBytes(input);
+            api.postMultipart("/me/photo", null, "image", bytes, "profile.jpg", "image/jpeg", true,
+                    new ApiClient.Callback() {
+                        @Override
+                        public void onSuccess(JSONObject json) {
+                            if (!isAdded()) {
+                                return;
+                            }
+                            requireActivity().runOnUiThread(() -> {
+                                progressBar.setVisibility(View.GONE);
+                                UiUtils.toast(requireContext(), getString(R.string.photo_updated));
+                                JSONObject student = json.optJSONObject("student");
+                                if (student != null) {
+                                    UiUtils.loadImage(requireContext(),
+                                            UrlHelper.imageFromJson(session.getBaseUrl(), student),
+                                            profileImage, 36);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            if (!isAdded()) {
+                                return;
+                            }
+                            requireActivity().runOnUiThread(() -> {
+                                progressBar.setVisibility(View.GONE);
+                                UiUtils.toast(requireContext(), message);
+                            });
+                        }
+                    });
+        } catch (Exception e) {
+            progressBar.setVisibility(View.GONE);
+            UiUtils.toast(requireContext(), e.getMessage());
+        }
+    }
+
     private void loadProfile(View root) {
         progressBar.setVisibility(View.VISIBLE);
         api.get("/me", true, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
-                if (!isAdded()) return;
+                if (!isAdded()) {
+                    return;
+                }
                 requireActivity().runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
                     JSONObject student = json.optJSONObject("student");
-                    if (student == null) return;
+                    if (student == null) {
+                        return;
+                    }
 
                     TextView name = root.findViewById(R.id.profileName);
-                    TextView classInfo = root.findViewById(R.id.profileClass);
-                    ImageView image = root.findViewById(R.id.profileImage);
+                    TextView location = root.findViewById(R.id.profileLocation);
 
                     name.setText(student.optString("name"));
-                    classInfo.setText(student.optString("class") + " · " + student.optString("session"));
-                    UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(session.getBaseUrl(), student), image, 36);
-
-                    detailsContainer.removeAllViews();
-                    addDetailRow("Mobile", student.optString("mobile_number"));
-                    addDetailRow("Email", student.optString("email"));
-                    addDetailRow("Address", student.optString("address"));
-                    addDetailRow("Course", student.optString("course"));
-                    addDetailRow("Registration", student.optString("registration_code"));
-                    addDetailRow("Total Fees", student.optString("total_fees"));
-                    addDetailRow("Paid Fees", student.optString("paid_fees"));
-                    addDetailRow("Due Fees", student.optString("due_fees"));
-                    addDetailRow("Status", student.optString("status"));
+                    String address = student.optString("address");
+                    location.setText(address.isEmpty() || "null".equals(address)
+                            ? student.optString("class") : address);
+                    UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(session.getBaseUrl(), student), profileImage, 36);
+                    session.setStudentName(student.optString("name"));
                 });
             }
 
             @Override
             public void onError(String message) {
-                if (!isAdded()) return;
+                if (!isAdded()) {
+                    return;
+                }
                 requireActivity().runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
                     UiUtils.toast(requireContext(), message);
                 });
             }
         });
-    }
-
-    private void addDetailRow(String label, String value) {
-        MaterialCardView card = new MaterialCardView(requireContext());
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = UiUtils.dp(requireContext(), 10);
-        card.setLayoutParams(lp);
-        card.setCardBackgroundColor(getResources().getColor(R.color.surface, null));
-        card.setRadius(UiUtils.dp(requireContext(), 12));
-        card.setStrokeColor(getResources().getColor(R.color.border, null));
-        card.setStrokeWidth(1);
-        card.setCardElevation(0f);
-
-        LinearLayout inner = new LinearLayout(requireContext());
-        inner.setOrientation(LinearLayout.VERTICAL);
-        int pad = UiUtils.dp(requireContext(), 14);
-        inner.setPadding(pad, pad, pad, pad);
-
-        TextView labelView = new TextView(requireContext());
-        labelView.setText(label);
-        labelView.setTextColor(getResources().getColor(R.color.secondary_text, null));
-        labelView.setTextSize(12f);
-
-        TextView valueView = new TextView(requireContext());
-        valueView.setText(value == null || value.isEmpty() ? "Not provided" : value);
-        valueView.setTextColor(getResources().getColor(R.color.primary_text, null));
-        valueView.setTextSize(14f);
-
-        inner.addView(labelView);
-        inner.addView(valueView);
-        card.addView(inner);
-        detailsContainer.addView(card);
     }
 }

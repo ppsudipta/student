@@ -51,4 +51,10 @@
         <item name="android:textSize">14sp</item>
         <item name="android:textColor">@color/primary_text</item>
     </style>
+
+    <style name="TextProfileSection">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/secondary_text</item>
+        <item name="android:layout_marginBottom">8dp</item>
+    </style>
 </resources>

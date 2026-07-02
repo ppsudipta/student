@@ -5,85 +5,179 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
-    android:padding="16dp">
+    android:clipToPadding="false"
+    android:paddingHorizontal="@dimen/screen_padding"
+    android:paddingTop="20dp"
+    android:paddingBottom="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/border"
-            app:strokeWidth="1dp">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="8dp">
+
+            <ImageView
+                android:id="@+id/profileImage"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/bg_image_rounded"
+                android:contentDescription="@string/profile"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_nav_profile" />
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-                <ImageView
-                    android:id="@+id/profileImage"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:background="@drawable/bg_service_circle"
-                    android:contentDescription="@string/profile"
-                    android:padding="12dp"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/ic_nav_profile" />
+                <TextView
+                    android:id="@+id/profileName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/primary_text"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:layout_marginTop="6dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_location"
+                        app:tint="@color/secondary_text" />
 
                     <TextView
-                        android:id="@+id/profileName"
+                        android:id="@+id/profileLocation"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/primary_text"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/profileClass"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginStart="4dp"
+                        android:ellipsize="end"
+                        android:maxLines="2"
                         android:textColor="@color/secondary_text"
                         android:textSize="13sp" />
                 </LinearLayout>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <TextView
+            style="@style/TextProfileSection"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/personal_info" />
+
+        <include
+            android:id="@+id/menuAccountDetails"
+            layout="@layout/item_profile_menu_row" />
 
         <LinearLayout
-            android:id="@+id/profileDetails"
+            android:id="@+id/btnPaymentMethod"
             android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_profile_payment"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_wallet" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:text="@string/payment_method"
+                android:textColor="@android:color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_chevron_right"
+                app:tint="@android:color/white" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/TextProfileSection"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="vertical" />
+            android:layout_marginTop="20dp"
+            android:text="@string/security" />
+
+        <include
+            android:id="@+id/menuChangePassword"
+            layout="@layout/item_profile_menu_row" />
+
+        <include
+            android:id="@+id/menuNotifications"
+            layout="@layout/item_profile_menu_row" />
+
+        <TextView
+            style="@style/TextProfileSection"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/general" />
+
+        <include
+            android:id="@+id/menuProgressReport"
+            layout="@layout/item_profile_menu_row" />
+
+        <TextView
+            style="@style/TextProfileSection"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/about_section" />
+
+        <include
+            android:id="@+id/menuLegal"
+            layout="@layout/item_profile_menu_row" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogout"
-            style="@style/Widget.DeyEducation.Button.Primary"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:backgroundTint="@color/alert_text"
-            android:text="@string/logout" />
+            android:layout_height="52dp"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/bg_logout_outline"
+            android:text="@string/logout"
+            android:textAllCaps="false"
+            android:textColor="@color/primary"
+            android:textSize="15sp"
+            app:backgroundTint="@android:color/transparent"
+            app:cornerRadius="28dp"
+            app:rippleColor="@color/primary_light"
+            app:strokeColor="@color/primary"
+            app:strokeWidth="1.5dp" />
 
         <ProgressBar
             android:id="@+id/profileProgress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="24dp" />
+            android:layout_marginTop="24dp"
+            android:visibility="gone" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

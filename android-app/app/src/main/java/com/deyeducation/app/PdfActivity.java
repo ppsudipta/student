@@ -1,22 +1,18 @@
 package com.deyeducation.app;
 
-import android.graphics.Bitmap;
-import android.graphics.pdf.PdfRenderer;
 import android.os.Bundle;
-import android.os.ParcelFileDescriptor;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.widget.NestedScrollView;
 
-import com.github.chrisbanes.photoview.PhotoView;
+import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.util.FitPolicy;
 import com.google.android.material.appbar.MaterialToolbar;
 
 import java.io.BufferedInputStream;
@@ -38,13 +34,11 @@ public class PdfActivity extends AppCompatActivity {
 
     private static final ExecutorService IO = Executors.newSingleThreadExecutor();
 
+    private MaterialToolbar toolbar;
+    private PDFView pdfView;
     private ProgressBar progressBar;
     private TextView errorView;
-    private NestedScrollView scrollView;
-    private LinearLayout pagesContainer;
-    private MaterialToolbar toolbar;
-    private ParcelFileDescriptor fileDescriptor;
-    private PdfRenderer pdfRenderer;
+
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
     private File cachedFile;
     private boolean canDownload;
@@ -69,17 +63,13 @@ public class PdfActivity extends AppCompatActivity {
         toolbar.setTitle(title == null || title.isEmpty() ? getString(R.string.read_material) : title);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        if (!canDownload) {
-            toolbar.setSubtitle(getString(R.string.material_view_only));
-        }
         toolbar.inflateMenu(R.menu.menu_material_viewer);
         toolbar.setOnMenuItemClickListener(this::onToolbarMenuClick);
         updateDownloadMenu(toolbar.getMenu());
 
+        pdfView = findViewById(R.id.pdfView);
         progressBar = findViewById(R.id.pdfProgress);
         errorView = findViewById(R.id.pdfError);
-        scrollView = findViewById(R.id.pdfScroll);
-        pagesContainer = findViewById(R.id.pdfPagesContainer);
 
         if (url == null || url.isEmpty()) {
             showError(getString(R.string.pdf_open_failed));
@@ -121,8 +111,7 @@ public class PdfActivity extends AppCompatActivity {
     private void loadPdf(String url) {
         progressBar.setVisibility(View.VISIBLE);
         errorView.setVisibility(View.GONE);
-        scrollView.setVisibility(View.GONE);
-        pagesContainer.removeAllViews();
+        pdfView.setVisibility(View.GONE);
 
         SessionManager session = new SessionManager(this);
         IO.execute(() -> {
@@ -132,11 +121,47 @@ public class PdfActivity extends AppCompatActivity {
                 if (destroyed.get()) {
                     return;
                 }
-                runOnUiThread(() -> openRenderer(file));
+                runOnUiThread(() -> displayPdf(file));
             } catch (Exception e) {
                 if (!destroyed.get()) {
                     runOnUiThread(() -> showError(getString(R.string.pdf_open_failed)));
                 }
+            }
+        });
+    }
+
+    private void displayPdf(File file) {
+        progressBar.setVisibility(View.GONE);
+        pdfView.setVisibility(View.VISIBLE);
+        pdfView.setBackgroundColor(0xFFFFFFFF);
+        pdfView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        pdfView.useBestQuality(true);
+        pdfView.post(() -> {
+            if (destroyed.get()) {
+                return;
+            }
+            try {
+                pdfView.fromFile(file)
+                        .defaultPage(0)
+                        .enableSwipe(true)
+                        .swipeHorizontal(false)
+                        .enableDoubletap(true)
+                        .enableAntialiasing(false)
+                        .autoSpacing(false)
+                        .fitEachPage(true)
+                        .pageFitPolicy(FitPolicy.WIDTH)
+                        .spacing(8)
+                        .onLoad(pageCount -> {
+                            String subtitle = canDownload
+                                    ? getString(R.string.pdf_scroll_hint, pageCount)
+                                    : getString(R.string.material_view_only);
+                            toolbar.setSubtitle(subtitle);
+                            pdfView.fitToWidth(0);
+                        })
+                        .onError(t -> showError(getString(R.string.pdf_open_failed)))
+                        .load();
+            } catch (Throwable t) {
+                showError(getString(R.string.pdf_open_failed));
             }
         });
     }
@@ -147,10 +172,10 @@ public class PdfActivity extends AppCompatActivity {
             throw new IllegalStateException("Cache unavailable");
         }
         File target = new File(dir, hash(urlString) + ".pdf");
-        if (target.exists() && target.length() > 0) {
-            if (looksLikePdf(target)) {
-                return target;
-            }
+        if (target.exists() && target.length() > 0 && looksLikePdf(target)) {
+            return target;
+        }
+        if (target.exists()) {
             target.delete();
         }
 
@@ -158,8 +183,8 @@ public class PdfActivity extends AppCompatActivity {
         try {
             conn = (HttpURLConnection) new URL(urlString).openConnection();
             conn.setConnectTimeout(20000);
-            conn.setReadTimeout(60000);
-            conn.setRequestProperty("Accept", "application/pdf");
+            conn.setReadTimeout(120000);
+            conn.setRequestProperty("Accept", "application/pdf,*/*");
             String token = session.getToken();
             if (token != null && !token.isEmpty()) {
                 conn.setRequestProperty("Authorization", "Bearer " + token);
@@ -170,7 +195,7 @@ public class PdfActivity extends AppCompatActivity {
             }
             try (InputStream in = new BufferedInputStream(conn.getInputStream());
                  FileOutputStream out = new FileOutputStream(target)) {
-                byte[] buffer = new byte[8192];
+                byte[] buffer = new byte[16384];
                 int read;
                 while ((read = in.read(buffer)) != -1) {
                     out.write(buffer, 0, read);
@@ -188,80 +213,9 @@ public class PdfActivity extends AppCompatActivity {
         return target;
     }
 
-    private void openRenderer(File file) {
-        try {
-            fileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
-            pdfRenderer = new PdfRenderer(fileDescriptor);
-            int pageCount = pdfRenderer.getPageCount();
-            if (pageCount == 0) {
-                showError(getString(R.string.pdf_open_failed));
-                return;
-            }
-            int pageWidth = getResources().getDisplayMetrics().widthPixels - UiUtils.dp(this, 16);
-            scrollView.setVisibility(View.VISIBLE);
-            progressBar.setVisibility(View.GONE);
-            toolbar.setSubtitle(canDownload
-                    ? getString(R.string.pdf_scroll_hint, pageCount)
-                    : getString(R.string.material_view_only));
-
-            IO.execute(() -> renderPages(pageWidth, pageCount));
-        } catch (Exception e) {
-            showError(getString(R.string.pdf_open_failed));
-        }
-    }
-
-    private void renderPages(int pageWidth, int pageCount) {
-        for (int i = 0; i < pageCount; i++) {
-            if (destroyed.get()) {
-                return;
-            }
-            Bitmap bitmap = renderPageBitmap(i, pageWidth);
-            if (bitmap == null || destroyed.get()) {
-                if (bitmap != null) {
-                    bitmap.recycle();
-                }
-                return;
-            }
-            final int pageIndex = i;
-            runOnUiThread(() -> addPageView(bitmap, pageIndex + 1, pageCount));
-        }
-    }
-
-    private Bitmap renderPageBitmap(int index, int pageWidth) {
-        synchronized (this) {
-            if (pdfRenderer == null) {
-                return null;
-            }
-            PdfRenderer.Page page = pdfRenderer.openPage(index);
-            int height = (int) (page.getHeight() * ((float) pageWidth / page.getWidth()));
-            Bitmap bitmap = Bitmap.createBitmap(pageWidth, height, Bitmap.Config.ARGB_8888);
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
-            page.close();
-            return bitmap;
-        }
-    }
-
-    private void addPageView(Bitmap bitmap, int pageNumber, int pageCount) {
-        if (destroyed.get()) {
-            bitmap.recycle();
-            return;
-        }
-        PhotoView photoView = new PhotoView(this);
-        photoView.setAdjustViewBounds(true);
-        photoView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-        photoView.setLongClickable(false);
-        photoView.setImageBitmap(bitmap);
-        photoView.setContentDescription(getString(R.string.pdf_page_label, pageNumber, pageCount));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = UiUtils.dp(this, 8);
-        pagesContainer.addView(photoView, lp);
-    }
-
     private void showError(String message) {
         progressBar.setVisibility(View.GONE);
-        scrollView.setVisibility(View.GONE);
+        pdfView.setVisibility(View.GONE);
         errorView.setText(message);
         errorView.setVisibility(View.VISIBLE);
     }
@@ -292,27 +246,9 @@ public class PdfActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         destroyed.set(true);
-        closeRenderer();
-        pagesContainer.removeAllViews();
-        super.onDestroy();
-    }
-
-    private void closeRenderer() {
-        synchronized (this) {
-            if (pdfRenderer != null) {
-                try {
-                    pdfRenderer.close();
-                } catch (Exception ignored) {
-                }
-                pdfRenderer = null;
-            }
-            if (fileDescriptor != null) {
-                try {
-                    fileDescriptor.close();
-                } catch (Exception ignored) {
-                }
-                fileDescriptor = null;
-            }
+        if (pdfView != null) {
+            pdfView.recycle();
         }
+        super.onDestroy();
     }
 }

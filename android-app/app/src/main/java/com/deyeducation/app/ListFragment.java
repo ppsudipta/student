@@ -1,21 +1,28 @@
 package com.deyeducation.app;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.tabs.TabLayout;
 
 import org.json.JSONArray;
@@ -34,21 +41,55 @@ public class ListFragment extends Fragment {
     public static final String TYPE_HOMEWORK = "homework";
     public static final String TYPE_ENQUIRIES = "enquiries";
     public static final String TYPE_COURSES = "courses";
+    public static final String TYPE_PROGRESS = "progress";
 
     private static final int MATERIAL_FILTER_ALL = 0;
     private static final int MATERIAL_FILTER_DOCUMENT = 1;
     private static final int MATERIAL_FILTER_VIDEO = 2;
+
+    private static final int NOTICE_FILTER_ALL = 0;
+    private static final int NOTICE_FILTER_UNREAD = 1;
+
+    private static final int ITEM_DEFAULT = 0;
+    private static final int ITEM_NOTICE = 1;
 
     private ApiClient api;
     private SessionManager session;
     private String type;
     private SwipeRefreshLayout swipeRefresh;
     private ProgressBar progressBar;
-    private TextView emptyView;
+    private LinearLayout emptyView;
+    private TextView emptyText;
     private TabLayout materialTabs;
     private ListAdapter adapter;
     private final List<ListItem> allMaterialItems = new ArrayList<>();
+    private final List<ListItem> allNoticeItems = new ArrayList<>();
     private int materialFilter = MATERIAL_FILTER_ALL;
+    private int noticeFilter = NOTICE_FILTER_ALL;
+    private ActivityResultLauncher<Intent> noticeLauncher;
+    private ActivityResultLauncher<Intent> enquiryLauncher;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        noticeLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK && isAdded()) {
+                        loadData();
+                        if (requireActivity() instanceof MainActivity) {
+                            ((MainActivity) requireActivity()).refreshUnreadNoticesBadge();
+                        }
+                    }
+                });
+        enquiryLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK && isAdded()) {
+                        loadData();
+                    }
+                });
+    }
 
     public static ListFragment newInstance(String type) {
         ListFragment fragment = new ListFragment();
@@ -75,6 +116,7 @@ public class ListFragment extends Fragment {
         swipeRefresh = view.findViewById(R.id.swipeRefresh);
         progressBar = view.findViewById(R.id.listProgress);
         emptyView = view.findViewById(R.id.emptyView);
+        emptyText = view.findViewById(R.id.emptyText);
         materialTabs = view.findViewById(R.id.materialTabs);
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
         adapter = new ListAdapter();
@@ -84,6 +126,15 @@ public class ListFragment extends Fragment {
 
         if (TYPE_MATERIALS.equals(type)) {
             setupMaterialTabs();
+        } else if (TYPE_NOTICES.equals(type)) {
+            setupNoticeTabs();
+        }
+
+        View fab = view.findViewById(R.id.fabAdd);
+        if (TYPE_ENQUIRIES.equals(type) && fab != null) {
+            fab.setVisibility(View.VISIBLE);
+            fab.setOnClickListener(v -> enquiryLauncher.launch(
+                    new Intent(requireContext(), CreateEnquiryActivity.class)));
         }
 
         swipeRefresh.setColorSchemeResources(R.color.primary);
@@ -96,9 +147,15 @@ public class ListFragment extends Fragment {
     private void setupMaterialTabs() {
         materialTabs.setVisibility(View.VISIBLE);
         materialTabs.removeAllTabs();
-        materialTabs.addTab(materialTabs.newTab().setText(R.string.materials_tab_all));
-        materialTabs.addTab(materialTabs.newTab().setText(R.string.materials_tab_documents));
-        materialTabs.addTab(materialTabs.newTab().setText(R.string.materials_tab_videos));
+        materialTabs.addTab(materialTabs.newTab()
+                .setText(R.string.materials_tab_all)
+                .setIcon(R.drawable.ic_tab_all));
+        materialTabs.addTab(materialTabs.newTab()
+                .setText(R.string.materials_tab_documents)
+                .setIcon(R.drawable.ic_tab_document));
+        materialTabs.addTab(materialTabs.newTab()
+                .setText(R.string.materials_tab_videos)
+                .setIcon(R.drawable.ic_tab_video));
         materialTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
@@ -114,6 +171,47 @@ public class ListFragment extends Fragment {
             public void onTabReselected(TabLayout.Tab tab) {
             }
         });
+    }
+
+    private void setupNoticeTabs() {
+        materialTabs.setVisibility(View.VISIBLE);
+        materialTabs.removeAllTabs();
+        materialTabs.addTab(materialTabs.newTab()
+                .setText(R.string.notices_tab_all)
+                .setIcon(R.drawable.ic_nav_notices));
+        materialTabs.addTab(materialTabs.newTab()
+                .setText(R.string.notices_tab_unread)
+                .setIcon(R.drawable.ic_bell));
+        materialTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                noticeFilter = tab.getPosition();
+                applyNoticeFilter();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+            }
+        });
+    }
+
+    private void applyNoticeFilter() {
+        List<ListItem> filtered = new ArrayList<>();
+        for (ListItem item : allNoticeItems) {
+            if (noticeFilter == NOTICE_FILTER_UNREAD && item.seen) {
+                continue;
+            }
+            filtered.add(item);
+        }
+        adapter.setItems(filtered);
+        emptyView.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+        emptyText.setText(noticeFilter == NOTICE_FILTER_UNREAD
+                ? getString(R.string.notice_no_unread)
+                : getString(R.string.no_records));
     }
 
     private void applyMaterialFilter() {
@@ -158,6 +256,14 @@ public class ListFragment extends Fragment {
                         allMaterialItems.clear();
                         allMaterialItems.addAll(items);
                         applyMaterialFilter();
+                    } else if (TYPE_NOTICES.equals(type)) {
+                        allNoticeItems.clear();
+                        allNoticeItems.addAll(items);
+                        applyNoticeFilter();
+                        if (requireActivity() instanceof MainActivity) {
+                            ((MainActivity) requireActivity()).updateNoticesBadge(
+                                    json.optInt("unread_count", countUnread(items)));
+                        }
                     } else {
                         adapter.setItems(items);
                         emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
@@ -190,7 +296,9 @@ public class ListFragment extends Fragment {
             case TYPE_ENQUIRIES:
                 return "/enquiries?per_page=30";
             case TYPE_COURSES:
-                return "/courses?per_page=30";
+                return "/events?per_page=30";
+            case TYPE_PROGRESS:
+                return "/progress?per_page=30";
             default:
                 return "/materials?per_page=30";
         }
@@ -211,6 +319,12 @@ public class ListFragment extends Fragment {
         JSONArray rows = extractRootArray(json);
         if (TYPE_MATERIALS.equals(type)) {
             appendMaterialRows(items, rows);
+        } else if (TYPE_NOTICES.equals(type)) {
+            appendNoticeRows(items, rows);
+        } else if (TYPE_ENQUIRIES.equals(type)) {
+            appendEnquiryRows(items, rows);
+        } else if (TYPE_PROGRESS.equals(type)) {
+            appendProgressRows(items, rows);
         } else {
             appendRows(items, rows, titleKeyForType(), subtitleKeyForType());
         }
@@ -243,6 +357,27 @@ public class ListFragment extends Fragment {
             ListItem item = new ListItem();
             item.title = first(row, titleKey, "name", "title", "subject", "notice_content");
             item.subtitle = first(row, subtitleKey, "material_description", "message", "description", "content");
+            item.eventId = row.optInt("id", 0);
+            item.raw = row;
+            items.add(item);
+        }
+    }
+
+    private void appendEnquiryRows(List<ListItem> items, JSONArray rows) {
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            if (row == null) {
+                continue;
+            }
+            ListItem item = new ListItem();
+            item.enquiryId = row.optInt("id", 0);
+            item.title = row.optString("subject", "Enquiry");
+            String typeLabel = row.optString("enquiry_type", "");
+            if (!typeLabel.isEmpty()) {
+                typeLabel = typeLabel.substring(0, 1).toUpperCase() + typeLabel.substring(1);
+            }
+            boolean replied = row.optBoolean("has_admin_reply", false) || !row.optString("reply_message").isEmpty();
+            item.subtitle = typeLabel + " · " + (replied ? getString(R.string.notice_read) : getString(R.string.pending_reply));
             item.raw = row;
             items.add(item);
         }
@@ -273,6 +408,80 @@ public class ListFragment extends Fragment {
             }
             items.add(item);
         }
+    }
+
+    private void appendProgressRows(List<ListItem> items, JSONArray rows) {
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            if (row == null) {
+                continue;
+            }
+            ListItem item = new ListItem();
+            item.title = row.optString("subject", "Progress Report");
+            item.subtitle = "Marks: " + row.optString("marks_obtained") + "/"
+                    + row.optString("marks_out_of") + " · " + row.optString("report_date");
+            String notes = row.optString("teacher_comments", "");
+            if (!notes.isEmpty() && !"null".equals(notes)) {
+                item.subtitle += "\n" + notes;
+            }
+            item.raw = row;
+            items.add(item);
+        }
+    }
+
+    private void appendNoticeRows(List<ListItem> items, JSONArray rows) {
+        String baseUrl = session.getBaseUrl();
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            if (row == null) {
+                continue;
+            }
+            ListItem item = new ListItem();
+            item.noticeId = row.optInt("id", 0);
+            item.seen = row.optBoolean("seen", false) || row.optInt("seen", 0) == 1;
+            item.noticeType = row.optString("notice_type", "text").toLowerCase();
+            item.noticeContent = row.optString("notice_content", "");
+            item.mediaUrl = first(row, "media_url");
+            if (item.mediaUrl.isEmpty() && !item.noticeContent.isEmpty()
+                    && ("image".equals(item.noticeType) || "video".equals(item.noticeType))) {
+                item.mediaUrl = UrlHelper.resolveImageUrl(baseUrl, item.noticeContent);
+            }
+            item.title = noticePreviewTitle(item);
+            item.subtitle = formatNoticeDate(row.optString("created_at", ""));
+            item.raw = row;
+            items.add(item);
+        }
+    }
+
+    private String noticePreviewTitle(ListItem item) {
+        if ("image".equals(item.noticeType)) {
+            return getString(R.string.notice_preview_image);
+        }
+        if ("video".equals(item.noticeType)) {
+            return getString(R.string.notice_preview_video);
+        }
+        String text = UrlHelper.cleanHtml(item.noticeContent);
+        if (text.length() > 120) {
+            return text.substring(0, 117) + "...";
+        }
+        return text.isEmpty() ? getString(R.string.notice) : text;
+    }
+
+    private String formatNoticeDate(String value) {
+        if (value == null || value.isEmpty() || "null".equals(value)) {
+            return "";
+        }
+        return value.replace('T', ' ').replaceAll(":00$", "");
+    }
+
+    private int countUnread(List<ListItem> items) {
+        int count = 0;
+        for (ListItem item : items) {
+            if (!item.seen) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private ListItem buildFieldsItem(String title, JSONObject obj) {
@@ -335,7 +544,7 @@ public class ListFragment extends Fragment {
         return key.replace("_", " ");
     }
 
-    private class ListAdapter extends RecyclerView.Adapter<ListAdapter.Holder> {
+    private class ListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         private final List<ListItem> items = new ArrayList<>();
 
         void setItems(List<ListItem> next) {
@@ -344,24 +553,72 @@ public class ListFragment extends Fragment {
             notifyDataSetChanged();
         }
 
+        @Override
+        public int getItemViewType(int position) {
+            return TYPE_NOTICES.equals(type) ? ITEM_NOTICE : ITEM_DEFAULT;
+        }
+
         @NonNull
         @Override
-        public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_list_card, parent, false);
-            return new Holder(view);
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+            if (viewType == ITEM_NOTICE) {
+                return new NoticeHolder(inflater.inflate(R.layout.item_notice_card, parent, false));
+            }
+            return new DefaultHolder(inflater.inflate(R.layout.item_list_card, parent, false));
         }
 
         @Override
-        public void onBindViewHolder(@NonNull Holder holder, int position) {
+        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
             ListItem item = items.get(position);
+            if (holder instanceof NoticeHolder) {
+                bindNotice((NoticeHolder) holder, item);
+                return;
+            }
+            bindDefault((DefaultHolder) holder, item);
+        }
+
+        private void bindNotice(NoticeHolder holder, ListItem item) {
+            holder.title.setText(item.title);
+            holder.subtitle.setText(item.subtitle);
+            holder.unreadDot.setVisibility(item.seen ? View.GONE : View.VISIBLE);
+            holder.status.setText(item.seen ? R.string.notice_read : R.string.notice_unread);
+            holder.status.setTextColor(ContextCompat.getColor(
+                    requireContext(),
+                    item.seen ? R.color.secondary_text : R.color.primary));
+            holder.card.setCardBackgroundColor(ContextCompat.getColor(
+                    requireContext(),
+                    item.seen ? R.color.surface : R.color.primary_light));
+
+            int iconRes = R.drawable.ic_bell;
+            if ("image".equals(item.noticeType)) {
+                iconRes = R.drawable.ic_material_image;
+            } else if ("video".equals(item.noticeType)) {
+                iconRes = R.drawable.ic_material_video;
+            }
+            holder.icon.setImageResource(iconRes);
+
+            View.OnClickListener open = v -> openNotice(item);
+            holder.itemView.setOnClickListener(open);
+        }
+
+        private void bindDefault(DefaultHolder holder, ListItem item) {
             holder.title.setText(item.title.isEmpty() ? "Item" : item.title);
             holder.subtitle.setText(item.subtitle);
             holder.action.setOnClickListener(null);
             holder.itemView.setOnClickListener(null);
 
+            if (TYPE_MATERIALS.equals(type)) {
+                holder.iconFrame.setVisibility(View.VISIBLE);
+                holder.itemIcon.setImageResource(iconForMaterial(item));
+            } else {
+                holder.iconFrame.setVisibility(View.GONE);
+            }
+
             if (item.hasVideo && item.materialId > 0) {
                 holder.action.setVisibility(View.VISIBLE);
-                holder.action.setText(R.string.play_video);
+                holder.action.setIconResource(R.drawable.ic_play_small);
+                holder.action.setContentDescription(getString(R.string.play_video));
                 View.OnClickListener openVideo = v -> {
                     Intent intent = new Intent(requireContext(), VideoActivity.class);
                     intent.putExtra(VideoActivity.EXTRA_MATERIAL_ID, item.materialId);
@@ -372,13 +629,38 @@ public class ListFragment extends Fragment {
                 holder.itemView.setOnClickListener(openVideo);
             } else if (item.fileUrl != null && !item.fileUrl.isEmpty()) {
                 holder.action.setVisibility(View.VISIBLE);
-                holder.action.setText(R.string.open_material);
+                holder.action.setIconResource(isImageMaterial(item)
+                        ? R.drawable.ic_material_image
+                        : R.drawable.ic_read_small);
+                holder.action.setContentDescription(getString(R.string.open_material));
                 View.OnClickListener openFile = v -> openMaterial(item);
                 holder.action.setOnClickListener(openFile);
                 holder.itemView.setOnClickListener(openFile);
+            } else if (TYPE_ENQUIRIES.equals(type) && item.enquiryId > 0) {
+                holder.action.setVisibility(View.GONE);
+                View.OnClickListener openEnquiry = v -> openEnquiry(item);
+                holder.itemView.setOnClickListener(openEnquiry);
+            } else if (TYPE_COURSES.equals(type) && item.eventId > 0) {
+                holder.action.setVisibility(View.VISIBLE);
+                holder.action.setIconResource(R.drawable.ic_chevron_right);
+                holder.action.setContentDescription(getString(R.string.view_course));
+                View.OnClickListener openCourse = v -> CourseDetailActivity.open(
+                        requireContext(), item.eventId, item.title);
+                holder.action.setOnClickListener(openCourse);
+                holder.itemView.setOnClickListener(openCourse);
             } else {
                 holder.action.setVisibility(View.GONE);
             }
+        }
+
+        private int iconForMaterial(ListItem item) {
+            if (item.hasVideo) {
+                return R.drawable.ic_material_video;
+            }
+            if (isImageMaterial(item)) {
+                return R.drawable.ic_material_image;
+            }
+            return R.drawable.ic_material_pdf;
         }
 
         @Override
@@ -386,18 +668,59 @@ public class ListFragment extends Fragment {
             return items.size();
         }
 
-        class Holder extends RecyclerView.ViewHolder {
+        class DefaultHolder extends RecyclerView.ViewHolder {
+            final View iconFrame;
+            final ImageView itemIcon;
             final TextView title;
             final TextView subtitle;
             final MaterialButton action;
 
-            Holder(@NonNull View itemView) {
+            DefaultHolder(@NonNull View itemView) {
                 super(itemView);
+                iconFrame = itemView.findViewById(R.id.itemIconFrame);
+                itemIcon = itemView.findViewById(R.id.itemIcon);
                 title = itemView.findViewById(R.id.itemTitle);
                 subtitle = itemView.findViewById(R.id.itemSubtitle);
                 action = itemView.findViewById(R.id.btnAction);
             }
         }
+
+        class NoticeHolder extends RecyclerView.ViewHolder {
+            final MaterialCardView card;
+            final ImageView icon;
+            final TextView title;
+            final TextView subtitle;
+            final TextView status;
+            final View unreadDot;
+
+            NoticeHolder(@NonNull View itemView) {
+                super(itemView);
+                card = itemView.findViewById(R.id.noticeCard);
+                icon = itemView.findViewById(R.id.noticeIcon);
+                title = itemView.findViewById(R.id.noticeTitle);
+                subtitle = itemView.findViewById(R.id.noticeSubtitle);
+                status = itemView.findViewById(R.id.noticeStatus);
+                unreadDot = itemView.findViewById(R.id.noticeUnreadDot);
+            }
+        }
+    }
+
+    private void openNotice(ListItem item) {
+        Intent intent = new Intent(requireContext(), NoticeDetailActivity.class);
+        intent.putExtra(NoticeDetailActivity.EXTRA_ID, item.noticeId);
+        intent.putExtra(NoticeDetailActivity.EXTRA_TYPE, item.noticeType);
+        intent.putExtra(NoticeDetailActivity.EXTRA_CONTENT, item.noticeContent);
+        intent.putExtra(NoticeDetailActivity.EXTRA_MEDIA_URL, item.mediaUrl);
+        intent.putExtra(NoticeDetailActivity.EXTRA_DATE, item.subtitle);
+        intent.putExtra(NoticeDetailActivity.EXTRA_SEEN, item.seen);
+        noticeLauncher.launch(intent);
+    }
+
+    private void openEnquiry(ListItem item) {
+        Intent intent = new Intent(requireContext(), EnquiryDetailActivity.class);
+        intent.putExtra(EnquiryDetailActivity.EXTRA_ID, item.enquiryId);
+        intent.putExtra(EnquiryDetailActivity.EXTRA_SUBJECT, item.title);
+        enquiryLauncher.launch(intent);
     }
 
     private void openMaterial(ListItem item) {
@@ -434,9 +757,16 @@ public class ListFragment extends Fragment {
         String title = "";
         String subtitle = "";
         int materialId = 0;
+        int noticeId = 0;
+        int enquiryId = 0;
+        int eventId = 0;
         boolean hasVideo = false;
         boolean canDownload = false;
+        boolean seen = true;
         String materialType = "";
+        String noticeType = "";
+        String noticeContent = "";
+        String mediaUrl = "";
         String fileUrl = "";
         JSONObject raw;
     }

@@ -263,31 +263,50 @@ if($_SESSION['username'] == true){
 </body>
 </html>
 <?php
-if(isset($_POST['submit']))
-{
-	$event_name=$_POST['e_name'];
-	$event_details=$_POST['details'];
-	$area=$_POST['area'];
-	$price=$_POST['price'];
-	$image1=$_FILES['image1']['name'];
-	$path1='event/'.$image1;
-	move_uploaded_file($_FILES['image1']['tmp_name'],$path1);
-	//$date=date('d-m-Y');
-	
-	
-	
-	
-	if($con->error)
-	echo $con->error;
-	else
-	{
-	//$sql="insert into event values('','$event_name','$path1','$event_details','$area','$price') ";
-	$sql= "INSERT INTO `event`(`id`, `name`, `image`, `description`, `date`, `price`) VALUES 
-  ('null','$event_name','$path1','$event_details','$date','$price')";
-	$con->query($sql);
-	echo "<script>alert('successfully added')</script>";	
-	echo "<script>window.location.href='allpack.php'</script>";	
+if (isset($_POST['submit'])) {
+	$event_name = mysqli_real_escape_string($con, $_POST['e_name'] ?? '');
+	$event_details = mysqli_real_escape_string($con, $_POST['details'] ?? '');
+	$price = isset($_POST['cost']) && $_POST['cost'] !== '' ? (float) $_POST['cost'] : 0.00;
+	$date = date('Y-m-d');
+
+	if (empty($_FILES['image1']['name'])) {
+		echo "<script>alert('Course image is required');</script>";
+		exit;
 	}
+
+	$targetDir = 'event/';
+	if (!is_dir($targetDir) && !mkdir($targetDir, 0775, true)) {
+		echo "<script>alert('Upload folder is not writable');</script>";
+		exit;
+	}
+
+	$filename = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($_FILES['image1']['name']));
+	$path1 = $targetDir . $filename;
+
+	if (!move_uploaded_file($_FILES['image1']['tmp_name'], $path1)) {
+		echo "<script>alert('Image upload failed. Check folder permissions.');</script>";
+		exit;
+	}
+
+	$stmt = $con->prepare(
+		"INSERT INTO event (name, image, description, date, price) VALUES (?, ?, ?, ?, ?)"
+	);
+	if (!$stmt) {
+		echo "<script>alert('Database error: " . addslashes($con->error) . "');</script>";
+		exit;
+	}
+
+	$stmt->bind_param('ssssd', $event_name, $path1, $event_details, $date, $price);
+
+	if ($stmt->execute()) {
+		$stmt->close();
+		echo "<script>alert('Course added successfully'); window.location.href='allpack.php';</script>";
+		exit;
+	}
+
+	$error = addslashes($stmt->error);
+	$stmt->close();
+	echo "<script>alert('Failed to add course: $error');</script>";
 }
 
  ?>

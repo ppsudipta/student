@@ -2,12 +2,15 @@ package com.deyeducation.app;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 
 import androidx.annotation.Nullable;
@@ -27,8 +30,13 @@ public class VideoActivity extends AppCompatActivity {
 
     private WebView webView;
     private ProgressBar progressBar;
+    private LinearLayout contentContainer;
+    private FrameLayout fullscreenContainer;
     private SessionManager session;
     private ApiClient api;
+
+    private View customView;
+    private WebChromeClient.CustomViewCallback customViewCallback;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -49,6 +57,8 @@ public class VideoActivity extends AppCompatActivity {
 
         progressBar = findViewById(R.id.videoProgress);
         webView = findViewById(R.id.webView);
+        contentContainer = findViewById(R.id.videoContent);
+        fullscreenContainer = findViewById(R.id.videoFullscreenContainer);
         session = new SessionManager(this);
         api = new ApiClient(session);
 
@@ -65,7 +75,7 @@ public class VideoActivity extends AppCompatActivity {
 
         hardenWebView(webView);
         webView.setWebViewClient(new SecureWebViewClient());
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new FullscreenChromeClient());
 
         if (materialId <= 0) {
             UiUtils.toast(this, getString(R.string.video_load_failed));
@@ -113,10 +123,52 @@ public class VideoActivity extends AppCompatActivity {
                 + "-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}"
                 + "iframe{position:fixed;top:0;left:0;width:100%;height:100%;border:0}</style></head><body>"
                 + "<iframe src=\"" + escapeHtml(embed) + "\" allow=\"autoplay; fullscreen; picture-in-picture\" "
-                + "allowfullscreen referrerpolicy=\"no-referrer-when-downgrade\" "
-                + "sandbox=\"allow-scripts allow-same-origin allow-presentation\"></iframe>"
+                + "allowfullscreen webkitallowfullscreen mozallowfullscreen referrerpolicy=\"no-referrer-when-downgrade\" "
+                + "sandbox=\"allow-scripts allow-same-origin allow-presentation allow-fullscreen\"></iframe>"
                 + "</body></html>";
         webView.loadDataWithBaseURL("https://player.vimeo.com", html, "text/html", "UTF-8", null);
+    }
+
+    private class FullscreenChromeClient extends WebChromeClient {
+        @Override
+        public void onShowCustomView(View view, CustomViewCallback callback) {
+            if (customView != null) {
+                callback.onCustomViewHidden();
+                return;
+            }
+            customView = view;
+            customViewCallback = callback;
+            fullscreenContainer.addView(view, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT));
+            fullscreenContainer.setVisibility(View.VISIBLE);
+            contentContainer.setVisibility(View.GONE);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+        }
+
+        @Override
+        public void onHideCustomView() {
+            if (customView == null) {
+                return;
+            }
+            fullscreenContainer.removeView(customView);
+            fullscreenContainer.setVisibility(View.GONE);
+            customView = null;
+            if (customViewCallback != null) {
+                customViewCallback.onCustomViewHidden();
+                customViewCallback = null;
+            }
+            contentContainer.setVisibility(View.VISIBLE);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -154,6 +206,13 @@ public class VideoActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        if (customView != null) {
+            WebChromeClient client = webView.getWebChromeClient();
+            if (client != null) {
+                client.onHideCustomView();
+            }
+            return;
+        }
         finish();
     }
 }

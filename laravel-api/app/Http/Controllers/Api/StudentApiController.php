@@ -150,8 +150,92 @@ class StudentApiController extends Controller
 
     public function company(): JsonResponse
     {
+        $company = Company::query()->first();
+
         return response()->json([
-            'data' => Company::query()->first(),
+            'data' => $company ? $this->withImageUrl($company->toArray()) : null,
+        ]);
+    }
+
+    public function about(): JsonResponse
+    {
+        $company = Company::query()->first();
+        $blog = $this->table('blog')->orderByDesc('id')->first();
+        $companyData = $company ? $this->withImageUrl($company->toArray()) : null;
+
+        if ($companyData && ! empty($companyData['address'])) {
+            $companyData['map_url'] = 'https://www.google.com/maps/search/?api=1&query='.urlencode($companyData['address']);
+        }
+
+        return response()->json([
+            'data' => [
+                'company' => $companyData,
+                'about' => $blog ? [
+                    'title' => $blog->name ?? 'About Us',
+                    'details' => $blog->details ?? '',
+                    'image' => $blog->image ?? null,
+                    'image_url' => $this->assetUrl($blog->image ?? null),
+                    'date' => $blog->date ?? null,
+                ] : null,
+            ],
+        ]);
+    }
+
+    public function legalPolicies(): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'title' => 'Legal and Policies',
+                'sections' => [
+                    [
+                        'title' => 'Terms of Use',
+                        'items' => [
+                            'By using the Dey Education app and services, you agree to follow academy rules and guidelines.',
+                            'Course materials, videos, and documents are for enrolled students only and must not be shared publicly.',
+                            'Misuse of login credentials or sharing account access may lead to suspension.',
+                            'Fees and payments must be completed as per the schedule communicated by the academy.',
+                        ],
+                    ],
+                    [
+                        'title' => 'Privacy Policy',
+                        'items' => [
+                            'We collect student name, contact details, class information, and academic records to provide our services.',
+                            'Profile photos and submitted documents are stored securely and used only for academy purposes.',
+                            'We do not sell personal data to third parties.',
+                            'You may contact the academy to update or correct your personal information.',
+                        ],
+                    ],
+                    [
+                        'title' => 'Refund & Cancellation',
+                        'items' => [
+                            'Admission and fee refund policies follow the rules stated at the time of enrollment.',
+                            'Partial refunds, if applicable, are processed only after admin review.',
+                            'Course transfers or batch changes are subject to seat availability and admin approval.',
+                        ],
+                    ],
+                    [
+                        'title' => 'Code of Conduct',
+                        'items' => [
+                            'Students must maintain respectful behaviour with teachers, staff, and fellow students.',
+                            'Harassment, cheating, or disruptive conduct in class or online platforms is not permitted.',
+                            'The academy reserves the right to take disciplinary action when rules are violated.',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    public function enquiryCategories(): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                ['id' => 'academic', 'label' => 'Academic'],
+                ['id' => 'financial', 'label' => 'Financial'],
+                ['id' => 'technical', 'label' => 'Technical Support'],
+                ['id' => 'facilities', 'label' => 'Facilities'],
+                ['id' => 'other', 'label' => 'Others'],
+            ],
         ]);
     }
 
@@ -238,11 +322,19 @@ class StudentApiController extends Controller
     {
         $student = $this->studentFromRequest($request);
 
+        $paginator = Notice::query()
+            ->where('student_id', $student->id)
+            ->latest('created_at')
+            ->paginate($request->integer('per_page', 20));
+
+        $paginator->getCollection()->transform(fn (Notice $notice) => $this->noticePayload($notice));
+
         return response()->json([
-            'data' => Notice::query()
+            'unread_count' => Notice::query()
                 ->where('student_id', $student->id)
-                ->latest('created_at')
-                ->paginate($request->integer('per_page', 20)),
+                ->where('seen', 0)
+                ->count(),
+            'data' => $paginator,
         ]);
     }
 
@@ -437,12 +529,30 @@ class StudentApiController extends Controller
     public function enquiries(Request $request): JsonResponse
     {
         $student = $this->studentFromRequest($request);
+        $paginator = $this->enquiriesQuery($student)
+            ->orderByDesc('created_at')
+            ->paginate($request->integer('per_page', 20));
+
+        $paginator->setCollection(
+            $paginator->getCollection()->map(fn ($row) => $this->enquiryPayload((array) $row))
+        );
 
         return response()->json([
-            'data' => $this->table('enquiries')
-                ->where('student_id', $student->id)
-                ->orderByDesc('created_at')
-                ->paginate($request->integer('per_page', 20)),
+            'data' => $paginator,
+        ]);
+    }
+
+    public function showEnquiry(Request $request, int $id): JsonResponse
+    {
+        $student = $this->studentFromRequest($request);
+        $enquiry = $this->enquiriesQuery($student)->where('id', $id)->first();
+
+        if (! $enquiry) {
+            return response()->json(['message' => 'Enquiry not found.'], 404);
+        }
+
+        return response()->json([
+            'data' => $this->enquiryPayload((array) $enquiry, true),
         ]);
     }
 
@@ -450,7 +560,7 @@ class StudentApiController extends Controller
     {
         $student = $this->studentFromRequest($request);
         $data = $request->validate([
-            'enquiry_type' => ['required', 'string', 'max:50'],
+            'enquiry_type' => ['required', 'string', Rule::in(['academic', 'financial', 'technical', 'facilities', 'other'])],
             'subject' => ['required', 'string', 'max:255'],
             'message' => ['required', 'string'],
             'attachment' => ['nullable', 'file', 'max:5120'],
@@ -458,24 +568,55 @@ class StudentApiController extends Controller
 
         $attachment = null;
         if ($request->hasFile('attachment')) {
-            $attachment = $this->saveUploadedFile($request->file('attachment'), base_path('../pages/uploads'), '');
+            $attachment = basename($this->saveUploadedFile($request->file('attachment'), base_path('../pages/uploads'), ''));
         }
 
         $id = $this->table('enquiries')->insertGetId([
-            'student_id' => $student->id,
+            'student_id' => $student->registration_code,
             'name' => $student->name,
             'email' => $student->email,
             'phone' => $student->mobile_number,
             'enquiry_type' => $data['enquiry_type'],
             'subject' => $data['subject'],
             'message' => $data['message'],
-            'attachment' => $attachment ? basename($attachment) : null,
+            'attachment' => $attachment,
             'created_at' => now(),
         ]);
 
+        $this->insertEnquiryMessage((int) $id, 'student', $student->name, $data['message'], $attachment);
+
+        $enquiry = $this->table('enquiries')->where('id', $id)->first();
+
         return response()->json([
             'message' => 'Enquiry submitted.',
-            'data' => $this->table('enquiries')->where('id', $id)->first(),
+            'data' => $this->enquiryPayload((array) $enquiry, true),
+        ], 201);
+    }
+
+    public function addEnquiryMessage(Request $request, int $id): JsonResponse
+    {
+        $student = $this->studentFromRequest($request);
+        $enquiry = $this->enquiriesQuery($student)->where('id', $id)->first();
+
+        if (! $enquiry) {
+            return response()->json(['message' => 'Enquiry not found.'], 404);
+        }
+
+        $data = $request->validate([
+            'message' => ['required', 'string'],
+            'attachment' => ['nullable', 'file', 'max:5120'],
+        ]);
+
+        $attachment = null;
+        if ($request->hasFile('attachment')) {
+            $attachment = basename($this->saveUploadedFile($request->file('attachment'), base_path('../pages/uploads'), ''));
+        }
+
+        $this->insertEnquiryMessage($id, 'student', $student->name, $data['message'], $attachment);
+
+        return response()->json([
+            'message' => 'Message sent.',
+            'data' => $this->enquiryPayload((array) $this->table('enquiries')->where('id', $id)->first(), true),
         ], 201);
     }
 
@@ -1008,6 +1149,111 @@ class StudentApiController extends Controller
         return implode('/', array_map('rawurlencode', $segments));
     }
 
+    private function enquiriesQuery(Student $student)
+    {
+        return $this->table('enquiries')->where(function ($query) use ($student) {
+            $query->where('student_id', (string) $student->registration_code)
+                ->orWhere('student_id', (string) $student->id);
+        });
+    }
+
+    private function enquiryPayload(array $row, bool $withMessages = false): array
+    {
+        $id = (int) ($row['id'] ?? 0);
+        $messages = $this->enquiryMessages($id);
+        $row['message_count'] = count($messages);
+        $row['messages'] = $withMessages ? $messages : [];
+        $row['has_admin_reply'] = collect($messages)->contains(fn ($message) => ($message['sender_type'] ?? '') === 'admin')
+            || ! empty($row['reply_message']);
+        $row['status'] = $row['has_admin_reply'] ? 'replied' : 'pending';
+        $row['last_message'] = $messages !== [] ? end($messages) : null;
+
+        return $row;
+    }
+
+    private function enquiryMessages(int $enquiryId): array
+    {
+        if ($enquiryId <= 0) {
+            return [];
+        }
+
+        if (Schema::hasTable('enquiry_messages')) {
+            $messages = $this->table('enquiry_messages')
+                ->where('enquiry_id', $enquiryId)
+                ->orderBy('created_at')
+                ->get()
+                ->map(fn ($row) => (array) $row)
+                ->all();
+
+            if ($messages !== []) {
+                return $messages;
+            }
+        }
+
+        $enquiry = $this->table('enquiries')->where('id', $enquiryId)->first();
+        if (! $enquiry) {
+            return [];
+        }
+
+        $legacy = [];
+        if (! empty($enquiry->message)) {
+            $legacy[] = [
+                'id' => 0,
+                'enquiry_id' => $enquiryId,
+                'sender_type' => 'student',
+                'sender_name' => $enquiry->name,
+                'message' => $enquiry->message,
+                'attachment' => $enquiry->attachment,
+                'created_at' => $enquiry->created_at,
+            ];
+        }
+        if (! empty($enquiry->reply_message)) {
+            $legacy[] = [
+                'id' => 0,
+                'enquiry_id' => $enquiryId,
+                'sender_type' => 'admin',
+                'sender_name' => $enquiry->replied_by ?? 'Admin',
+                'message' => $enquiry->reply_message,
+                'attachment' => null,
+                'created_at' => $enquiry->replied_at ?? $enquiry->created_at,
+            ];
+        }
+
+        return $legacy;
+    }
+
+    private function insertEnquiryMessage(int $enquiryId, string $senderType, ?string $senderName, string $message, ?string $attachment = null): void
+    {
+        if (! Schema::hasTable('enquiry_messages')) {
+            if ($senderType === 'admin') {
+                $this->table('enquiries')->where('id', $enquiryId)->update([
+                    'reply_message' => $message,
+                    'replied_at' => now(),
+                    'replied_by' => $senderName,
+                ]);
+            }
+
+            return;
+        }
+
+        $this->table('enquiry_messages')->insert([
+            'enquiry_id' => $enquiryId,
+            'sender_type' => $senderType,
+            'sender_name' => $senderName,
+            'message' => $message,
+            'attachment' => $attachment,
+            'created_at' => now(),
+        ]);
+
+        if ($senderType === 'admin') {
+            $this->table('enquiries')->where('id', $enquiryId)->update([
+                'reply_message' => $message,
+                'replied_at' => now(),
+                'replied_by' => $senderName,
+            ]);
+        }
+    }
+
     private function saveUploadedFile($file, string $directory, string $databasePrefix): string
     {
         if (! is_dir($directory)) {
@@ -1130,6 +1376,17 @@ class StudentApiController extends Controller
         $paginator->getCollection()->transform(fn (StudentMaterial $material) => $this->materialPayload($material));
 
         return $paginator;
+    }
+
+    private function noticePayload(Notice $notice): array
+    {
+        $data = $notice->toArray();
+
+        if (in_array($notice->notice_type, ['image', 'video'], true) && ! empty($notice->notice_content)) {
+            $data['media_url'] = $this->assetUrl($notice->notice_content);
+        }
+
+        return $data;
     }
 
     private function materialPayload(StudentMaterial $material, bool $detailed = false): array
