@@ -1083,8 +1083,12 @@ class StudentApiController extends Controller
 
     private function withImageUrl(array $row): array
     {
-        if (array_key_exists('image', $row)) {
-            $row['image_url'] = $this->assetUrl($row['image']);
+        foreach (['image', 'logo', 'photo'] as $field) {
+            if (! empty($row[$field])) {
+                $row['image_url'] = $this->assetUrl($row[$field]);
+
+                return $row;
+            }
         }
 
         return $row;

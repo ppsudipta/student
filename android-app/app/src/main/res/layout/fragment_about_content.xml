@@ -46,6 +46,23 @@
                     android:textColor="@color/primary_text"
                     android:textSize="15sp" />
 
+                <TextView
+                    android:id="@+id/teachersSectionTitle"
+                    style="@style/TextSectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/our_teachers"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/teachersGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="gone" />
+
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/contactCard"
                     android:layout_width="match_parent"

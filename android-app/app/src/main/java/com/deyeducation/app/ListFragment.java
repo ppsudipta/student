@@ -723,10 +723,12 @@ public class ListFragment extends Fragment {
     }
 
     private void openEnquiry(ListItem item) {
-        Intent intent = new Intent(requireContext(), EnquiryDetailActivity.class);
-        intent.putExtra(EnquiryDetailActivity.EXTRA_ID, item.enquiryId);
-        intent.putExtra(EnquiryDetailActivity.EXTRA_SUBJECT, item.title);
-        enquiryLauncher.launch(intent);
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).showFragment(
+                    EnquiryDetailFragment.newInstance(item.enquiryId, item.title),
+                    item.title,
+                    true);
+        }
     }
 
     private void openMaterial(ListItem item) {

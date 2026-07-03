@@ -18,6 +18,7 @@
     <string name="promotional_images">Promotional Images</string>
     <string name="home_slider">Slider</string>
     <string name="academy_details">Academy Details</string>
+    <string name="academy_details_hint">Welcome to our academy. Meet our teachers below.</string>
     <string name="about_us">About Us</string>
     <string name="more">More</string>
     <string name="logout">Logout</string>
@@ -78,6 +79,18 @@
     <string name="general">General</string>
     <string name="about_section">About</string>
     <string name="my_account_details">My Account Details</string>
+    <string name="label_name">Name</string>
+    <string name="label_mobile">Mobile</string>
+    <string name="label_email">Email</string>
+    <string name="label_address">Address</string>
+    <string name="label_class">Class</string>
+    <string name="label_session">Session</string>
+    <string name="label_course">Course</string>
+    <string name="label_registration">Registration</string>
+    <string name="label_total_fees">Total Fees</string>
+    <string name="label_paid_fees">Paid Fees</string>
+    <string name="label_due_fees">Due Fees</string>
+    <string name="label_status">Status</string>
     <string name="payment_method">Payment Method</string>
     <string name="change_password">Change Password</string>
     <string name="notifications_menu">Notifications</string>
@@ -91,6 +104,7 @@
     <string name="password_mismatch">New passwords do not match.</string>
     <string name="fill_all_fields">Please fill in all fields.</string>
     <string name="not_provided">Not provided</string>
+    <string name="our_teachers">Our Teachers</string>
     <string name="back">Back</string>
     <string name="about_us_title">About Us</string>
     <string name="open_in_maps">Open in Maps</string>

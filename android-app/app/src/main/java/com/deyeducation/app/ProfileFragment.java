@@ -64,14 +64,16 @@ public class ProfileFragment extends Fragment {
 
         setupMenuRow(view.findViewById(R.id.menuAccountDetails), R.drawable.ic_edit_profile,
                 getString(R.string.my_account_details),
-                v -> ProfileAccountActivity.open(requireContext()));
+                v -> activity.showFragment(new ProfileAccountFragment(),
+                        getString(R.string.my_account_details), true));
 
         view.findViewById(R.id.btnPaymentMethod).setOnClickListener(v ->
                 activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees)));
 
         setupMenuRow(view.findViewById(R.id.menuChangePassword), R.drawable.ic_lock,
                 getString(R.string.change_password),
-                v -> startActivity(new Intent(requireContext(), ChangePasswordActivity.class)));
+                v -> activity.showFragment(new ChangePasswordFragment(),
+                        getString(R.string.change_password), true));
 
         setupMenuRow(view.findViewById(R.id.menuNotifications), R.drawable.ic_bell,
                 getString(R.string.notifications_menu),
@@ -84,7 +86,8 @@ public class ProfileFragment extends Fragment {
 
         setupMenuRow(view.findViewById(R.id.menuLegal), R.drawable.ic_shield,
                 getString(R.string.legal_policies),
-                v -> LegalPoliciesActivity.open(requireContext()));
+                v -> activity.showFragment(new LegalPoliciesFragment(),
+                        getString(R.string.legal_terms_title), true));
 
         logout.setOnClickListener(v -> {
             session.clear();
@@ -93,6 +96,14 @@ public class ProfileFragment extends Fragment {
         });
 
         loadProfile(view);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).setScreenTitle(getString(R.string.profile));
+        }
     }
 
     private void setupMenuRow(View row, int iconRes, String label, View.OnClickListener click) {

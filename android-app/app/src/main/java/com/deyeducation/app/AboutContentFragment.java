@@ -13,11 +13,17 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class AboutContentFragment extends Fragment {
     public static final String ARG_MODE = "mode";
@@ -35,6 +41,9 @@ public class AboutContentFragment extends Fragment {
     private ImageView heroView;
     private MaterialCardView contactCard;
     private MaterialButton mapsButton;
+    private TextView teachersSectionTitle;
+    private RecyclerView teachersGrid;
+    private TeacherAdapter teacherAdapter;
 
     public static AboutContentFragment newInstance(String mode) {
         Bundle args = new Bundle();
@@ -65,6 +74,12 @@ public class AboutContentFragment extends Fragment {
         addressView = view.findViewById(R.id.aboutAddress);
         contactCard = view.findViewById(R.id.contactCard);
         mapsButton = view.findViewById(R.id.btnOpenMaps);
+        teachersSectionTitle = view.findViewById(R.id.teachersSectionTitle);
+        teachersGrid = view.findViewById(R.id.teachersGrid);
+        teacherAdapter = new TeacherAdapter();
+        teachersGrid.setLayoutManager(new GridLayoutManager(requireContext(), 2));
+        teachersGrid.setNestedScrollingEnabled(false);
+        teachersGrid.setAdapter(teacherAdapter);
 
         mapsButton.setOnClickListener(v -> {
             if (mapUrl != null && !mapUrl.isEmpty()) {
@@ -172,22 +187,26 @@ public class AboutContentFragment extends Fragment {
                             company.optString("description"),
                             company.optString("details"));
                 }
-                UiUtils.bindHtml(descriptionView, details);
-                String heroUrl = UrlHelper.imageFromJson(baseUrl, company);
-                UiUtils.loadImage(requireContext(), heroUrl, heroView, 0);
+                if (details.isEmpty() || "null".equals(details)) {
+                    descriptionView.setText(R.string.academy_details_hint);
+                } else {
+                    UiUtils.bindHtml(descriptionView, details);
+                }
+                UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(baseUrl, company), heroView, 0);
             } else if (about != null) {
                 titleView.setText(about.optString("title", getString(R.string.academy_details)));
                 UiUtils.bindHtml(descriptionView, about.optString("details", ""));
-                UiUtils.loadImage(requireContext(), about.optString("image_url"), heroView, 0);
+                UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(baseUrl, about), heroView, 0);
             }
             contactCard.setVisibility(View.GONE);
+            loadTeachers();
             return;
         }
 
         if (about != null) {
             titleView.setText(about.optString("title", getString(R.string.about_us_title)));
             UiUtils.bindHtml(descriptionView, about.optString("details", ""));
-            UiUtils.loadImage(requireContext(), about.optString("image_url"), heroView, 0);
+            UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(baseUrl, about), heroView, 0);
         } else if (company != null) {
             titleView.setText(company.optString("name", getString(R.string.about_us_title)));
             UiUtils.bindHtml(descriptionView, firstNonEmpty(
@@ -215,6 +234,110 @@ public class AboutContentFragment extends Fragment {
             }
         }
         mapsButton.setVisibility(mapUrl == null || mapUrl.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+
+    private void loadTeachers() {
+        SessionManager session = ((MainActivity) requireActivity()).getSession();
+        api.get("/teachers?per_page=30", false, new ApiClient.Callback() {
+            @Override
+            public void onSuccess(JSONObject json) {
+                if (!isAdded()) {
+                    return;
+                }
+                requireActivity().runOnUiThread(() -> {
+                    List<TeacherItem> items = parseTeachers(json, session.getBaseUrl());
+                    teacherAdapter.setItems(items);
+                    boolean hasTeachers = !items.isEmpty();
+                    teachersSectionTitle.setVisibility(hasTeachers ? View.VISIBLE : View.GONE);
+                    teachersGrid.setVisibility(hasTeachers ? View.VISIBLE : View.GONE);
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+            }
+        });
+    }
+
+    private List<TeacherItem> parseTeachers(JSONObject json, String baseUrl) {
+        List<TeacherItem> items = new ArrayList<>();
+        Object data = json.opt("data");
+        JSONArray rows = new JSONArray();
+        if (data instanceof JSONArray) {
+            rows = (JSONArray) data;
+        } else if (data instanceof JSONObject) {
+            Object inner = ((JSONObject) data).opt("data");
+            if (inner instanceof JSONArray) {
+                rows = (JSONArray) inner;
+            }
+        }
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            if (row == null) {
+                continue;
+            }
+            TeacherItem item = new TeacherItem();
+            item.name = row.optString("name", "Teacher");
+            item.subject = row.optString("subject", "");
+            item.imageUrl = UrlHelper.imageFromJson(baseUrl, row);
+            items.add(item);
+        }
+        return items;
+    }
+
+    private class TeacherAdapter extends RecyclerView.Adapter<TeacherAdapter.Holder> {
+        private final List<TeacherItem> items = new ArrayList<>();
+
+        void setItems(List<TeacherItem> next) {
+            items.clear();
+            items.addAll(next);
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_teacher_card, parent, false);
+            return new Holder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull Holder holder, int position) {
+            TeacherItem item = items.get(position);
+            holder.name.setText(item.name);
+            holder.subject.setText(item.subject.isEmpty() ? getString(R.string.not_provided) : item.subject);
+            UiUtils.loadImage(holder.itemView.getContext(), item.imageUrl, holder.image, 12);
+            holder.itemView.setOnClickListener(v -> {
+                if (item.imageUrl != null) {
+                    ImageViewerActivity.open(requireContext(), item.name, item.imageUrl);
+                }
+            });
+        }
+
+        @Override
+        public int getItemCount() {
+            return items.size();
+        }
+
+        class Holder extends RecyclerView.ViewHolder {
+            final ImageView image;
+            final TextView name;
+            final TextView subject;
+
+            Holder(@NonNull View itemView) {
+                super(itemView);
+                image = itemView.findViewById(R.id.teacherImage);
+                name = itemView.findViewById(R.id.teacherName);
+                subject = itemView.findViewById(R.id.teacherSubject);
+            }
+        }
+    }
+
+    private static class TeacherItem {
+        String name = "";
+        String subject = "";
+        String imageUrl;
     }
 
     private String firstNonEmpty(String... values) {

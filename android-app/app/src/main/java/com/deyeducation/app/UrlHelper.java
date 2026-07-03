@@ -11,16 +11,26 @@ public final class UrlHelper {
     private UrlHelper() {
     }
 
-    /** Prefer server-provided {@code image_url}, else build from legacy {@code image} path. */
+    /** Prefer server-provided {@code image_url}, else legacy {@code image}, {@code logo}, or {@code photo}. */
     public static String imageFromJson(String baseUrl, JSONObject row) {
         if (row == null) {
             return null;
         }
         String direct = row.optString("image_url", "");
-        if (!TextUtils.isEmpty(direct) && !"null".equals(direct)) {
+        if (!isBlank(direct)) {
             return resolveImageUrl(baseUrl, direct);
         }
-        return resolveImageUrl(baseUrl, row.optString("image"));
+        for (String key : new String[]{"image", "logo", "photo"}) {
+            String path = row.optString(key, "");
+            if (!isBlank(path)) {
+                return resolveImageUrl(baseUrl, path);
+            }
+        }
+        return null;
+    }
+
+    private static boolean isBlank(String value) {
+        return TextUtils.isEmpty(value) || "null".equalsIgnoreCase(value);
     }
 
     /**
