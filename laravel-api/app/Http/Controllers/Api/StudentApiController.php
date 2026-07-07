@@ -71,6 +71,28 @@ class StudentApiController extends Controller
         ]);
     }
 
+    public function registrationOptions(): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'classes' => $this->table('class_session')
+                    ->where('class', '!=', '')
+                    ->distinct()
+                    ->orderBy('class')
+                    ->pluck('class')
+                    ->unique()
+                    ->values(),
+                'sessions' => $this->table('class_session')
+                    ->where('session', '!=', '')
+                    ->distinct()
+                    ->orderByDesc('session')
+                    ->pluck('session')
+                    ->unique()
+                    ->values(),
+            ],
+        ]);
+    }
+
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -81,6 +103,7 @@ class StudentApiController extends Controller
             'address' => ['required', 'string', 'max:255'],
             'father_name' => ['required', 'string', 'max:255'],
             'school_name' => ['required', 'string', 'max:255'],
+            'date_of_birth' => ['nullable', 'date'],
             'class' => ['required'],
             'session' => ['required', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'max:5120'],
@@ -108,6 +131,7 @@ class StudentApiController extends Controller
         $student->address = $this->clean($data['address']);
         $student->father_name = $this->clean($data['father_name']);
         $student->school_name = $this->clean($data['school_name']);
+        $student->date_of_birth = $request->input('date_of_birth');
         $student->last_percentage = '00';
         $student->course = $request->input('course', 'no');
         $student->class = $classes;
@@ -455,17 +479,51 @@ class StudentApiController extends Controller
         $data = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
+            'month' => ['nullable', 'date_format:Y-m'],
         ]);
 
-        $from = $data['from'] ?? now()->startOfMonth()->toDateString();
-        $to = $data['to'] ?? now()->toDateString();
+        if (! empty($data['month'])) {
+            $from = \Carbon\Carbon::createFromFormat('Y-m', $data['month'])->startOfMonth()->toDateString();
+            $to = \Carbon\Carbon::createFromFormat('Y-m', $data['month'])->endOfMonth()->toDateString();
+        } else {
+            $from = $data['from'] ?? now()->startOfMonth()->toDateString();
+            $to = $data['to'] ?? now()->toDateString();
+        }
+
+        $records = $this->table('attendance')
+            ->where('student_id', $student->id)
+            ->whereBetween('attendance_date', [$from, $to])
+            ->orderByDesc('attendance_date')
+            ->get();
+
+        $totalDays = $records->count();
+        $presentDays = $records->where('status', 'Present')->count();
+        $absentDays = $totalDays - $presentDays;
+        $attendancePercentage = $totalDays > 0 ? (int) round(($presentDays / $totalDays) * 100) : 0;
+
+        $perPage = $request->integer('per_page', 31);
+        $page = max(1, $request->integer('page', 1));
+        $paginated = $records->forPage($page, $perPage)->values();
 
         return response()->json([
-            'data' => $this->table('attendance')
-                ->where('student_id', $student->id)
-                ->whereBetween('attendance_date', [$from, $to])
-                ->orderByDesc('attendance_date')
-                ->paginate($request->integer('per_page', 31)),
+            'summary' => [
+                'total_days' => $totalDays,
+                'present_days' => $presentDays,
+                'absent_days' => $absentDays,
+                'attendance_percentage' => $attendancePercentage,
+                'month' => substr($from, 0, 7),
+            ],
+            'student' => [
+                'name' => $student->name,
+                'registration_code' => $student->registration_code,
+                'class' => $student->class,
+            ],
+            'data' => [
+                'current_page' => $page,
+                'data' => $paginated,
+                'per_page' => $perPage,
+                'total' => $totalDays,
+            ],
         ]);
     }
 

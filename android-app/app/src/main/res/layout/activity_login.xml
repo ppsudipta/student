@@ -123,10 +123,22 @@
                 android:visibility="gone" />
 
             <TextView
+                android:id="@+id/linkRegister"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="8dp"
+                android:padding="8dp"
+                android:text="@string/sign_up"
+                android:textColor="@color/primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
                 android:text="@string/no_account"
                 android:textColor="@color/secondary_text"
                 android:textSize="14sp" />

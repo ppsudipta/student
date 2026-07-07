@@ -10,7 +10,7 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/background">
+        android:background="@drawable/bg_screen_soft">
 
         <com.google.android.material.appbar.AppBarLayout
             android:id="@+id/appBar"
@@ -53,7 +53,7 @@
             android:layout_width="match_parent"
             android:layout_height="@dimen/bottom_nav_height"
             android:layout_gravity="bottom"
-            android:background="@color/bottom_nav_bg"
+            android:background="@drawable/bg_bottom_nav"
             app:elevation="8dp"
             app:itemActiveIndicatorStyle="@null"
             app:itemIconTint="@color/bottom_nav_color"
@@ -67,7 +67,7 @@
         android:layout_width="280dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="@color/surface"
+        android:background="@color/secondary_bg"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/drawer_menu" />
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -36,8 +36,15 @@ public class LoginActivity extends AppCompatActivity {
         MaterialButton login = findViewById(R.id.btnLogin);
 
         baseUrl.setText(AppConfig.DEFAULT_BASE_URL);
-        mobile.setText("8100392691");
-        password.setText("123456");
+
+        findViewById(R.id.linkRegister).setOnClickListener(v -> {
+            String base = baseUrl.getText() == null ? "" : baseUrl.getText().toString().trim();
+            Intent intent = new Intent(this, RegisterActivity.class);
+            if (!base.isEmpty()) {
+                intent.putExtra(RegisterActivity.EXTRA_BASE_URL, base);
+            }
+            startActivity(intent);
+        });
 
         login.setOnClickListener(v -> {
             String base = baseUrl.getText() == null ? "" : baseUrl.getText().toString().trim();

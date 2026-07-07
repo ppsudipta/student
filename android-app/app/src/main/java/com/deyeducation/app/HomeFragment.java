@@ -78,19 +78,23 @@ public class HomeFragment extends Fragment {
         promoPager = view.findViewById(R.id.promoPager);
         LinearLayout promoDots = view.findViewById(R.id.promoDots);
 
-        addServiceItem(serviceGrid, R.drawable.ic_service_academy, getString(R.string.academy_details), v ->
+        addServiceItem(serviceGrid, R.drawable.ic_service_academy, getString(R.string.academy_details),
+                R.drawable.bg_service_purple, R.color.primary, v ->
                 activity.showFragment(
                         AboutContentFragment.newInstance(AboutContentFragment.MODE_ACADEMY),
                         getString(R.string.academy_details),
                         true));
-        addServiceItem(serviceGrid, R.drawable.ic_service_about, getString(R.string.about_us), v ->
+        addServiceItem(serviceGrid, R.drawable.ic_service_about, getString(R.string.about_us),
+                R.drawable.bg_service_teal, R.color.accent_teal, v ->
                 activity.showFragment(
                         AboutContentFragment.newInstance(AboutContentFragment.MODE_ABOUT),
                         getString(R.string.about_us_title),
                         true));
-        addServiceItem(serviceGrid, R.drawable.ic_service_gallery, getString(R.string.gallery), v ->
+        addServiceItem(serviceGrid, R.drawable.ic_service_gallery, getString(R.string.gallery),
+                R.drawable.bg_service_coral, R.color.accent, v ->
                 activity.selectBottomNav(R.id.nav_gallery));
-        addServiceItem(serviceGrid, R.drawable.ic_service_more, getString(R.string.more), v -> showMoreSheet(activity));
+        addServiceItem(serviceGrid, R.drawable.ic_service_more, getString(R.string.more),
+                R.drawable.bg_service_yellow, R.color.primary_dark, v -> showMoreSheet(activity));
 
         view.findViewById(R.id.btnNotifications).setOnClickListener(v ->
                 activity.selectBottomNav(R.id.nav_notices));
@@ -151,11 +155,13 @@ public class HomeFragment extends Fragment {
         promoHandler.removeCallbacks(promoAutoTick);
     }
 
-    private void addServiceItem(GridLayout grid, int iconRes, String label, View.OnClickListener click) {
+    private void addServiceItem(GridLayout grid, int iconRes, String label, int circleBg, int iconColor,
+                                View.OnClickListener click) {
         View item = LayoutInflater.from(requireContext()).inflate(R.layout.item_service_grid, grid, false);
+        item.findViewById(R.id.serviceCircle).setBackgroundResource(circleBg);
         ImageView icon = item.findViewById(R.id.serviceIcon);
         icon.setImageResource(iconRes);
-        icon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.primary));
+        icon.setColorFilter(ContextCompat.getColor(requireContext(), iconColor));
         ((TextView) item.findViewById(R.id.serviceLabel)).setText(label);
         item.setOnClickListener(click);
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
@@ -169,27 +175,33 @@ public class HomeFragment extends Fragment {
         BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
         View sheet = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_more, null);
         GridLayout moreGrid = sheet.findViewById(R.id.moreGrid);
-        addServiceItem(moreGrid, R.drawable.ic_service_gallery, getString(R.string.gallery), v -> {
+        addServiceItem(moreGrid, R.drawable.ic_service_gallery, getString(R.string.gallery),
+                R.drawable.bg_service_coral, R.color.accent, v -> {
             dialog.dismiss();
             activity.selectBottomNav(R.id.nav_gallery);
         });
-        addServiceItem(moreGrid, R.drawable.ic_service_academy, getString(R.string.courses), v -> {
+        addServiceItem(moreGrid, R.drawable.ic_service_academy, getString(R.string.courses),
+                R.drawable.bg_service_purple, R.color.primary, v -> {
             dialog.dismiss();
             activity.showFragment(new CoursesGridFragment(), getString(R.string.courses), true);
         });
-        addServiceItem(moreGrid, R.drawable.ic_whatsapp, getString(R.string.contact), v -> {
+        addServiceItem(moreGrid, R.drawable.ic_whatsapp, getString(R.string.contact),
+                R.drawable.bg_service_mint, R.color.success, v -> {
             dialog.dismiss();
             activity.openWhatsapp();
         });
-        addServiceItem(moreGrid, R.drawable.ic_bell, getString(R.string.enquiry), v -> {
+        addServiceItem(moreGrid, R.drawable.ic_bell, getString(R.string.enquiry),
+                R.drawable.bg_service_teal, R.color.accent_teal, v -> {
             dialog.dismiss();
             activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry));
         });
-        addServiceItem(moreGrid, R.drawable.ic_nav_materials, getString(R.string.materials), v -> {
+        addServiceItem(moreGrid, R.drawable.ic_nav_materials, getString(R.string.materials),
+                R.drawable.bg_service_yellow, R.color.primary_dark, v -> {
             dialog.dismiss();
             activity.selectBottomNav(R.id.nav_explore);
         });
-        addServiceItem(moreGrid, R.drawable.ic_service_about, getString(R.string.fees), v -> {
+        addServiceItem(moreGrid, R.drawable.ic_service_about, getString(R.string.fees),
+                R.drawable.bg_service_purple, R.color.primary, v -> {
             dialog.dismiss();
             activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees));
         });

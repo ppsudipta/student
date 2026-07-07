@@ -31,6 +31,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 
 public class ListFragment extends Fragment {
     public static final String ARG_TYPE = "type";
@@ -41,11 +42,14 @@ public class ListFragment extends Fragment {
     public static final String TYPE_HOMEWORK = "homework";
     public static final String TYPE_ENQUIRIES = "enquiries";
     public static final String TYPE_COURSES = "courses";
-    public static final String TYPE_PROGRESS = "progress";
+    public static final String TYPE_ATTENDANCE = "attendance";
 
-    private static final int MATERIAL_FILTER_ALL = 0;
-    private static final int MATERIAL_FILTER_DOCUMENT = 1;
-    private static final int MATERIAL_FILTER_VIDEO = 2;
+    private static final String MATERIAL_CAT_ALL = "all";
+    private static final String MATERIAL_CAT_VIDEO = "video";
+    private static final String MATERIAL_CAT_WORKSHEET = "worksheet";
+    private static final String MATERIAL_CAT_QUESTION = "question_paper";
+    private static final String MATERIAL_CAT_RPS = "rps";
+    private static final String MATERIAL_CAT_OTHERS = "others";
 
     private static final int NOTICE_FILTER_ALL = 0;
     private static final int NOTICE_FILTER_UNREAD = 1;
@@ -64,7 +68,7 @@ public class ListFragment extends Fragment {
     private ListAdapter adapter;
     private final List<ListItem> allMaterialItems = new ArrayList<>();
     private final List<ListItem> allNoticeItems = new ArrayList<>();
-    private int materialFilter = MATERIAL_FILTER_ALL;
+    private String materialCategoryFilter = MATERIAL_CAT_ALL;
     private int noticeFilter = NOTICE_FILTER_ALL;
     private ActivityResultLauncher<Intent> noticeLauncher;
     private ActivityResultLauncher<Intent> enquiryLauncher;
@@ -147,19 +151,19 @@ public class ListFragment extends Fragment {
     private void setupMaterialTabs() {
         materialTabs.setVisibility(View.VISIBLE);
         materialTabs.removeAllTabs();
-        materialTabs.addTab(materialTabs.newTab()
-                .setText(R.string.materials_tab_all)
-                .setIcon(R.drawable.ic_tab_all));
-        materialTabs.addTab(materialTabs.newTab()
-                .setText(R.string.materials_tab_documents)
-                .setIcon(R.drawable.ic_tab_document));
-        materialTabs.addTab(materialTabs.newTab()
-                .setText(R.string.materials_tab_videos)
-                .setIcon(R.drawable.ic_tab_video));
+        materialTabs.setTabMode(TabLayout.MODE_SCROLLABLE);
+        materialTabs.setTabGravity(TabLayout.GRAVITY_START);
+        addMaterialTab(R.string.materials_tab_all, MATERIAL_CAT_ALL, R.drawable.ic_tab_all);
+        addMaterialTab(R.string.materials_tab_videos, MATERIAL_CAT_VIDEO, R.drawable.ic_tab_video);
+        addMaterialTab(R.string.materials_tab_worksheet, MATERIAL_CAT_WORKSHEET, R.drawable.ic_tab_document);
+        addMaterialTab(R.string.materials_tab_question_papers, MATERIAL_CAT_QUESTION, R.drawable.ic_tab_document);
+        addMaterialTab(R.string.materials_tab_rps, MATERIAL_CAT_RPS, R.drawable.ic_tab_document);
+        addMaterialTab(R.string.materials_tab_others, MATERIAL_CAT_OTHERS, R.drawable.ic_tab_document);
         materialTabs.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
-                materialFilter = tab.getPosition();
+                Object tag = tab.getTag();
+                materialCategoryFilter = tag == null ? MATERIAL_CAT_ALL : tag.toString();
                 applyMaterialFilter();
             }
 
@@ -171,6 +175,14 @@ public class ListFragment extends Fragment {
             public void onTabReselected(TabLayout.Tab tab) {
             }
         });
+    }
+
+    private void addMaterialTab(int labelRes, String tag, int iconRes) {
+        TabLayout.Tab tab = materialTabs.newTab()
+                .setText(labelRes)
+                .setIcon(iconRes);
+        tab.setTag(tag);
+        materialTabs.addTab(tab);
     }
 
     private void setupNoticeTabs() {
@@ -226,14 +238,34 @@ public class ListFragment extends Fragment {
     }
 
     private boolean matchesMaterialFilter(ListItem item) {
-        switch (materialFilter) {
-            case MATERIAL_FILTER_VIDEO:
+        String category = normalizeCategory(item.materialCategory);
+        switch (materialCategoryFilter) {
+            case MATERIAL_CAT_VIDEO:
                 return item.hasVideo;
-            case MATERIAL_FILTER_DOCUMENT:
-                return !item.hasVideo;
+            case MATERIAL_CAT_WORKSHEET:
+                return "worksheet".equals(category);
+            case MATERIAL_CAT_QUESTION:
+                return "question paper".equals(category) || category.contains("question");
+            case MATERIAL_CAT_RPS:
+                return "rps".equals(category);
+            case MATERIAL_CAT_OTHERS:
+                if (item.hasVideo) {
+                    return false;
+                }
+                return !"worksheet".equals(category)
+                        && !"question paper".equals(category)
+                        && !category.contains("question")
+                        && !"rps".equals(category);
             default:
                 return true;
         }
+    }
+
+    private String normalizeCategory(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim().toLowerCase(Locale.ROOT);
     }
 
     private void loadData() {
@@ -297,8 +329,8 @@ public class ListFragment extends Fragment {
                 return "/enquiries?per_page=30";
             case TYPE_COURSES:
                 return "/events?per_page=30";
-            case TYPE_PROGRESS:
-                return "/progress?per_page=30";
+            case TYPE_ATTENDANCE:
+                return "/attendance?per_page=31";
             default:
                 return "/materials?per_page=30";
         }
@@ -323,8 +355,8 @@ public class ListFragment extends Fragment {
             appendNoticeRows(items, rows);
         } else if (TYPE_ENQUIRIES.equals(type)) {
             appendEnquiryRows(items, rows);
-        } else if (TYPE_PROGRESS.equals(type)) {
-            appendProgressRows(items, rows);
+        } else if (TYPE_ATTENDANCE.equals(type)) {
+            appendAttendanceRows(items, rows);
         } else {
             appendRows(items, rows, titleKeyForType(), subtitleKeyForType());
         }
@@ -390,7 +422,11 @@ public class ListFragment extends Fragment {
             if (row == null) continue;
             ListItem item = new ListItem();
             item.title = first(row, "material_title", "name", "title");
-            item.subtitle = UrlHelper.cleanHtml(first(row, "material_description", "description", "subject", "material_category"));
+            item.materialCategory = row.optString("material_category", "");
+            item.subtitle = UrlHelper.cleanHtml(first(row, "material_description", "description", "subject"));
+            if (item.subtitle.isEmpty() && !item.materialCategory.isEmpty()) {
+                item.subtitle = item.materialCategory;
+            }
             item.raw = row;
 
             String materialType = row.optString("material_type", "").toLowerCase();
@@ -410,20 +446,39 @@ public class ListFragment extends Fragment {
         }
     }
 
-    private void appendProgressRows(List<ListItem> items, JSONArray rows) {
+    private void appendAttendanceRows(List<ListItem> items, JSONArray rows) {
         for (int i = 0; i < rows.length(); i++) {
             JSONObject row = rows.optJSONObject(i);
             if (row == null) {
                 continue;
             }
             ListItem item = new ListItem();
-            item.title = row.optString("subject", "Progress Report");
-            item.subtitle = "Marks: " + row.optString("marks_obtained") + "/"
-                    + row.optString("marks_out_of") + " · " + row.optString("report_date");
-            String notes = row.optString("teacher_comments", "");
-            if (!notes.isEmpty() && !"null".equals(notes)) {
-                item.subtitle += "\n" + notes;
+            String status = row.optString("status", "");
+            String date = row.optString("attendance_date", "");
+            String title = row.optString("attendance_title", "");
+            if (title.isEmpty() || "null".equals(title)) {
+                title = row.optString("class_name", getString(R.string.attendance));
             }
+            item.title = title + " · " + status;
+            StringBuilder subtitle = new StringBuilder();
+            if (!date.isEmpty() && !"null".equals(date)) {
+                subtitle.append(date);
+            }
+            String day = row.optString("day_name", "");
+            if (!day.isEmpty() && !"null".equals(day)) {
+                if (subtitle.length() > 0) {
+                    subtitle.append(" · ");
+                }
+                subtitle.append(day);
+            }
+            String className = row.optString("class_name", "");
+            if (!className.isEmpty() && !"null".equals(className)) {
+                if (subtitle.length() > 0) {
+                    subtitle.append(" · ");
+                }
+                subtitle.append(className);
+            }
+            item.subtitle = subtitle.toString();
             item.raw = row;
             items.add(item);
         }
@@ -772,6 +827,7 @@ public class ListFragment extends Fragment {
         boolean canDownload = false;
         boolean seen = true;
         String materialType = "";
+        String materialCategory = "";
         String noticeType = "";
         String noticeContent = "";
         String mediaUrl = "";

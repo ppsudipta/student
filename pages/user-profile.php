@@ -234,7 +234,7 @@ $rowm = $res->fetch_assoc();
             <a href="./progress.php" class="d-flex align-items-center justify-content-between">
               <div class="d-flex align-items-center gap-12 shrink-0">
                 <img src="../assets/svg/globe.svg" alt="icon">
-                <p>Progress Report</p>
+                <p>My Attendance</p>
               </div>
   
               <img src="../assets/svg/chevron-right.svg" alt="Icon">

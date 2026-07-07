@@ -79,10 +79,10 @@ public class ProfileFragment extends Fragment {
                 getString(R.string.notifications_menu),
                 v -> activity.selectBottomNav(R.id.nav_notices));
 
-        setupMenuRow(view.findViewById(R.id.menuProgressReport), R.drawable.ic_progress,
+        setupMenuRow(view.findViewById(R.id.menuProgressReport), R.drawable.ic_attendance,
                 getString(R.string.progress_report),
-                v -> activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_PROGRESS),
-                        getString(R.string.progress_report)));
+                v -> activity.showFragment(new AttendanceFragment(),
+                        getString(R.string.progress_report), true));
 
         setupMenuRow(view.findViewById(R.id.menuLegal), R.drawable.ic_shield,
                 getString(R.string.legal_policies),

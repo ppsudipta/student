@@ -7,6 +7,7 @@ Route::get('/health', [StudentApiController::class, 'health']);
 Route::get('/ping', [StudentApiController::class, 'ping']);
 Route::post('/login', [StudentApiController::class, 'login']);
 Route::post('/register', [StudentApiController::class, 'register']);
+Route::get('/registration-options', [StudentApiController::class, 'registrationOptions']);
 Route::post('/contact', [StudentApiController::class, 'contact']);
 
 Route::get('/home', [StudentApiController::class, 'home']);
