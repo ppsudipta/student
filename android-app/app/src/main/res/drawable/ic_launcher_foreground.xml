@@ -4,10 +4,25 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Open book -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,28L28,42v24l26,14 26,-14V42L54,28zM54,36.5L68,44.5v16L54,68.5 40,60.5v-16L54,36.5z" />
+        android:pathData="M30,62c0,-4 8,-8 24,-8s24,4 24,8v18c0,3 -8,6 -24,6s-24,-3 -24,-6V62z" />
+    <path
+        android:fillColor="#EDE9FF"
+        android:pathData="M54,54v32c8,-2 16,-2 24,0V54c-8,2 -16,2 -24,0z" />
+    <!-- Graduation cap -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M48,52h12v12H48z" />
+        android:pathData="M54,28L20,44l34,16 34,-16 -34,-16z" />
+    <path
+        android:fillColor="#FFE66D"
+        android:pathData="M54,28v8l30,-14 -30,-14 -30,14 30,14v-8z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M78,44v14l-6,3V47l6,-3z" />
+    <!-- Star accent -->
+    <path
+        android:fillColor="#FFE66D"
+        android:pathData="M54,18l2.5,5 5.5,0.8 -4,3.9 0.9,5.5 -4.9,-2.6 -4.9,2.6 0.9,-5.5 -4,-3.9 5.5,-0.8z" />
 </vector>

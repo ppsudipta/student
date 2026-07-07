@@ -60,6 +60,7 @@ public class PdfActivity extends AppCompatActivity {
         setContentView(R.layout.activity_pdf);
 
         toolbar = findViewById(R.id.pdfToolbar);
+        UiUtils.setupViewerWindow(this, toolbar);
         toolbar.setTitle(title == null || title.isEmpty() ? getString(R.string.read_material) : title);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);

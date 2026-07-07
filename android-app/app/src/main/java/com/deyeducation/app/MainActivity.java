@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private ActionBarDrawerToggle drawerToggle;
     private MaterialToolbar toolbar;
     private String rootTitle = "";
+    private long lastBackPressTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -138,8 +139,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 bottomNav.setSelectedItemId(R.id.nav_profile);
             } else if ("fees".equals(screen)) {
                 showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees));
-            } else if ("homework".equals(screen)) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_HOMEWORK), getString(R.string.homework));
             } else if ("enquiry".equals(screen)) {
                 showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry));
             } else {
@@ -156,9 +155,17 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     drawerLayout.closeDrawer(GravityCompat.START);
                 } else if (popBackStackIfPossible()) {
                     // handled
+                } else if (!isOnHomeTab()) {
+                    goHome();
                 } else {
-                    setEnabled(false);
-                    getOnBackPressedDispatcher().onBackPressed();
+                    long now = System.currentTimeMillis();
+                    if (now - lastBackPressTime < 2000) {
+                        setEnabled(false);
+                        getOnBackPressedDispatcher().onBackPressed();
+                    } else {
+                        lastBackPressTime = now;
+                        UiUtils.toast(MainActivity.this, getString(R.string.press_back_again));
+                    }
                 }
             }
         });
@@ -215,6 +222,18 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             return true;
         }
         return false;
+    }
+
+    private boolean isOnHomeTab() {
+        Fragment current = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+        return current instanceof HomeFragment
+                && getSupportFragmentManager().getBackStackEntryCount() == 0
+                && bottomNav.getSelectedItemId() == R.id.nav_home;
+    }
+
+    private void goHome() {
+        showFragment(new HomeFragment(), getString(R.string.home));
+        bottomNav.setSelectedItemId(R.id.nav_home);
     }
 
     private void updateToolbarNavigation() {
@@ -324,10 +343,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
         if (id == R.id.drawer_fees) {
             showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees));
-            return true;
-        }
-        if (id == R.id.drawer_homework) {
-            showFragment(ListFragment.newInstance(ListFragment.TYPE_HOMEWORK), getString(R.string.homework));
             return true;
         }
         if (id == R.id.drawer_enquiry) {

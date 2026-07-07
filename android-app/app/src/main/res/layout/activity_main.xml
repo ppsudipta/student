@@ -16,7 +16,7 @@
             android:id="@+id/appBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/primary"
+            android:background="@drawable/bg_header_gradient"
             app:elevation="0dp">
 
             <com.google.android.material.appbar.MaterialToolbar

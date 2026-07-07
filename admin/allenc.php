@@ -292,6 +292,13 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
               <label for="reply_message">Your Reply:</label>
               <textarea class="form-control" name="reply_message" id="reply_message" rows="6" required></textarea>
             </div>
+
+            <div class="form-group">
+              <label for="reply_attachment">Attachment (optional)</label>
+              <input type="file" class="form-control" name="attachment" id="reply_attachment"
+                     accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,image/*,application/pdf">
+              <p class="help-block">Max 5 MB. JPG, PNG, PDF, DOC, DOCX, XLS, XLSX.</p>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
@@ -441,6 +448,12 @@ $(function () {
           html += '<div style="margin-bottom:12px;padding:8px;border-left:4px solid ' + (msg.sender_type === 'admin' ? '#5cb85c' : '#3c8dbc') + ';background:#f9f9f9;">';
           html += '<strong>' + who + '</strong> <small class="text-muted">' + when + '</small><br>';
           html += $('<div/>').text(msg.message).html().replace(/\n/g, '<br>');
+          if (msg.attachment) {
+            var attachUrl = msg.attachment.indexOf('/') >= 0
+              ? '../pages/' + msg.attachment
+              : '../pages/uploads/' + msg.attachment;
+            html += '<br><a href="' + attachUrl + '" target="_blank"><i class="fas fa-paperclip"></i> View attachment</a>';
+          }
           html += '</div>';
         });
         $('#view_thread').html(html);
@@ -481,6 +494,10 @@ $(function () {
       formData.append('enquiry_id', enquiryId);
       formData.append('reply_message', replyMessage);
       formData.append('reply_submit', '1');
+      var replyFile = document.getElementById('reply_attachment');
+      if (replyFile && replyFile.files.length > 0) {
+        formData.append('attachment', replyFile.files[0]);
+      }
       
       // Log FormData contents for debugging
       for (var pair of formData.entries()) {

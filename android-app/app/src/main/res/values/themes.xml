@@ -5,7 +5,7 @@
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSecondary">@color/primary_light</item>
-        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:statusBarColor">@color/primary_dark</item>
         <item name="android:navigationBarColor">@color/bottom_nav_bg</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">true</item>
@@ -13,7 +13,7 @@
     </style>
 
     <style name="Widget.DeyEducation.Toolbar" parent="Widget.Material3.Toolbar">
-        <item name="android:background">@color/primary</item>
+        <item name="android:background">@drawable/bg_header_gradient</item>
         <item name="titleTextColor">@color/white</item>
         <item name="android:minHeight">@dimen/toolbar_height</item>
     </style>

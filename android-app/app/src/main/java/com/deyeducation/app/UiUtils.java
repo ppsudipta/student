@@ -4,9 +4,18 @@ import android.app.Activity;
 import android.content.Context;
 import android.text.Html;
 import android.text.TextUtils;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
@@ -92,5 +101,24 @@ public final class UiUtils {
 
     public static int dp(Context context, int value) {
         return (int) (value * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    /** Keep toolbar and actions below the system status bar (fixes overlap on edge-to-edge devices). */
+    public static void setupViewerWindow(AppCompatActivity activity, View toolbar) {
+        if (activity == null || toolbar == null) {
+            return;
+        }
+        WindowCompat.setDecorFitsSystemWindows(activity.getWindow(), false);
+        activity.getWindow().setStatusBarColor(ContextCompat.getColor(activity, R.color.primary));
+        final int toolbarBase = activity.getResources().getDimensionPixelSize(R.dimen.toolbar_height);
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar, (v, windowInsets) -> {
+            Insets statusBars = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars());
+            ViewGroup.LayoutParams lp = v.getLayoutParams();
+            lp.height = toolbarBase + statusBars.top;
+            v.setPadding(v.getPaddingLeft(), statusBars.top, v.getPaddingRight(), v.getPaddingBottom());
+            v.setLayoutParams(lp);
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(toolbar);
     }
 }

@@ -1,12 +1,16 @@
 package com.deyeducation.app;
 
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -20,19 +24,25 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class EnquiryDetailFragment extends Fragment {
     public static final String ARG_ID = "enquiry_id";
     public static final String ARG_SUBJECT = "enquiry_subject";
 
     private ApiClient api;
+    private SessionManager session;
     private int enquiryId;
-    private MessageAdapter adapter;
+    private EnquiryMessagesAdapter adapter;
     private ProgressBar progressBar;
     private TextInputEditText inputReply;
     private MaterialButton sendButton;
     private TextView metaView;
+    private TextView replyAttachmentView;
+    private AttachmentHelper.SelectedFile selectedFile;
+    private ActivityResultLauncher<String[]> pickFileLauncher;
 
     public static EnquiryDetailFragment newInstance(int id, String subject) {
         Bundle args = new Bundle();
@@ -41,6 +51,14 @@ public class EnquiryDetailFragment extends Fragment {
         EnquiryDetailFragment fragment = new EnquiryDetailFragment();
         fragment.setArguments(args);
         return fragment;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        pickFileLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                this::onFileSelected);
     }
 
     @Nullable
@@ -56,23 +74,29 @@ public class EnquiryDetailFragment extends Fragment {
         Bundle args = getArguments();
         enquiryId = args == null ? 0 : args.getInt(ARG_ID, 0);
         String subject = args == null ? null : args.getString(ARG_SUBJECT);
-        api = ((MainActivity) requireActivity()).getApi();
+        MainActivity activity = (MainActivity) requireActivity();
+        api = activity.getApi();
+        session = activity.getSession();
 
         metaView = view.findViewById(R.id.enquiryMeta);
         RecyclerView list = view.findViewById(R.id.messageList);
         inputReply = view.findViewById(R.id.inputReply);
         sendButton = view.findViewById(R.id.btnSendReply);
         progressBar = view.findViewById(R.id.enquiryProgress);
+        replyAttachmentView = view.findViewById(R.id.tvReplyAttachment);
+        ImageButton attachButton = view.findViewById(R.id.btnAttachReply);
 
-        adapter = new MessageAdapter();
+        adapter = new EnquiryMessagesAdapter(session.getBaseUrl());
         list.setLayoutManager(new LinearLayoutManager(requireContext()));
         list.setAdapter(adapter);
 
+        attachButton.setOnClickListener(v ->
+                pickFileLauncher.launch(AttachmentHelper.openDocumentMimeTypes()));
         sendButton.setOnClickListener(v -> sendReply());
         loadThread();
 
-        if (getActivity() instanceof MainActivity && subject != null && !subject.isEmpty()) {
-            ((MainActivity) getActivity()).setScreenTitle(subject);
+        if (subject != null && !subject.isEmpty()) {
+            activity.setScreenTitle(subject);
         }
     }
 
@@ -86,6 +110,31 @@ public class EnquiryDetailFragment extends Fragment {
                 ((MainActivity) getActivity()).setScreenTitle(getString(R.string.enquiry_thread));
             }
         }
+    }
+
+    private void onFileSelected(Uri uri) {
+        if (uri == null || !isAdded()) {
+            return;
+        }
+        try {
+            requireContext().getContentResolver().takePersistableUriPermission(uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) {
+        }
+        try {
+            selectedFile = AttachmentHelper.readSelectedFile(requireContext(), uri);
+            replyAttachmentView.setText(selectedFile.fileName);
+            replyAttachmentView.setVisibility(View.VISIBLE);
+        } catch (Exception e) {
+            clearAttachment();
+            UiUtils.toast(requireContext(), e.getMessage());
+        }
+    }
+
+    private void clearAttachment() {
+        selectedFile = null;
+        replyAttachmentView.setText("");
+        replyAttachmentView.setVisibility(View.GONE);
     }
 
     private void loadThread() {
@@ -129,40 +178,52 @@ public class EnquiryDetailFragment extends Fragment {
         }
         progressBar.setVisibility(View.VISIBLE);
         sendButton.setEnabled(false);
-        try {
-            JSONObject body = new JSONObject();
-            body.put("message", text);
-            api.post("/enquiries/" + enquiryId + "/messages", body, true, new ApiClient.Callback() {
-                @Override
-                public void onSuccess(JSONObject json) {
-                    if (!isAdded()) {
-                        return;
-                    }
-                    requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        sendButton.setEnabled(true);
-                        inputReply.setText("");
-                        UiUtils.toast(requireContext(), getString(R.string.message_sent));
-                        loadThread();
-                    });
-                }
 
-                @Override
-                public void onError(String message) {
-                    if (!isAdded()) {
-                        return;
-                    }
-                    requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        sendButton.setEnabled(true);
-                        UiUtils.toast(requireContext(), message);
-                    });
+        Map<String, String> fields = new HashMap<>();
+        fields.put("message", text);
+
+        ApiClient.Callback callback = new ApiClient.Callback() {
+            @Override
+            public void onSuccess(JSONObject json) {
+                if (!isAdded()) {
+                    return;
                 }
-            });
-        } catch (Exception e) {
-            progressBar.setVisibility(View.GONE);
-            sendButton.setEnabled(true);
-            UiUtils.toast(requireContext(), e.getMessage());
+                requireActivity().runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    sendButton.setEnabled(true);
+                    inputReply.setText("");
+                    clearAttachment();
+                    UiUtils.toast(requireContext(), getString(R.string.message_sent));
+                    loadThread();
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                if (!isAdded()) {
+                    return;
+                }
+                requireActivity().runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    sendButton.setEnabled(true);
+                    UiUtils.toast(requireContext(), message);
+                });
+            }
+        };
+
+        if (selectedFile != null) {
+            api.postMultipart("/enquiries/" + enquiryId + "/messages", fields, "attachment",
+                    selectedFile.bytes, selectedFile.fileName, selectedFile.mimeType, true, callback);
+        } else {
+            try {
+                JSONObject body = new JSONObject();
+                body.put("message", text);
+                api.post("/enquiries/" + enquiryId + "/messages", body, true, callback);
+            } catch (Exception e) {
+                progressBar.setVisibility(View.GONE);
+                sendButton.setEnabled(true);
+                UiUtils.toast(requireContext(), e.getMessage());
+            }
         }
     }
 
@@ -185,52 +246,5 @@ public class EnquiryDetailFragment extends Fragment {
             return "";
         }
         return value.substring(0, 1).toUpperCase() + value.substring(1);
-    }
-
-    private class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.Holder> {
-        private final List<JSONObject> items = new ArrayList<>();
-
-        void setMessages(List<JSONObject> next) {
-            items.clear();
-            items.addAll(next);
-            notifyDataSetChanged();
-        }
-
-        @NonNull
-        @Override
-        public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_enquiry_message, parent, false);
-            return new Holder(view);
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull Holder holder, int position) {
-            JSONObject row = items.get(position);
-            boolean admin = "admin".equals(row.optString("sender_type"));
-            holder.sender.setText(admin
-                    ? holder.itemView.getContext().getString(R.string.admin_reply)
-                    : holder.itemView.getContext().getString(R.string.you));
-            holder.time.setText(row.optString("created_at", ""));
-            holder.body.setText(row.optString("message", ""));
-        }
-
-        @Override
-        public int getItemCount() {
-            return items.size();
-        }
-
-        class Holder extends RecyclerView.ViewHolder {
-            final TextView sender;
-            final TextView time;
-            final TextView body;
-
-            Holder(@NonNull View itemView) {
-                super(itemView);
-                sender = itemView.findViewById(R.id.msgSender);
-                time = itemView.findViewById(R.id.msgTime);
-                body = itemView.findViewById(R.id.msgBody);
-            }
-        }
     }
 }

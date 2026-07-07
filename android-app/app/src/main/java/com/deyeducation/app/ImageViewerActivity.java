@@ -61,6 +61,7 @@ public class ImageViewerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_image_viewer);
 
         MaterialToolbar toolbar = findViewById(R.id.imageToolbar);
+        UiUtils.setupViewerWindow(this, toolbar);
         toolbar.setTitle(title == null || title.isEmpty() ? getString(R.string.gallery) : title);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);

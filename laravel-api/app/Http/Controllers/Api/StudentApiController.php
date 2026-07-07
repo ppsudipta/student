@@ -563,7 +563,7 @@ class StudentApiController extends Controller
             'enquiry_type' => ['required', 'string', Rule::in(['academic', 'financial', 'technical', 'facilities', 'other'])],
             'subject' => ['required', 'string', 'max:255'],
             'message' => ['required', 'string'],
-            'attachment' => ['nullable', 'file', 'max:5120'],
+            'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx'],
         ]);
 
         $attachment = null;
@@ -604,7 +604,7 @@ class StudentApiController extends Controller
 
         $data = $request->validate([
             'message' => ['required', 'string'],
-            'attachment' => ['nullable', 'file', 'max:5120'],
+            'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx'],
         ]);
 
         $attachment = null;
@@ -1164,7 +1164,11 @@ class StudentApiController extends Controller
     private function enquiryPayload(array $row, bool $withMessages = false): array
     {
         $id = (int) ($row['id'] ?? 0);
-        $messages = $this->enquiryMessages($id);
+        $messages = array_map(
+            fn (array $message) => $this->formatEnquiryMessage($message),
+            $this->enquiryMessages($id)
+        );
+        $row['attachment_url'] = $this->enquiryAttachmentUrl($row['attachment'] ?? null);
         $row['message_count'] = count($messages);
         $row['messages'] = $withMessages ? $messages : [];
         $row['has_admin_reply'] = collect($messages)->contains(fn ($message) => ($message['sender_type'] ?? '') === 'admin')
@@ -1173,6 +1177,41 @@ class StudentApiController extends Controller
         $row['last_message'] = $messages !== [] ? end($messages) : null;
 
         return $row;
+    }
+
+    private function formatEnquiryMessage(array $message): array
+    {
+        $message['attachment_url'] = $this->enquiryAttachmentUrl($message['attachment'] ?? null);
+
+        return $message;
+    }
+
+    private function enquiryAttachmentUrl(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        $path = str_replace('\\/', '/', $path);
+        $base = $this->publicAssetBase();
+
+        if (str_starts_with($path, 'pages/')) {
+            return $base.'/'.$this->encodePath($path);
+        }
+
+        if (str_starts_with($path, 'uploads/')) {
+            return $base.'/pages/'.$this->encodePath($path);
+        }
+
+        if (! str_contains($path, '/')) {
+            return $base.'/pages/uploads/'.$this->encodePath($path);
+        }
+
+        return $this->assetUrl($path);
     }
 
     private function enquiryMessages(int $enquiryId): array

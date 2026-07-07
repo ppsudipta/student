@@ -51,6 +51,7 @@ public class VideoActivity extends AppCompatActivity {
         String title = getIntent().getStringExtra(EXTRA_TITLE);
 
         MaterialToolbar toolbar = findViewById(R.id.videoToolbar);
+        UiUtils.setupViewerWindow(this, toolbar);
         toolbar.setTitle(title == null ? getString(R.string.play_video) : title);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);

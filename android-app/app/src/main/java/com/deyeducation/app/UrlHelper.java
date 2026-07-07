@@ -29,6 +29,42 @@ public final class UrlHelper {
         return null;
     }
 
+    /** Prefer {@code attachment_url} from API, else build URL for enquiry uploads. */
+    public static String enquiryAttachmentFromJson(String baseUrl, JSONObject row) {
+        if (row == null) {
+            return null;
+        }
+        String direct = row.optString("attachment_url", "");
+        if (!isBlank(direct)) {
+            if (direct.startsWith("http://") || direct.startsWith("https://")) {
+                return direct;
+            }
+            return resolveImageUrl(baseUrl, direct);
+        }
+        return enquiryAttachmentUrl(baseUrl, row.optString("attachment", ""));
+    }
+
+    public static String enquiryAttachmentUrl(String baseUrl, String attachment) {
+        if (isBlank(attachment)) {
+            return null;
+        }
+        String cleaned = normalizeRelativePath(attachment.replace("\\/", "/"));
+        String root = projectRootFromApi(baseUrl);
+        if (cleaned.startsWith("pages/")) {
+            return encodeUrl(root + cleaned);
+        }
+        if (cleaned.startsWith("uploads/")) {
+            return encodeUrl(root + "pages/" + cleaned);
+        }
+        if (!cleaned.contains("/")) {
+            return encodeUrl(root + "pages/uploads/" + cleaned);
+        }
+        if (cleaned.startsWith("admin/")) {
+            return encodeUrl(root + cleaned);
+        }
+        return encodeUrl(root + "pages/" + cleaned);
+    }
+
     private static boolean isBlank(String value) {
         return TextUtils.isEmpty(value) || "null".equalsIgnoreCase(value);
     }

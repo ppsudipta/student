@@ -2,7 +2,6 @@ package com.deyeducation.app;
 
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -42,6 +41,7 @@ public class NoticeDetailActivity extends AppCompatActivity {
         seen = getIntent().getBooleanExtra(EXTRA_SEEN, false);
 
         MaterialToolbar toolbar = findViewById(R.id.noticeToolbar);
+        UiUtils.setupViewerWindow(this, toolbar);
         toolbar.setTitle(R.string.notice);
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);

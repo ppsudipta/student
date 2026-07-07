@@ -14,6 +14,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
@@ -152,7 +153,9 @@ public class HomeFragment extends Fragment {
 
     private void addServiceItem(GridLayout grid, int iconRes, String label, View.OnClickListener click) {
         View item = LayoutInflater.from(requireContext()).inflate(R.layout.item_service_grid, grid, false);
-        ((ImageView) item.findViewById(R.id.serviceIcon)).setImageResource(iconRes);
+        ImageView icon = item.findViewById(R.id.serviceIcon);
+        icon.setImageResource(iconRes);
+        icon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.primary));
         ((TextView) item.findViewById(R.id.serviceLabel)).setText(label);
         item.setOnClickListener(click);
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
@@ -190,10 +193,6 @@ public class HomeFragment extends Fragment {
             dialog.dismiss();
             activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees));
         });
-        addServiceItem(moreGrid, R.drawable.ic_service_more, getString(R.string.homework), v -> {
-            dialog.dismiss();
-            activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_HOMEWORK), getString(R.string.homework));
-        });
         dialog.setContentView(sheet);
         dialog.show();
     }
@@ -211,7 +210,7 @@ public class HomeFragment extends Fragment {
                     TextView greeting = root.findViewById(R.id.tvGreeting);
                     TextView address = root.findViewById(R.id.tvAddress);
                     if (student != null) {
-                        greeting.setText("Hi, " + student.optString("name", "Student"));
+                        greeting.setText("Hey, " + student.optString("name", "Student") + " 👋");
                         address.setText(student.optString("address", ""));
                         session.setStudentName(student.optString("name"));
                     } else if (company != null) {

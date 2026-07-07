@@ -54,6 +54,56 @@ function load_enquiry_messages($con, $enquiry_id) {
     return $messages;
 }
 
+function save_enquiry_attachment_file($file, &$errorMessage) {
+    $maxBytes = 5 * 1024 * 1024;
+    $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+
+    if (!isset($file['name']) || $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $errorMessage = 'File upload failed.';
+        return false;
+    }
+    if ($file['size'] > $maxBytes) {
+        $errorMessage = 'File is too large. Maximum size is 5 MB.';
+        return false;
+    }
+
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($extension, $allowed, true)) {
+        $errorMessage = 'File type not allowed. Use JPG, PNG, PDF, DOC, DOCX, XLS, or XLSX.';
+        return false;
+    }
+
+    $uploadDir = __DIR__ . '/uploads';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    $storedName = uniqid('api_', true) . '.' . $extension;
+    $targetPath = $uploadDir . '/' . $storedName;
+    if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+        $errorMessage = 'Unable to save uploaded file.';
+        return false;
+    }
+
+    return $storedName;
+}
+
+function enquiry_attachment_url($attachment) {
+    if (empty($attachment)) {
+        return '';
+    }
+    if (strpos($attachment, 'uploads/') === 0) {
+        return htmlspecialchars($attachment);
+    }
+    if (strpos($attachment, '/') === false) {
+        return 'uploads/' . htmlspecialchars($attachment);
+    }
+    return htmlspecialchars($attachment);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['followup_enquiry_id'])) {
         $enquiry_id = intval($_POST['followup_enquiry_id']);
@@ -65,10 +115,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $owned = $check->get_result()->fetch_assoc();
             $check->close();
             if ($owned) {
+                $uploadError = '';
+                $followupAttachment = null;
+                if (!empty($_FILES['followup_attachment']['name'])) {
+                    $saved = save_enquiry_attachment_file($_FILES['followup_attachment'], $uploadError);
+                    if ($saved === false) {
+                        echo "<script>alert('" . addslashes($uploadError) . "'); window.history.back();</script>";
+                        exit();
+                    }
+                    $followupAttachment = $saved;
+                }
                 $tableCheck = $con->query("SHOW TABLES LIKE 'enquiry_messages'");
                 if ($tableCheck && $tableCheck->num_rows > 0) {
-                    $msgStmt = $con->prepare("INSERT INTO enquiry_messages (enquiry_id, sender_type, sender_name, message, created_at) VALUES (?, 'student', ?, ?, NOW())");
-                    $msgStmt->bind_param("iss", $enquiry_id, $name, $followup_message);
+                    $msgStmt = $con->prepare("INSERT INTO enquiry_messages (enquiry_id, sender_type, sender_name, message, attachment, created_at) VALUES (?, 'student', ?, ?, ?, NOW())");
+                    $msgStmt->bind_param("isss", $enquiry_id, $name, $followup_message, $followupAttachment);
                     $msgStmt->execute();
                     $msgStmt->close();
                 }
@@ -91,16 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Handle file upload if any
     $attachment = '';
+    $uploadError = '';
     if (!empty($_FILES['attachment']['name'])) {
-        $targetDir = "uploads/";
-        if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0777, true);
+        $saved = save_enquiry_attachment_file($_FILES['attachment'], $uploadError);
+        if ($saved === false) {
+            echo "<script>alert('" . addslashes($uploadError) . "'); window.history.back();</script>";
+            exit();
         }
-        $fileName = basename($_FILES["attachment"]["name"]);
-        $targetFilePath = $targetDir . time() . '_' . $fileName;
-        if (move_uploaded_file($_FILES["attachment"]["tmp_name"], $targetFilePath)) {
-            $attachment = $targetFilePath;
-        }
+        $attachment = $saved;
     }
 
     // Insert into database
@@ -351,8 +409,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <textarea class="form-control" id="message" name="message" rows="5" required></textarea>
           </div>
           <div class="mb-3">
-            <label for="attachment" class="form-label">Supporting Documents (if any)</label>
-            <input type="file" class="form-control" id="attachment" name="attachment">
+            <label for="attachment" class="form-label">Supporting Documents (optional)</label>
+            <input type="file" class="form-control" id="attachment" name="attachment"
+                   accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,image/*,application/pdf">
+            <small class="text-muted">Max 5 MB. JPG, PNG, PDF, DOC, DOCX, XLS, XLSX.</small>
           </div>
         </div>
 
@@ -401,14 +461,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <span class="enquiry-date"><?= date('M j, Y g:i A', strtotime($msg['created_at'])) ?></span>
             </div>
             <p><?= nl2br(htmlspecialchars($msg['message'])) ?></p>
+            <?php if (!empty($msg['attachment'])): ?>
+              <p><a href="<?= enquiry_attachment_url($msg['attachment']) ?>" target="_blank">View attachment</a></p>
+            <?php endif; ?>
           </div>
           <?php endforeach; ?>
 
-          <form method="POST" class="mt-3">
+          <form method="POST" class="mt-3" enctype="multipart/form-data">
             <input type="hidden" name="followup_enquiry_id" value="<?= (int)$enquiry['id'] ?>">
             <div class="mb-2">
               <label class="form-label">Reply to this thread</label>
               <textarea class="form-control" name="followup_message" rows="3" required placeholder="Type your follow-up message..."></textarea>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Attach file (optional)</label>
+              <input type="file" class="form-control" name="followup_attachment"
+                     accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,image/*,application/pdf">
+              <small class="text-muted">Max 5 MB. JPG, PNG, PDF, DOC, DOCX, XLS, XLSX.</small>
             </div>
             <button type="submit" class="btn btn-outline-primary btn-sm">Send Reply</button>
           </form>

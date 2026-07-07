@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dey Education</string>
-    <string name="welcome_back">Hi, Welcome Back!</string>
-    <string name="welcome_subtitle">Thank you for visiting again.</string>
+    <string name="welcome_back">Hey Student! 👋</string>
+    <string name="welcome_subtitle">Learn, grow &amp; shine with Dey Education</string>
+    <string name="press_back_again">Press back again to exit</string>
     <string name="mobile_number">Mobile Number</string>
     <string name="password">Password</string>
     <string name="login">Login</string>
@@ -26,6 +27,7 @@
     <string name="no_records">No records found.</string>
     <string name="fee_warning">You didn\'t pay your fees for the last 2 months. Please submit them as soon as possible.</string>
     <string name="all_services">All Services</string>
+    <string name="quick_services">Quick Services</string>
     <string name="courses">Courses</string>
     <string name="contact">Contact</string>
     <string name="enquiry">Enquiry</string>
@@ -36,7 +38,7 @@
     <string name="progress">Progress</string>
     <string name="menu">Menu</string>
     <string name="notice">Notice</string>
-    <string name="verified_user">Verified user · Membership</string>
+    <string name="verified_user">Student · Dey Education</string>
     <string name="play_video">Play Video</string>
     <string name="open_material">Read</string>
     <string name="read_material">Study material</string>
@@ -131,4 +133,11 @@
     <string name="address_label">Address</string>
     <string name="whatsapp_label">WhatsApp</string>
     <string name="view_course">View course</string>
+    <string name="attach_file">Attach file</string>
+    <string name="attachment_optional">Attach image, PDF, Word or Excel (optional)</string>
+    <string name="attachment_limit_hint">Max 5 MB · JPG, PNG, PDF, DOC, DOCX, XLS, XLSX</string>
+    <string name="attachment_too_large">File is too large. Maximum size is 5 MB.</string>
+    <string name="attachment_type_not_allowed">This file type is not allowed.</string>
+    <string name="remove_attachment">Remove attachment</string>
+    <string name="open_attachment">Open attachment</string>
 </resources>
