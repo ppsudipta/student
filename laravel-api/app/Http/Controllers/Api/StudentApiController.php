@@ -434,28 +434,80 @@ class StudentApiController extends Controller
     {
         $student = $this->studentFromRequest($request);
         $payments = Donation::query()
-            ->where('student_registration_code', $student->registration_code);
+            ->where('student_registration_code', $student->registration_code)
+            ->select(['donation_date', 'payment_reason', 'status', 'created_at']);
+
+        if ($request->filled('year')) {
+            $payments->whereYear('donation_date', $request->integer('year'));
+        }
 
         if ($request->filled('month')) {
             $payments->where('payment_reason', $request->input('month'));
         }
 
+        $paginated = $payments
+            ->latest('created_at')
+            ->paginate($request->integer('per_page', 50));
+
+        $paginated->getCollection()->transform(function ($payment) {
+            $date = $payment->donation_date;
+            $year = $date ? $date->format('Y') : '';
+            $month = trim((string) ($payment->payment_reason ?? ''));
+            $payment->fee_period = $month !== '' && $year !== ''
+                ? $month.' '.$year
+                : ($month !== '' ? $month : $year);
+
+            return $payment;
+        });
+
         return response()->json([
-            'summary' => [
-                'total_fees' => $student->total_fees,
-                'paid_fees' => $student->paid_fees,
-                'due_fees' => $student->due_fees,
+            'student' => [
+                'name' => $student->name,
+                'registration_code' => $student->registration_code,
+                'mobile_number' => $student->mobile_number,
+                'email' => $student->email,
             ],
-            'months' => Donation::query()
-                ->where('student_registration_code', $student->registration_code)
-                ->distinct()
-                ->orderBy('payment_reason')
-                ->pluck('payment_reason')
-                ->values(),
-            'payments' => $payments
-                ->latest('created_at')
-                ->paginate($request->integer('per_page', 20)),
+            'months_by_year' => $this->feeMonthsByYear($student->registration_code),
+            'record_count' => $paginated->total(),
+            'payments' => $paginated,
         ]);
+    }
+
+    private function feeMonthsByYear(string $registrationCode): array
+    {
+        $rows = Donation::query()
+            ->where('student_registration_code', $registrationCode)
+            ->whereNotNull('donation_date')
+            ->orderByDesc('donation_date')
+            ->get(['donation_date', 'payment_reason']);
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $year = (int) $row->donation_date->format('Y');
+            $month = trim((string) ($row->payment_reason ?? ''));
+            if ($month === '') {
+                continue;
+            }
+            $grouped[$year][$month] = true;
+        }
+
+        krsort($grouped);
+        $result = [];
+        foreach ($grouped as $year => $months) {
+            $monthNames = array_keys($months);
+            usort($monthNames, function (string $a, string $b) use ($year) {
+                $aNum = (int) date('n', strtotime($a.' 1 '.$year));
+                $bNum = (int) date('n', strtotime($b.' 1 '.$year));
+
+                return $bNum <=> $aNum;
+            });
+            $result[] = [
+                'year' => (int) $year,
+                'months' => array_values($monthNames),
+            ];
+        }
+
+        return $result;
     }
 
     public function markNoticeSeen(Request $request, int $id): JsonResponse
@@ -777,35 +829,56 @@ class StudentApiController extends Controller
     public function polls(Request $request): JsonResponse
     {
         $student = $this->studentFromRequest($request);
-        $polls = $this->table('polls')
-            ->where(function ($query) use ($student) {
-                $query->where('send_type', 'all')
-                    ->orWhere(function ($single) use ($student) {
-                        $single->where('send_type', 'single')->where('student_id', $student->id);
-                    })
-                    ->orWhere(function ($class) use ($student) {
-                        $class->where('send_type', 'class')
-                            ->where('class_name', $student->class)
-                            ->where('session', $student->session);
-                    });
-            })
-            ->where(function ($query) {
-                $query->whereNull('expiry_date')->orWhere('expiry_date', '>=', now()->toDateString());
-            })
-            ->orderByDesc('id')
-            ->get();
+        $polls = $this->pollsVisibleToStudent($student);
 
         $pollIds = $polls->pluck('id');
         $options = $this->table('poll_options')->whereIn('poll_id', $pollIds)->get()->groupBy('poll_id');
         $votes = $this->table('poll_votes')->where('student_id', $student->id)->whereIn('poll_id', $pollIds)->get()->keyBy('poll_id');
 
         return response()->json([
-            'data' => $polls->map(fn ($poll) => [
-                'poll' => $poll,
-                'options' => $options->get($poll->id, collect())->values(),
-                'my_vote' => $votes->get($poll->id),
-            ])->values(),
+            'data' => $polls->map(function ($poll) use ($options, $votes) {
+                $myVote = $votes->get($poll->id);
+                $payload = [
+                    'poll' => $poll,
+                    'options' => $options->get($poll->id, collect())->values(),
+                    'my_vote' => $myVote,
+                    'has_voted' => $myVote !== null,
+                ];
+                if ($myVote !== null) {
+                    $payload['results'] = $this->pollResults((int) $poll->id);
+                }
+
+                return $payload;
+            })->values(),
         ]);
+    }
+
+    public function showPoll(Request $request, int $id): JsonResponse
+    {
+        $student = $this->studentFromRequest($request);
+        $poll = $this->pollsVisibleToStudent($student)->firstWhere('id', $id);
+
+        if (! $poll) {
+            return response()->json(['message' => 'Poll not found.'], 404);
+        }
+
+        $myVote = $this->table('poll_votes')
+            ->where('poll_id', $id)
+            ->where('student_id', $student->id)
+            ->first();
+
+        $payload = [
+            'poll' => $poll,
+            'options' => $this->table('poll_options')->where('poll_id', $id)->get()->values(),
+            'my_vote' => $myVote,
+            'has_voted' => $myVote !== null,
+        ];
+
+        if ($myVote !== null) {
+            $payload['results'] = $this->pollResults($id);
+        }
+
+        return response()->json(['data' => $payload]);
     }
 
     public function votePoll(Request $request, int $id): JsonResponse
@@ -814,6 +887,11 @@ class StudentApiController extends Controller
         $data = $request->validate([
             'option_id' => ['required', 'integer'],
         ]);
+
+        $poll = $this->pollsVisibleToStudent($student)->firstWhere('id', $id);
+        if (! $poll) {
+            return response()->json(['message' => 'Poll not found.'], 404);
+        }
 
         $option = $this->table('poll_options')
             ->where('id', $data['option_id'])
@@ -843,7 +921,21 @@ class StudentApiController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Vote saved.']);
+        $myVote = $this->table('poll_votes')
+            ->where('poll_id', $id)
+            ->where('student_id', $student->id)
+            ->first();
+
+        return response()->json([
+            'message' => 'Vote saved.',
+            'data' => [
+                'poll' => $poll,
+                'options' => $this->table('poll_options')->where('poll_id', $id)->get()->values(),
+                'my_vote' => $myVote,
+                'has_voted' => true,
+                'results' => $this->pollResults($id),
+            ],
+        ]);
     }
 
     public function contact(Request $request): JsonResponse
@@ -1379,20 +1471,31 @@ class StudentApiController extends Controller
 
     private function hasPendingFees(Student $student): bool
     {
-        $months = [
-            now()->subMonth()->format('F'),
-            now()->format('F'),
+        $periods = [
+            [
+                'month' => now()->subMonth()->format('F'),
+                'year' => now()->subMonth()->year,
+            ],
+            [
+                'month' => now()->format('F'),
+                'year' => now()->year,
+            ],
         ];
 
-        $paid = Donation::query()
-            ->where('student_registration_code', $student->registration_code)
-            ->whereIn('payment_reason', $months)
-            ->where('status', 'success')
-            ->distinct()
-            ->pluck('payment_reason')
-            ->all();
+        foreach ($periods as $period) {
+            $paid = Donation::query()
+                ->where('student_registration_code', $student->registration_code)
+                ->where('payment_reason', $period['month'])
+                ->whereYear('donation_date', $period['year'])
+                ->where('status', 'success')
+                ->exists();
 
-        return count(array_diff($months, $paid)) === 2;
+            if (! $paid) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function canAccessMaterial(Student $student, StudentMaterial $material): bool
@@ -1470,6 +1573,66 @@ class StudentApiController extends Controller
         }
 
         return count(array_intersect($studentClasses, $materialClasses)) > 0;
+    }
+
+    private function pollsVisibleToStudent(Student $student)
+    {
+        $studentClasses = $this->splitClasses($student->class);
+        $studentSessions = $this->splitClasses($student->session);
+
+        return $this->table('polls')
+            ->where(function ($query) use ($student, $studentClasses, $studentSessions) {
+                $query->where('send_type', 'all')
+                    ->orWhere(function ($single) use ($student) {
+                        $single->where('send_type', 'single')->where('student_id', $student->id);
+                    })
+                    ->orWhere(function ($class) use ($studentClasses, $studentSessions) {
+                        $class->where('send_type', 'class')
+                            ->where(function ($match) use ($studentClasses, $studentSessions) {
+                                $match->where(function ($classFilter) use ($studentClasses) {
+                                    $classFilter->whereNull('class_name')
+                                        ->orWhere('class_name', '');
+                                    if ($studentClasses !== []) {
+                                        $classFilter->orWhereIn('class_name', $studentClasses);
+                                    }
+                                })->where(function ($sessionFilter) use ($studentSessions) {
+                                    $sessionFilter->whereNull('session')
+                                        ->orWhere('session', '');
+                                    if ($studentSessions !== []) {
+                                        $sessionFilter->orWhereIn('session', $studentSessions);
+                                    }
+                                });
+                            });
+                    });
+            })
+            ->where(function ($query) {
+                $query->whereNull('expiry_date')->orWhere('expiry_date', '>=', now()->toDateString());
+            })
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    private function pollResults(int $pollId): array
+    {
+        $options = $this->table('poll_options')->where('poll_id', $pollId)->get();
+        $counts = $this->table('poll_votes')
+            ->where('poll_id', $pollId)
+            ->selectRaw('option_id, COUNT(*) as votes')
+            ->groupBy('option_id')
+            ->pluck('votes', 'option_id');
+
+        $total = (int) $counts->sum();
+
+        return $options->map(function ($option) use ($counts, $total) {
+            $votes = (int) ($counts[$option->id] ?? 0);
+
+            return [
+                'id' => $option->id,
+                'option_text' => $option->option_text,
+                'votes' => $votes,
+                'percentage' => $total > 0 ? (int) round(($votes / $total) * 100) : 0,
+            ];
+        })->values()->all();
     }
 
     private function transformPaginator($paginator)

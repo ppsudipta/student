@@ -7,7 +7,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -32,7 +31,7 @@ public class AboutContentFragment extends Fragment {
 
     private ApiClient api;
     private String mapUrl;
-    private ProgressBar progress;
+    private View progress;
     private TextView titleView;
     private TextView descriptionView;
     private TextView phoneView;
@@ -111,7 +110,7 @@ public class AboutContentFragment extends Fragment {
     }
 
     private void loadAbout() {
-        progress.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progress, true);
         api.get("/about", false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
@@ -119,7 +118,7 @@ public class AboutContentFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     JSONObject data = json.optJSONObject("data");
                     if (data != null) {
                         bindAbout(data);
@@ -147,7 +146,7 @@ public class AboutContentFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     JSONObject company = json.optJSONObject("data");
                     if (company != null) {
                         bindCompany(company, null);
@@ -161,7 +160,7 @@ public class AboutContentFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     UiUtils.toast(requireContext(), message);
                 });
             }

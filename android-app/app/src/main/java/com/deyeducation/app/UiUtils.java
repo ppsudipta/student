@@ -10,12 +10,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
@@ -101,6 +104,34 @@ public final class UiUtils {
 
     public static int dp(Context context, int value) {
         return (int) (value * context.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    public static void setLoaderVisible(@Nullable View loader, boolean visible) {
+        if (loader == null) {
+            return;
+        }
+        if (loader instanceof FunLoaderView funLoader) {
+            if (visible) {
+                funLoader.show();
+            } else {
+                funLoader.hide();
+            }
+        } else {
+            loader.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    public static void setupColorfulSwipeRefresh(SwipeRefreshLayout refresh) {
+        if (refresh == null) {
+            return;
+        }
+        refresh.setColorSchemeResources(
+                R.color.primary,
+                R.color.accent_teal,
+                R.color.accent,
+                R.color.accent_pink,
+                R.color.accent_yellow);
+        refresh.setProgressBackgroundColorSchemeResource(R.color.white);
     }
 
     /** Keep toolbar and actions below the system status bar (fixes overlap on edge-to-edge devices). */

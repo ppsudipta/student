@@ -8,7 +8,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -61,7 +60,7 @@ public class ListFragment extends Fragment {
     private SessionManager session;
     private String type;
     private SwipeRefreshLayout swipeRefresh;
-    private ProgressBar progressBar;
+    private View progressBar;
     private LinearLayout emptyView;
     private TextView emptyText;
     private TabLayout materialTabs;
@@ -141,7 +140,7 @@ public class ListFragment extends Fragment {
                     new Intent(requireContext(), CreateEnquiryActivity.class)));
         }
 
-        swipeRefresh.setColorSchemeResources(R.color.primary);
+        UiUtils.setupColorfulSwipeRefresh(swipeRefresh);
         swipeRefresh.setOnRefreshListener(this::loadData);
         swipeRefresh.setOnChildScrollUpCallback((parent, child) ->
                 recyclerView.canScrollVertically(-1));
@@ -270,7 +269,7 @@ public class ListFragment extends Fragment {
 
     private void loadData() {
         if (!swipeRefresh.isRefreshing()) {
-            progressBar.setVisibility(View.VISIBLE);
+            UiUtils.setLoaderVisible(progressBar, true);
         }
         emptyView.setVisibility(View.GONE);
 
@@ -282,7 +281,7 @@ public class ListFragment extends Fragment {
                 if (!isAdded()) return;
                 requireActivity().runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     List<ListItem> items = parseItems(json);
                     if (TYPE_MATERIALS.equals(type)) {
                         allMaterialItems.clear();
@@ -308,7 +307,7 @@ public class ListFragment extends Fragment {
                 if (!isAdded()) return;
                 requireActivity().runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     UiUtils.toast(requireContext(), message);
                 });
             }
@@ -316,13 +315,14 @@ public class ListFragment extends Fragment {
     }
 
     private String pathForType() {
+        if (TYPE_FEES.equals(type)) {
+            return "/fees";
+        }
         switch (type) {
             case TYPE_NOTICES:
                 return "/notices?per_page=30";
             case TYPE_GALLERY:
                 return "/gallery?per_page=30";
-            case TYPE_FEES:
-                return "/fees";
             case TYPE_HOMEWORK:
                 return "/homework?per_page=30";
             case TYPE_ENQUIRIES:
@@ -338,16 +338,6 @@ public class ListFragment extends Fragment {
 
     private List<ListItem> parseItems(JSONObject json) {
         List<ListItem> items = new ArrayList<>();
-        if (TYPE_FEES.equals(type)) {
-            JSONObject summary = json.optJSONObject("summary");
-            if (summary != null) {
-                items.add(buildFieldsItem("Fee Summary", summary));
-            }
-            JSONObject payments = json.optJSONObject("payments");
-            JSONArray rows = payments != null ? extractArray(payments) : new JSONArray();
-            appendRows(items, rows, "payment_reason", "amount");
-            return items;
-        }
         JSONArray rows = extractRootArray(json);
         if (TYPE_MATERIALS.equals(type)) {
             appendMaterialRows(items, rows);

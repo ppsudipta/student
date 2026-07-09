@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/swipeRefresh"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_screen_soft">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/pollsList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:padding="16dp" />
+
+        <TextView
+            android:id="@+id/tvEmptyPolls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="24dp"
+            android:text="@string/no_polls"
+            android:textColor="@color/secondary_text"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <com.deyeducation.app.FunLoaderView
+            android:id="@+id/pollsProgress"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            app:loaderKind="general"
+            app:loaderSize="full" />
+    </FrameLayout>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

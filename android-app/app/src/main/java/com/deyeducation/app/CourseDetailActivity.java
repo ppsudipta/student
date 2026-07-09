@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -44,7 +43,7 @@ public class CourseDetailActivity extends AppCompatActivity {
         TextView title = findViewById(R.id.courseTitle);
         TextView meta = findViewById(R.id.courseMeta);
         TextView description = findViewById(R.id.courseDescription);
-        ProgressBar progress = findViewById(R.id.courseProgress);
+        View progress = findViewById(R.id.courseProgress);
 
         title.setText(initialTitle);
 
@@ -54,7 +53,7 @@ public class CourseDetailActivity extends AppCompatActivity {
             return;
         }
 
-        progress.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progress, true);
         new ApiClient(new SessionManager(this)).get("/events/" + id, false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
@@ -62,7 +61,7 @@ public class CourseDetailActivity extends AppCompatActivity {
                     if (!UiUtils.isContextValid(CourseDetailActivity.this)) {
                         return;
                     }
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     JSONObject data = json.optJSONObject("data");
                     if (data == null) {
                         UiUtils.toast(CourseDetailActivity.this, getString(R.string.no_records));
@@ -91,7 +90,7 @@ public class CourseDetailActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     if (UiUtils.isContextValid(CourseDetailActivity.this)) {
                         UiUtils.toast(CourseDetailActivity.this, message);
                     }

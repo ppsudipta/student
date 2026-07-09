@@ -7,7 +7,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -34,14 +33,14 @@ public class LegalPoliciesActivity extends AppCompatActivity {
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
 
         LinearLayout container = findViewById(R.id.legalContainer);
-        ProgressBar progress = findViewById(R.id.legalProgress);
-        progress.setVisibility(View.VISIBLE);
+        View progress = findViewById(R.id.legalProgress);
+        UiUtils.setLoaderVisible(progress, true);
 
         new ApiClient(new SessionManager(this)).get("/legal-policies", false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
                 runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     bindSections(container, json.optJSONObject("data"));
                 });
             }
@@ -49,7 +48,7 @@ public class LegalPoliciesActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     UiUtils.toast(LegalPoliciesActivity.this, message);
                 });
             }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="FunLoaderView">
+        <attr name="loaderKind" format="enum">
+            <enum name="general" value="0" />
+            <enum name="home" value="1" />
+            <enum name="materials" value="2" />
+            <enum name="video" value="3" />
+            <enum name="pdf" value="4" />
+            <enum name="login" value="5" />
+            <enum name="profile" value="6" />
+            <enum name="enquiry" value="7" />
+            <enum name="gallery" value="8" />
+            <enum name="notices" value="9" />
+            <enum name="attendance" value="10" />
+        </attr>
+        <attr name="loaderSize" format="enum">
+            <enum name="compact" value="0" />
+            <enum name="full" value="1" />
+        </attr>
+    </declare-styleable>
+</resources>

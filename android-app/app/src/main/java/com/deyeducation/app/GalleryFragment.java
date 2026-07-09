@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -25,7 +24,7 @@ public class GalleryFragment extends Fragment {
     private ApiClient api;
     private SessionManager session;
     private SwipeRefreshLayout swipeRefresh;
-    private ProgressBar progressBar;
+    private View progressBar;
     private TextView emptyView;
     private GalleryAdapter adapter;
 
@@ -51,7 +50,7 @@ public class GalleryFragment extends Fragment {
         grid.setHasFixedSize(false);
         grid.setAdapter(adapter);
 
-        swipeRefresh.setColorSchemeResources(R.color.primary);
+        UiUtils.setupColorfulSwipeRefresh(swipeRefresh);
         swipeRefresh.setOnRefreshListener(this::loadData);
         swipeRefresh.setOnChildScrollUpCallback((parent, child) -> grid.canScrollVertically(-1));
         loadData();
@@ -67,7 +66,7 @@ public class GalleryFragment extends Fragment {
 
     private void loadData() {
         if (!swipeRefresh.isRefreshing()) {
-            progressBar.setVisibility(View.VISIBLE);
+            UiUtils.setLoaderVisible(progressBar, true);
         }
         emptyView.setVisibility(View.GONE);
 
@@ -77,7 +76,7 @@ public class GalleryFragment extends Fragment {
                 if (!isAdded()) return;
                 requireActivity().runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     List<GalleryItem> items = parseGallery(json);
                     adapter.setItems(items);
                     emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
@@ -89,7 +88,7 @@ public class GalleryFragment extends Fragment {
                 if (!isAdded()) return;
                 requireActivity().runOnUiThread(() -> {
                     swipeRefresh.setRefreshing(false);
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     UiUtils.toast(requireContext(), message);
                 });
             }

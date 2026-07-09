@@ -6,7 +6,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -36,7 +35,7 @@ public class EnquiryDetailFragment extends Fragment {
     private SessionManager session;
     private int enquiryId;
     private EnquiryMessagesAdapter adapter;
-    private ProgressBar progressBar;
+    private View progressBar;
     private TextInputEditText inputReply;
     private MaterialButton sendButton;
     private TextView metaView;
@@ -138,7 +137,7 @@ public class EnquiryDetailFragment extends Fragment {
     }
 
     private void loadThread() {
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         api.get("/enquiries/" + enquiryId, true, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
@@ -146,7 +145,7 @@ public class EnquiryDetailFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     JSONObject data = json.optJSONObject("data");
                     if (data == null) {
                         return;
@@ -163,7 +162,7 @@ public class EnquiryDetailFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     UiUtils.toast(requireContext(), message);
                 });
             }
@@ -176,7 +175,7 @@ public class EnquiryDetailFragment extends Fragment {
             UiUtils.toast(requireContext(), getString(R.string.fill_all_fields));
             return;
         }
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         sendButton.setEnabled(false);
 
         Map<String, String> fields = new HashMap<>();
@@ -189,7 +188,7 @@ public class EnquiryDetailFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     sendButton.setEnabled(true);
                     inputReply.setText("");
                     clearAttachment();
@@ -204,7 +203,7 @@ public class EnquiryDetailFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     sendButton.setEnabled(true);
                     UiUtils.toast(requireContext(), message);
                 });
@@ -220,7 +219,7 @@ public class EnquiryDetailFragment extends Fragment {
                 body.put("message", text);
                 api.post("/enquiries/" + enquiryId + "/messages", body, true, callback);
             } catch (Exception e) {
-                progressBar.setVisibility(View.GONE);
+                UiUtils.setLoaderVisible(progressBar, false);
                 sendButton.setEnabled(true);
                 UiUtils.toast(requireContext(), e.getMessage());
             }

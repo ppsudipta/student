@@ -4,7 +4,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.VideoView;
 
@@ -12,6 +11,12 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 
 public class NoticeDetailActivity extends AppCompatActivity {
     public static final String EXTRA_ID = "notice_id";
@@ -51,7 +56,7 @@ public class NoticeDetailActivity extends AppCompatActivity {
         TextView textView = findViewById(R.id.noticeText);
         ImageView imageView = findViewById(R.id.noticeImage);
         videoView = findViewById(R.id.noticeVideo);
-        ProgressBar progressBar = findViewById(R.id.noticeProgress);
+        View progressBar = findViewById(R.id.noticeProgress);
 
         dateView.setText(date == null || date.isEmpty() ? "" : date);
         api = new ApiClient(new SessionManager(this));
@@ -61,22 +66,47 @@ public class NoticeDetailActivity extends AppCompatActivity {
             case "image":
                 typeLabel.setText(R.string.notice_type_image);
                 imageView.setVisibility(View.VISIBLE);
-                progressBar.setVisibility(View.VISIBLE);
-                UiUtils.loadZoomImage(this, mediaUrl, imageView);
-                progressBar.setVisibility(View.GONE);
+                UiUtils.setLoaderVisible(progressBar, true);
+                Glide.with(this)
+                        .load(mediaUrl)
+                        .placeholder(R.drawable.bg_image_placeholder)
+                        .error(R.drawable.bg_image_placeholder)
+                        .listener(new RequestListener<android.graphics.drawable.Drawable>() {
+                            @Override
+                            public boolean onLoadFailed(@Nullable GlideException e, Object model,
+                                                        Target<android.graphics.drawable.Drawable> target,
+                                                        boolean isFirstResource) {
+                                UiUtils.setLoaderVisible(progressBar, false);
+                                return false;
+                            }
+
+                            @Override
+                            public boolean onResourceReady(android.graphics.drawable.Drawable resource,
+                                                           Object model,
+                                                           Target<android.graphics.drawable.Drawable> target,
+                                                           DataSource dataSource,
+                                                           boolean isFirstResource) {
+                                UiUtils.setLoaderVisible(progressBar, false);
+                                return false;
+                            }
+                        })
+                        .into(imageView);
                 break;
             case "video":
                 typeLabel.setText(R.string.notice_type_video);
                 if (mediaUrl != null && !mediaUrl.isEmpty()) {
+                    if (progressBar instanceof FunLoaderView funLoader) {
+                        funLoader.setKind(FunLoaderView.Kind.VIDEO);
+                    }
                     videoView.setVisibility(View.VISIBLE);
-                    progressBar.setVisibility(View.VISIBLE);
+                    UiUtils.setLoaderVisible(progressBar, true);
                     videoView.setVideoURI(Uri.parse(mediaUrl));
                     videoView.setOnPreparedListener(mp -> {
-                        progressBar.setVisibility(View.GONE);
+                        UiUtils.setLoaderVisible(progressBar, false);
                         mp.setLooping(false);
                     });
                     videoView.setOnErrorListener((mp, what, extra) -> {
-                        progressBar.setVisibility(View.GONE);
+                        UiUtils.setLoaderVisible(progressBar, false);
                         UiUtils.toast(this, getString(R.string.video_load_failed));
                         return true;
                     });

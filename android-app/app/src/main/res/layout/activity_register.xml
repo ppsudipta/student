@@ -203,11 +203,14 @@
                         android:orientation="vertical" />
                 </ScrollView>
 
-                <ProgressBar
+                <com.deyeducation.app.FunLoaderView
+                    xmlns:app="http://schemas.android.com/apk/res-auto"
                     android:id="@+id/classesProgress"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center" />
+                    android:layout_gravity="center"
+                    app:loaderKind="general"
+                    app:loaderSize="compact" />
             </FrameLayout>
 
             <TextView
@@ -267,13 +270,16 @@
                 android:layout_height="wrap_content"
                 android:text="@string/register_now" />
 
-            <ProgressBar
+            <com.deyeducation.app.FunLoaderView
+                xmlns:app="http://schemas.android.com/apk/res-auto"
                 android:id="@+id/registerProgress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="16dp"
-                android:visibility="gone" />
+                android:visibility="gone"
+                app:loaderKind="login"
+                app:loaderSize="compact" />
 
             <TextView
                 android:id="@+id/linkLogin"

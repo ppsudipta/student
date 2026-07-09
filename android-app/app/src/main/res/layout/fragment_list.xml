@@ -11,14 +11,14 @@
         android:id="@+id/materialTabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary_light"
+        android:background="@drawable/bg_tabs_bar"
         android:elevation="2dp"
         android:visibility="gone"
         app:tabGravity="start"
-        app:tabIconTint="@color/bottom_nav_color"
-        app:tabIndicatorColor="@color/primary"
+        app:tabIconTint="@null"
+        app:tabIndicatorColor="@color/accent_teal"
         app:tabIndicatorFullWidth="false"
-        app:tabIndicatorHeight="3dp"
+        app:tabIndicatorHeight="4dp"
         app:tabMode="scrollable"
         app:tabRippleColor="@color/primary_light"
         app:tabSelectedTextColor="@color/primary"
@@ -47,11 +47,13 @@
                 android:scrollbars="vertical" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-        <ProgressBar
+        <com.deyeducation.app.FunLoaderView
             android:id="@+id/listProgress"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center" />
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            app:loaderKind="materials"
+            app:loaderSize="full" />
 
         <LinearLayout
             android:id="@+id/emptyView"
@@ -68,7 +70,7 @@
                 android:layout_height="64dp"
                 android:alpha="0.5"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_nav_materials" />
+                android:src="@drawable/ic_menu_materials" />
 
             <TextView
                 android:id="@+id/emptyText"
@@ -90,7 +92,8 @@
             android:contentDescription="@string/new_enquiry"
             android:src="@android:drawable/ic_input_add"
             android:visibility="gone"
-            app:backgroundTint="@color/primary"
+            app:backgroundTint="@color/accent_teal"
+            app:elevation="6dp"
             app:tint="@android:color/white" />
     </FrameLayout>
 </LinearLayout>

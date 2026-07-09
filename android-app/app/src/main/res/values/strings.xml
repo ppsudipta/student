@@ -30,6 +30,9 @@
     <string name="already_have_account">Already have an account? Login</string>
     <string name="invalid_mobile">Mobile number must be 10 digits</string>
     <string name="api_base_url">API Server</string>
+    <string name="drawer_section_main">Main Menu</string>
+    <string name="drawer_section_services">Student Services</string>
+    <string name="drawer_section_account">My Account</string>
     <string name="home">Home</string>
     <string name="explore">Materials</string>
     <string name="notices">Notices</string>
@@ -134,6 +137,32 @@
     <string name="attendance_present">Present</string>
     <string name="attendance_absent">Absent</string>
     <string name="no_attendance_records">No attendance records available for this month.</string>
+    <string name="fee_payment_records">Fee Payment Records</string>
+    <string name="student_information">Student Information</string>
+    <string name="filter_by_month_label">Filter by Month &amp; Year</string>
+    <string name="all_months">All Months</string>
+    <string name="clear_filter">Clear</string>
+    <string name="label_date">Date</string>
+    <string name="label_month">Month</string>
+    <string name="label_name_value">Name: %1$s</string>
+    <string name="label_registration_value">Registration Code: %1$s</string>
+    <string name="label_mobile_value">Mobile: %1$s</string>
+    <string name="label_email_value">Email: %1$s</string>
+    <string name="no_fee_records">No payment records found.</string>
+    <string name="no_fee_records_for_month">No payment records found for %1$s.</string>
+    <string name="payment_success">Success</string>
+    <string name="polls">Polls</string>
+    <string name="no_polls">No active polls right now.</string>
+    <string name="poll_vote_now">Tap to vote</string>
+    <string name="poll_voted">Voted · View results</string>
+    <string name="poll_option_singular">option</string>
+    <string name="poll_options_plural">options</string>
+    <string name="poll_expires">Expires %1$s</string>
+    <string name="submit_vote">Submit Vote</string>
+    <string name="poll_results">Poll Results</string>
+    <string name="poll_result_stats">%1$d votes · %2$d%%</string>
+    <string name="poll_select_option">Please select an option.</string>
+    <string name="poll_vote_saved">Your vote has been saved.</string>
     <string name="legal_policies">Legal and Policies</string>
     <string name="current_password">Current Password</string>
     <string name="new_password">New Password</string>
@@ -177,4 +206,80 @@
     <string name="attachment_type_not_allowed">This file type is not allowed.</string>
     <string name="remove_attachment">Remove attachment</string>
     <string name="open_attachment">Open attachment</string>
+
+    <string name="loader_title_general">Loading…</string>
+    <string name="loader_title_home">Welcome back!</string>
+    <string name="loader_title_materials">Fetching materials</string>
+    <string name="loader_title_video">Preparing your video</string>
+    <string name="loader_title_pdf">Opening document</string>
+    <string name="loader_title_login">Signing you in</string>
+    <string name="loader_title_profile">Loading profile</string>
+    <string name="loader_title_enquiry">Loading enquiry</string>
+    <string name="loader_title_gallery">Loading gallery</string>
+    <string name="loader_title_notices">Loading notices</string>
+    <string name="loader_title_attendance">Loading attendance</string>
+    <string name="loader_tip_default">Almost there…</string>
+    <string name="loader_video_slow">Still buffering — great things take a moment!</string>
+
+    <string-array name="loader_tips_general">
+        <item>✨ Gathering awesome content…</item>
+        <item>🚀 Your study zone is warming up…</item>
+        <item>📖 Good things are on the way…</item>
+        <item>⭐ Almost ready for you…</item>
+    </string-array>
+    <string-array name="loader_tips_home">
+        <item>🏠 Setting up your dashboard…</item>
+        <item>📢 Checking latest notices…</item>
+        <item>🎯 Preparing quick services…</item>
+        <item>✨ Your learning hub is almost ready…</item>
+    </string-array>
+    <string-array name="loader_tips_materials">
+        <item>📚 Collecting worksheets &amp; papers…</item>
+        <item>🎬 Finding your class videos…</item>
+        <item>📝 Organizing study materials…</item>
+        <item>⭐ Your library is loading…</item>
+    </string-array>
+    <string-array name="loader_tips_video">
+        <item>🎬 Warming up the projector…</item>
+        <item>🍿 Grab your notebook while we load…</item>
+        <item>📺 Streaming your class video…</item>
+        <item>⭐ Almost ready to play!</item>
+        <item>🎵 Buffering the best lesson for you…</item>
+    </string-array>
+    <string-array name="loader_tips_pdf">
+        <item>📄 Flipping pages for you…</item>
+        <item>🔍 Sharpening the document…</item>
+        <item>📖 Your PDF is on its way…</item>
+        <item>✏️ Get ready to read &amp; learn…</item>
+    </string-array>
+    <string-array name="loader_tips_login">
+        <item>🔐 Verifying your details…</item>
+        <item>👋 Welcome back, scholar!</item>
+        <item>🎒 Packing your study bag…</item>
+    </string-array>
+    <string-array name="loader_tips_profile">
+        <item>👤 Fetching your profile…</item>
+        <item>📸 Loading your photo…</item>
+        <item>✨ Personalizing your account…</item>
+    </string-array>
+    <string-array name="loader_tips_enquiry">
+        <item>💬 Loading your messages…</item>
+        <item>📎 Checking attachments…</item>
+        <item>🤝 Connecting with admin…</item>
+    </string-array>
+    <string-array name="loader_tips_gallery">
+        <item>🖼️ Loading beautiful moments…</item>
+        <item>📸 Preparing photo gallery…</item>
+        <item>🌈 Colors coming alive…</item>
+    </string-array>
+    <string-array name="loader_tips_notices">
+        <item>📢 Fetching latest notices…</item>
+        <item>🔔 Stay updated with news…</item>
+        <item>📋 Important updates loading…</item>
+    </string-array>
+    <string-array name="loader_tips_attendance">
+        <item>📅 Counting your present days…</item>
+        <item>✅ Crunching attendance stats…</item>
+        <item>📊 Your report is almost ready…</item>
+    </string-array>
 </resources>

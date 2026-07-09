@@ -8,7 +8,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -32,16 +31,16 @@ public class ProfileAccountActivity extends AppCompatActivity {
     toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
 
     LinearLayout container = findViewById(R.id.accountDetailsContainer);
-    ProgressBar progressBar = findViewById(R.id.accountProgress);
+    View progressBar = findViewById(R.id.accountProgress);
     SessionManager session = new SessionManager(this);
     ApiClient api = new ApiClient(session);
 
-    progressBar.setVisibility(View.VISIBLE);
+    UiUtils.setLoaderVisible(progressBar, true);
     api.get("/me", true, new ApiClient.Callback() {
       @Override
       public void onSuccess(JSONObject json) {
         runOnUiThread(() -> {
-          progressBar.setVisibility(View.GONE);
+          UiUtils.setLoaderVisible(progressBar, false);
           JSONObject student = json.optJSONObject("student");
           if (student == null) {
             return;
@@ -65,7 +64,7 @@ public class ProfileAccountActivity extends AppCompatActivity {
       @Override
       public void onError(String message) {
         runOnUiThread(() -> {
-          progressBar.setVisibility(View.GONE);
+          UiUtils.setLoaderVisible(progressBar, false);
           UiUtils.toast(ProfileAccountActivity.this, message);
         });
       }

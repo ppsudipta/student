@@ -88,6 +88,19 @@
 			
           </ul>
         </li>
+	<li class="treeview">
+          <a href="#">
+            <i class="fa fa-bar-chart"></i>
+            <span>Poll Management</span>
+            <span class="pull-right-container">
+              <i class="fa fa-angle-left pull-right"></i>
+            </span>
+          </a>
+          <ul class="treeview-menu">
+            <li><a href="addpoll.php"><i class="fa fa-circle-o"></i>Add Poll</a></li>
+            <li><a href="allpoll.php"><i class="fa fa-circle-o"></i>All Polls</a></li>
+          </ul>
+        </li>
 			<li class="treeview">
           <a href="#">
             <i class="fa fa-image"></i>

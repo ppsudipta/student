@@ -114,13 +114,15 @@
                 android:layout_height="wrap_content"
                 android:text="@string/login" />
 
-            <ProgressBar
+            <com.deyeducation.app.FunLoaderView
                 android:id="@+id/loginProgress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="16dp"
-                android:visibility="gone" />
+                android:visibility="gone"
+                app:loaderKind="login"
+                app:loaderSize="compact" />
 
             <TextView
                 android:id="@+id/linkRegister"

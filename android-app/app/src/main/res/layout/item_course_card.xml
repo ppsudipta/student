@@ -47,11 +47,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:background="@drawable/bg_section_chip"
+                android:background="@drawable/bg_section_chip_light"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="3dp"
                 android:text="Popular"
-                android:textColor="@color/primary"
+                android:textColor="@color/primary_dark"
                 android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>

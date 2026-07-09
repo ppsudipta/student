@@ -6,7 +6,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -24,7 +23,7 @@ public class AboutActivity extends AppCompatActivity {
 
     private String mapUrl;
     private ApiClient api;
-    private ProgressBar progress;
+    private View progress;
     private TextView titleView;
     private TextView descriptionView;
     private TextView phoneView;
@@ -63,7 +62,7 @@ public class AboutActivity extends AppCompatActivity {
     }
 
     private void loadAbout() {
-        progress.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progress, true);
         api.get("/about", false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
@@ -71,7 +70,7 @@ public class AboutActivity extends AppCompatActivity {
                     if (!UiUtils.isContextValid(AboutActivity.this)) {
                         return;
                     }
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     JSONObject data = json.optJSONObject("data");
                     if (data != null) {
                         bindAbout(data);
@@ -101,7 +100,7 @@ public class AboutActivity extends AppCompatActivity {
                     if (!UiUtils.isContextValid(AboutActivity.this)) {
                         return;
                     }
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     JSONObject company = json.optJSONObject("data");
                     if (company != null) {
                         bindCompany(company, null);
@@ -112,7 +111,7 @@ public class AboutActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     if (UiUtils.isContextValid(AboutActivity.this)) {
                         UiUtils.toast(AboutActivity.this, message);
                     }

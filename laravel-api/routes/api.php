@@ -42,6 +42,7 @@ Route::get('/fees', [StudentApiController::class, 'fees']);
 Route::get('/reminders', [StudentApiController::class, 'reminders']);
 Route::get('/admission', [StudentApiController::class, 'admission']);
 Route::get('/polls', [StudentApiController::class, 'polls']);
+Route::get('/polls/{id}', [StudentApiController::class, 'showPoll'])->whereNumber('id');
 Route::post('/polls/{id}/vote', [StudentApiController::class, 'votePoll'])->whereNumber('id');
 Route::post('/mock-questions/answer', [StudentApiController::class, 'submitMockAnswer']);
 Route::get('/attendance', [StudentApiController::class, 'attendance']);

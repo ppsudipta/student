@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -14,6 +13,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.MaterialDatePicker;
@@ -30,7 +30,8 @@ import java.util.TimeZone;
 
 public class AttendanceFragment extends Fragment {
     private ApiClient api;
-    private ProgressBar progressBar;
+    private View progressBar;
+    private SwipeRefreshLayout swipeRefresh;
     private TextView selectedMonthView;
     private TextView recordsTitleView;
     private TextView emptyView;
@@ -57,6 +58,7 @@ public class AttendanceFragment extends Fragment {
         selectedMonth = monthKey(Calendar.getInstance());
 
         progressBar = view.findViewById(R.id.attendanceProgress);
+        swipeRefresh = view.findViewById(R.id.swipeRefresh);
         selectedMonthView = view.findViewById(R.id.tvSelectedMonth);
         recordsTitleView = view.findViewById(R.id.tvRecordsTitle);
         emptyView = view.findViewById(R.id.tvEmptyAttendance);
@@ -64,10 +66,10 @@ public class AttendanceFragment extends Fragment {
         studentClassView = view.findViewById(R.id.tvStudentClass);
         RecyclerView list = view.findViewById(R.id.attendanceList);
 
-        bindStatCard(view.findViewById(R.id.statTotal), getString(R.string.total_days));
-        bindStatCard(view.findViewById(R.id.statPresent), getString(R.string.present_days));
-        bindStatCard(view.findViewById(R.id.statAbsent), getString(R.string.absent_days));
-        bindStatCard(view.findViewById(R.id.statPercent), getString(R.string.attendance_percent));
+        bindStatCard(view.findViewById(R.id.statTotal), getString(R.string.total_days), R.color.primary);
+        bindStatCard(view.findViewById(R.id.statPresent), getString(R.string.present_days), R.color.success);
+        bindStatCard(view.findViewById(R.id.statAbsent), getString(R.string.absent_days), R.color.alert_text);
+        bindStatCard(view.findViewById(R.id.statPercent), getString(R.string.attendance_percent), R.color.accent_teal);
 
         statTotalValue = view.findViewById(R.id.statTotal).findViewById(R.id.statValue);
         statPresentValue = view.findViewById(R.id.statPresent).findViewById(R.id.statValue);
@@ -88,6 +90,11 @@ public class AttendanceFragment extends Fragment {
                     loadAttendance();
                 });
 
+        UiUtils.setupColorfulSwipeRefresh(swipeRefresh);
+        swipeRefresh.setOnRefreshListener(this::loadAttendance);
+        swipeRefresh.setOnChildScrollUpCallback((parent, child) ->
+                view.findViewById(R.id.attendanceScroll).canScrollVertically(-1));
+
         loadAttendance();
     }
 
@@ -95,13 +102,14 @@ public class AttendanceFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (getActivity() instanceof MainActivity) {
-            ((MainActivity) getActivity()).showFragment(new AttendanceFragment(),
-                    getString(R.string.progress_report), true);
+            ((MainActivity) getActivity()).setScreenTitle(getString(R.string.progress_report));
         }
     }
 
-    private void bindStatCard(View root, String label) {
+    private void bindStatCard(View root, String label, int valueColor) {
         ((TextView) root.findViewById(R.id.statLabel)).setText(label);
+        ((TextView) root.findViewById(R.id.statValue)).setTextColor(
+                ContextCompat.getColor(requireContext(), valueColor));
     }
 
     private void showMonthPicker() {
@@ -120,7 +128,9 @@ public class AttendanceFragment extends Fragment {
     }
 
     private void loadAttendance() {
-        progressBar.setVisibility(View.VISIBLE);
+        if (!swipeRefresh.isRefreshing()) {
+            UiUtils.setLoaderVisible(progressBar, true);
+        }
         emptyView.setVisibility(View.GONE);
         api.get("/attendance?month=" + selectedMonth + "&per_page=100", true, new ApiClient.Callback() {
             @Override
@@ -129,7 +139,8 @@ public class AttendanceFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
+                    swipeRefresh.setRefreshing(false);
                     JSONObject summary = json.optJSONObject("summary");
                     JSONObject student = json.optJSONObject("student");
                     if (student != null) {
@@ -139,14 +150,12 @@ public class AttendanceFragment extends Fragment {
                     if (summary != null) {
                         statTotalValue.setText(String.valueOf(summary.optInt("total_days", 0)));
                         statPresentValue.setText(String.valueOf(summary.optInt("present_days", 0)));
-                        statPresentValue.setTextColor(ContextCompat.getColor(requireContext(), R.color.success));
                         statAbsentValue.setText(String.valueOf(summary.optInt("absent_days", 0)));
-                        statAbsentValue.setTextColor(ContextCompat.getColor(requireContext(), R.color.alert_text));
                         statPercentValue.setText(summary.optInt("attendance_percentage", 0) + "%");
                     }
                     recordsTitleView.setText(getString(R.string.attendance_records_for,
                             formatMonthLabel(selectedMonth)));
-                    adapter.setItems(parseRecords(json.optJSONObject("data")));
+                    adapter.setItems(parseRecords(json));
                     boolean empty = adapter.getItemCount() == 0;
                     emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
                 });
@@ -158,19 +167,28 @@ public class AttendanceFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
+                    swipeRefresh.setRefreshing(false);
                     UiUtils.toast(requireContext(), message);
                 });
             }
         });
     }
 
-    private List<JSONObject> parseRecords(JSONObject data) {
+    private List<JSONObject> parseRecords(JSONObject json) {
         List<JSONObject> items = new ArrayList<>();
-        if (data == null) {
+        if (json == null) {
             return items;
         }
-        JSONArray rows = data.optJSONArray("data");
+        Object data = json.opt("data");
+        JSONArray rows;
+        if (data instanceof JSONArray) {
+            rows = (JSONArray) data;
+        } else if (data instanceof JSONObject) {
+            rows = ((JSONObject) data).optJSONArray("data");
+        } else {
+            rows = null;
+        }
         if (rows == null) {
             return items;
         }

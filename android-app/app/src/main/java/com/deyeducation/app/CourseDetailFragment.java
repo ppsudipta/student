@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -52,7 +51,7 @@ public class CourseDetailFragment extends Fragment {
         TextView title = view.findViewById(R.id.courseTitle);
         TextView meta = view.findViewById(R.id.courseMeta);
         TextView description = view.findViewById(R.id.courseDescription);
-        ProgressBar progress = view.findViewById(R.id.courseProgress);
+        View progress = view.findViewById(R.id.courseProgress);
 
         String initialTitle = fallbackTitle == null ? getString(R.string.course_details) : fallbackTitle;
         title.setText(initialTitle);
@@ -63,7 +62,7 @@ public class CourseDetailFragment extends Fragment {
             return;
         }
 
-        progress.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progress, true);
         api.get("/events/" + id, false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
@@ -71,7 +70,7 @@ public class CourseDetailFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     JSONObject data = json.optJSONObject("data");
                     if (data == null) {
                         UiUtils.toast(requireContext(), getString(R.string.no_records));
@@ -104,7 +103,7 @@ public class CourseDetailFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     UiUtils.toast(requireContext(), message);
                 });
             }

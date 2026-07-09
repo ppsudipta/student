@@ -2,7 +2,6 @@ package com.deyeducation.app;
 
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ProgressBar;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,7 +26,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
     TextInputEditText newInput = findViewById(R.id.inputNewPassword);
     TextInputEditText confirmInput = findViewById(R.id.inputConfirmPassword);
     MaterialButton saveButton = findViewById(R.id.btnSavePassword);
-    ProgressBar progressBar = findViewById(R.id.passwordProgress);
+    View progressBar = findViewById(R.id.passwordProgress);
     ApiClient api = new ApiClient(new SessionManager(this));
 
     saveButton.setOnClickListener(v -> {
@@ -42,7 +41,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
         UiUtils.toast(this, getString(R.string.password_mismatch));
         return;
       }
-      progressBar.setVisibility(View.VISIBLE);
+      UiUtils.setLoaderVisible(progressBar, true);
       saveButton.setEnabled(false);
       try {
         JSONObject body = new JSONObject();
@@ -52,7 +51,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
           @Override
           public void onSuccess(JSONObject json) {
             runOnUiThread(() -> {
-              progressBar.setVisibility(View.GONE);
+              UiUtils.setLoaderVisible(progressBar, false);
               saveButton.setEnabled(true);
               UiUtils.toast(ChangePasswordActivity.this, getString(R.string.password_changed));
               finish();
@@ -62,14 +61,14 @@ public class ChangePasswordActivity extends AppCompatActivity {
           @Override
           public void onError(String message) {
             runOnUiThread(() -> {
-              progressBar.setVisibility(View.GONE);
+              UiUtils.setLoaderVisible(progressBar, false);
               saveButton.setEnabled(true);
               UiUtils.toast(ChangePasswordActivity.this, message);
             });
           }
         });
       } catch (Exception e) {
-        progressBar.setVisibility(View.GONE);
+        UiUtils.setLoaderVisible(progressBar, false);
         saveButton.setEnabled(true);
         UiUtils.toast(this, e.getMessage());
       }

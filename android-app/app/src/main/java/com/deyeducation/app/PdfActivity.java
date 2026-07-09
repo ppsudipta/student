@@ -5,7 +5,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -36,7 +35,7 @@ public class PdfActivity extends AppCompatActivity {
 
     private MaterialToolbar toolbar;
     private PDFView pdfView;
-    private ProgressBar progressBar;
+    private View progressBar;
     private TextView errorView;
 
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
@@ -110,7 +109,7 @@ public class PdfActivity extends AppCompatActivity {
     }
 
     private void loadPdf(String url) {
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         errorView.setVisibility(View.GONE);
         pdfView.setVisibility(View.GONE);
 
@@ -132,7 +131,7 @@ public class PdfActivity extends AppCompatActivity {
     }
 
     private void displayPdf(File file) {
-        progressBar.setVisibility(View.GONE);
+        UiUtils.setLoaderVisible(progressBar, false);
         pdfView.setVisibility(View.VISIBLE);
         pdfView.setBackgroundColor(0xFFFFFFFF);
         pdfView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -215,7 +214,7 @@ public class PdfActivity extends AppCompatActivity {
     }
 
     private void showError(String message) {
-        progressBar.setVisibility(View.GONE);
+        UiUtils.setLoaderVisible(progressBar, false);
         pdfView.setVisibility(View.GONE);
         errorView.setText(message);
         errorView.setVisibility(View.VISIBLE);

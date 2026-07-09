@@ -20,11 +20,14 @@
             android:scrollbars="vertical" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <ProgressBar
+    <com.deyeducation.app.FunLoaderView
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:id="@+id/galleryProgress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:loaderKind="gallery"
+        app:loaderSize="full" />
 
     <TextView
         android:id="@+id/galleryEmpty"

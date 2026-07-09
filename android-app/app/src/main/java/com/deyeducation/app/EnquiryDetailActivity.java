@@ -6,7 +6,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -43,7 +42,7 @@ public class EnquiryDetailActivity extends AppCompatActivity {
     private SessionManager session;
     private int enquiryId;
     private EnquiryMessagesAdapter adapter;
-    private ProgressBar progressBar;
+    private View progressBar;
     private TextInputEditText inputReply;
     private MaterialButton sendButton;
     private TextView replyAttachmentView;
@@ -113,12 +112,12 @@ public class EnquiryDetailActivity extends AppCompatActivity {
     }
 
     private void loadThread(TextView meta) {
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         api.get("/enquiries/" + enquiryId, true, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
                 runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     JSONObject data = json.optJSONObject("data");
                     if (data == null) {
                         return;
@@ -132,7 +131,7 @@ public class EnquiryDetailActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     UiUtils.toast(EnquiryDetailActivity.this, message);
                 });
             }
@@ -145,7 +144,7 @@ public class EnquiryDetailActivity extends AppCompatActivity {
             UiUtils.toast(this, getString(R.string.fill_all_fields));
             return;
         }
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         sendButton.setEnabled(false);
 
         Map<String, String> fields = new HashMap<>();
@@ -155,7 +154,7 @@ public class EnquiryDetailActivity extends AppCompatActivity {
             @Override
             public void onSuccess(JSONObject json) {
                 runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     sendButton.setEnabled(true);
                     inputReply.setText("");
                     clearAttachment();
@@ -167,7 +166,7 @@ public class EnquiryDetailActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     sendButton.setEnabled(true);
                     UiUtils.toast(EnquiryDetailActivity.this, message);
                 });
@@ -183,7 +182,7 @@ public class EnquiryDetailActivity extends AppCompatActivity {
                 body.put("message", text);
                 api.post("/enquiries/" + enquiryId + "/messages", body, true, callback);
             } catch (Exception e) {
-                progressBar.setVisibility(View.GONE);
+                UiUtils.setLoaderVisible(progressBar, false);
                 sendButton.setEnabled(true);
                 UiUtils.toast(this, e.getMessage());
             }

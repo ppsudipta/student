@@ -8,7 +8,6 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -40,8 +39,8 @@ public class RegisterActivity extends AppCompatActivity {
 
     private SessionManager session;
     private ApiClient api;
-    private ProgressBar registerProgress;
-    private ProgressBar classesProgress;
+    private View registerProgress;
+    private View classesProgress;
     private MaterialButton registerButton;
     private LinearLayout classCheckboxContainer;
     private Spinner sessionSpinner;
@@ -157,12 +156,12 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void loadRegistrationOptions() {
-        classesProgress.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(classesProgress, true);
         api.get("/registration-options", false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
                 runOnUiThread(() -> {
-                    classesProgress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(classesProgress, false);
                     JSONObject data = json.optJSONObject("data");
                     if (data == null) {
                         UiUtils.toast(RegisterActivity.this, getString(R.string.network_error));
@@ -176,7 +175,7 @@ public class RegisterActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    classesProgress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(classesProgress, false);
                     UiUtils.toast(RegisterActivity.this, message);
                 });
             }
@@ -307,7 +306,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setLoading(boolean loading) {
-        registerProgress.setVisibility(loading ? View.VISIBLE : View.GONE);
+        UiUtils.setLoaderVisible(registerProgress, loading);
         registerButton.setEnabled(!loading);
     }
 }

@@ -3,7 +3,6 @@ package com.deyeducation.app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ProgressBar;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -15,7 +14,7 @@ import org.json.JSONObject;
 public class LoginActivity extends AppCompatActivity {
     private SessionManager session;
     private ApiClient api;
-    private ProgressBar progressBar;
+    private View progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,7 +92,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setLoading(boolean loading) {
-        progressBar.setVisibility(loading ? View.VISIBLE : View.GONE);
+        UiUtils.setLoaderVisible(progressBar, loading);
     }
 
     private void openMain() {

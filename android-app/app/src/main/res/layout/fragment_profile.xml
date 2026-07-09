@@ -30,7 +30,7 @@
                 android:background="@drawable/bg_image_rounded"
                 android:contentDescription="@string/profile"
                 android:scaleType="centerCrop"
-                android:src="@drawable/ic_nav_profile" />
+                android:src="@drawable/ic_menu_profile" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -85,39 +85,12 @@
             android:id="@+id/menuAccountDetails"
             layout="@layout/item_profile_menu_row" />
 
-        <LinearLayout
-            android:id="@+id/btnPaymentMethod"
+        <include
+            android:id="@+id/menuPaymentMethod"
+            layout="@layout/item_profile_menu_row"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="4dp"
-            android:background="@drawable/bg_profile_payment"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
-
-            <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_wallet" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:text="@string/payment_method"
-                android:textColor="@android:color/white"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_chevron_right"
-                app:tint="@android:color/white" />
-        </LinearLayout>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
 
         <TextView
             style="@style/TextProfileSection"
@@ -173,12 +146,16 @@
             app:strokeColor="@color/primary"
             app:strokeWidth="1.5dp" />
 
-        <ProgressBar
+        <com.deyeducation.app.FunLoaderView
+            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:id="@+id/profileProgress"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="24dp"
-            android:visibility="gone" />
+            android:minHeight="160dp"
+            android:visibility="gone"
+            app:loaderKind="profile"
+            app:loaderSize="full" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

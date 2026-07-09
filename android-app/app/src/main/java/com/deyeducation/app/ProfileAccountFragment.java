@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -26,11 +25,11 @@ public class ProfileAccountFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         LinearLayout container = view.findViewById(R.id.accountDetailsContainer);
-        ProgressBar progressBar = view.findViewById(R.id.accountProgress);
+        View progressBar = view.findViewById(R.id.accountProgress);
         MainActivity activity = (MainActivity) requireActivity();
         ApiClient api = activity.getApi();
 
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         api.get("/me", true, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
@@ -38,7 +37,7 @@ public class ProfileAccountFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     JSONObject student = json.optJSONObject("student");
                     if (student == null) {
                         return;
@@ -65,7 +64,7 @@ public class ProfileAccountFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     UiUtils.toast(requireContext(), message);
                 });
             }

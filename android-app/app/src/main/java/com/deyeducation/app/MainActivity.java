@@ -3,14 +3,14 @@ package com.deyeducation.app;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.MenuItem;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
@@ -20,11 +20,10 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.navigation.NavigationView;
 
 import org.json.JSONObject;
 
-public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+public class MainActivity extends AppCompatActivity {
     public static final String EXTRA_SCREEN = "screen";
 
     private DrawerLayout drawerLayout;
@@ -56,7 +55,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         drawerLayout = findViewById(R.id.drawerLayout);
         bottomNav = findViewById(R.id.bottomNav);
         toolbar = findViewById(R.id.toolbar);
-        NavigationView navigationView = findViewById(R.id.navigationView);
         ImageButton profileBtn = findViewById(R.id.btnToolbarProfile);
 
         setSupportActionBar(toolbar);
@@ -74,10 +72,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         getSupportFragmentManager().addOnBackStackChangedListener(this::updateToolbarNavigation);
 
-        navigationView.setNavigationItemSelectedListener(this);
-        View navHeader = navigationView.getHeaderView(0);
-        navUserName = navHeader.findViewById(R.id.navUserName);
-        navAvatar = navHeader.findViewById(R.id.navAvatar);
+        setupDrawerMenu();
+        bottomNav.setItemIconTintList(null);
         navUserName.setText(session.getStudentName());
         toolbarProfileBtn = profileBtn;
         loadNavProfileImage();
@@ -138,9 +134,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 showFragment(new ProfileFragment(), getString(R.string.profile));
                 bottomNav.setSelectedItemId(R.id.nav_profile);
             } else if ("fees".equals(screen)) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees));
+                showFragment(new FeesFragment(), getString(R.string.fees));
             } else if ("enquiry".equals(screen)) {
                 showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry));
+            } else if ("polls".equals(screen)) {
+                showFragment(new PollsFragment(), getString(R.string.polls));
             } else {
                 showFragment(new HomeFragment(), getString(R.string.home));
                 bottomNav.setSelectedItemId(R.id.nav_home);
@@ -169,6 +167,57 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
             }
         });
+    }
+
+    private void setupDrawerMenu() {
+        View panel = findViewById(R.id.drawerPanel);
+        navUserName = panel.findViewById(R.id.navUserName);
+        navAvatar = panel.findViewById(R.id.navAvatar);
+        navAvatar.setOnClickListener(v -> {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            selectBottomNav(R.id.nav_profile);
+        });
+
+        LinearLayout mainItems = panel.findViewById(R.id.drawerMainItems);
+        LinearLayout serviceItems = panel.findViewById(R.id.drawerServiceItems);
+        LinearLayout accountItems = panel.findViewById(R.id.drawerAccountItems);
+
+        addDrawerItem(mainItems, R.drawable.ic_menu_home, R.string.home,
+                () -> selectBottomNav(R.id.nav_home));
+        addDrawerItem(mainItems, R.drawable.ic_menu_materials, R.string.materials,
+                () -> selectBottomNav(R.id.nav_explore));
+        addDrawerItem(mainItems, R.drawable.ic_menu_notices, R.string.notices,
+                () -> selectBottomNav(R.id.nav_notices));
+        addDrawerItem(mainItems, R.drawable.ic_menu_gallery, R.string.gallery,
+                () -> selectBottomNav(R.id.nav_gallery));
+
+        addDrawerItem(serviceItems, R.drawable.ic_menu_fees, R.string.fees,
+                () -> showFragment(new FeesFragment(), getString(R.string.fees)));
+        addDrawerItem(serviceItems, R.drawable.ic_menu_enquiry, R.string.enquiry,
+                () -> showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry)));
+        addDrawerItem(serviceItems, R.drawable.ic_menu_poll, R.string.polls,
+                () -> showFragment(new PollsFragment(), getString(R.string.polls)));
+
+        addDrawerItem(accountItems, R.drawable.ic_menu_profile, R.string.profile,
+                () -> selectBottomNav(R.id.nav_profile));
+
+        panel.findViewById(R.id.btnDrawerLogout).setOnClickListener(v -> {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            session.clear();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+        });
+    }
+
+    private void addDrawerItem(LinearLayout container, int iconRes, int labelRes, Runnable action) {
+        View row = LayoutInflater.from(this).inflate(R.layout.item_drawer_menu_row, container, false);
+        ((ImageView) row.findViewById(R.id.drawerIcon)).setImageResource(iconRes);
+        ((TextView) row.findViewById(R.id.drawerLabel)).setText(labelRes);
+        row.setOnClickListener(v -> {
+            drawerLayout.closeDrawer(GravityCompat.START);
+            action.run();
+        });
+        container.addView(row);
     }
 
     public ApiClient getApi() {
@@ -323,38 +372,5 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (toolbarProfileBtn != null) {
             UiUtils.loadImage(this, imageUrl, toolbarProfileBtn, 20);
         }
-    }
-
-    @Override
-    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-        drawerLayout.closeDrawer(GravityCompat.START);
-        int id = item.getItemId();
-        if (id == R.id.drawer_home) {
-            selectBottomNav(R.id.nav_home);
-            return true;
-        }
-        if (id == R.id.drawer_notices) {
-            selectBottomNav(R.id.nav_notices);
-            return true;
-        }
-        if (id == R.id.drawer_materials) {
-            selectBottomNav(R.id.nav_explore);
-            return true;
-        }
-        if (id == R.id.drawer_fees) {
-            showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees));
-            return true;
-        }
-        if (id == R.id.drawer_enquiry) {
-            showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry));
-            return true;
-        }
-        if (id == R.id.drawer_logout) {
-            session.clear();
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
-            return true;
-        }
-        return false;
     }
 }

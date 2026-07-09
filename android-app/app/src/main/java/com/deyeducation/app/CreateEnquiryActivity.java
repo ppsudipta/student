@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -29,7 +28,7 @@ import java.util.Map;
 public class CreateEnquiryActivity extends AppCompatActivity {
     private final List<String> categoryIds = new ArrayList<>();
     private ApiClient api;
-    private ProgressBar progressBar;
+    private View progressBar;
     private MaterialButton submitButton;
     private TextView selectedAttachmentView;
     private ImageButton removeAttachmentButton;
@@ -144,7 +143,7 @@ public class CreateEnquiryActivity extends AppCompatActivity {
             UiUtils.toast(this, getString(R.string.fill_all_fields));
             return;
         }
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         submitButton.setEnabled(false);
 
         Map<String, String> fields = new HashMap<>();
@@ -156,7 +155,7 @@ public class CreateEnquiryActivity extends AppCompatActivity {
             @Override
             public void onSuccess(JSONObject json) {
                 runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     submitButton.setEnabled(true);
                     UiUtils.toast(CreateEnquiryActivity.this, getString(R.string.enquiry_sent));
                     setResult(RESULT_OK);
@@ -167,7 +166,7 @@ public class CreateEnquiryActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     submitButton.setEnabled(true);
                     UiUtils.toast(CreateEnquiryActivity.this, message);
                 });
@@ -185,7 +184,7 @@ public class CreateEnquiryActivity extends AppCompatActivity {
                 body.put("message", message);
                 api.post("/enquiries", body, true, callback);
             } catch (Exception e) {
-                progressBar.setVisibility(View.GONE);
+                UiUtils.setLoaderVisible(progressBar, false);
                 submitButton.setEnabled(true);
                 UiUtils.toast(this, e.getMessage());
             }

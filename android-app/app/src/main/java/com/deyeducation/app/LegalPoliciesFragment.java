@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -27,10 +26,10 @@ public class LegalPoliciesFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         LinearLayout container = view.findViewById(R.id.legalContainer);
-        ProgressBar progress = view.findViewById(R.id.legalProgress);
+        View progress = view.findViewById(R.id.legalProgress);
         ApiClient api = ((MainActivity) requireActivity()).getApi();
 
-        progress.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progress, true);
         api.get("/legal-policies", false, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
@@ -38,7 +37,7 @@ public class LegalPoliciesFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     bindSections(container, json.optJSONObject("data"));
                 });
             }
@@ -49,7 +48,7 @@ public class LegalPoliciesFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progress.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progress, false);
                     UiUtils.toast(requireContext(), message);
                 });
             }

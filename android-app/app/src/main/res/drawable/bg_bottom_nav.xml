@@ -5,10 +5,11 @@
             <solid android:color="@color/bottom_nav_bg" />
         </shape>
     </item>
-    <item android:height="3dp">
+    <item android:height="4dp">
         <shape android:shape="rectangle">
             <gradient
                 android:angle="0"
+                android:centerColor="@color/accent_pink"
                 android:endColor="@color/accent_teal"
                 android:startColor="@color/primary"
                 android:type="linear" />

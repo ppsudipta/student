@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <View
+        android:id="@+id/loaderScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_loader_scrim" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/loaderCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        app:cardBackgroundColor="@color/surface_card"
+        app:cardCornerRadius="22dp"
+        app:cardElevation="10dp"
+        app:strokeColor="@color/primary_light"
+        app:strokeWidth="2dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:minWidth="220dp"
+            android:orientation="vertical"
+            android:paddingLeft="28dp"
+            android:paddingTop="24dp"
+            android:paddingRight="28dp"
+            android:paddingBottom="20dp">
+
+            <TextView
+                android:id="@+id/loaderEmoji"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✨"
+                android:textSize="42sp" />
+
+            <TextView
+                android:id="@+id/loaderTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="@string/loader_title_general"
+                android:textColor="@color/primary_text"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/loaderDotsRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:layout_marginBottom="6dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/loaderDot1"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/bg_loader_dot_purple" />
+
+                <View
+                    android:id="@+id/loaderDot2"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/bg_loader_dot_teal" />
+
+                <View
+                    android:id="@+id/loaderDot3"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:layout_margin="6dp"
+                    android:background="@drawable/bg_loader_dot_coral" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/loaderTip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:maxWidth="260dp"
+                android:text="@string/loader_tip_default"
+                android:textColor="@color/secondary_text"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</merge>

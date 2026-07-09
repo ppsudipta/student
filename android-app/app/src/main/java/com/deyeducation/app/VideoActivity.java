@@ -2,6 +2,8 @@ package com.deyeducation.app;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebChromeClient;
@@ -11,7 +13,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,9 +28,10 @@ public class VideoActivity extends AppCompatActivity {
     private static final String USER_AGENT =
             "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+    private static final long SLOW_LOAD_HINT_MS = 12000L;
 
     private WebView webView;
-    private ProgressBar progressBar;
+    private FunLoaderView progressBar;
     private LinearLayout contentContainer;
     private FrameLayout fullscreenContainer;
     private SessionManager session;
@@ -37,6 +39,13 @@ public class VideoActivity extends AppCompatActivity {
 
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
+    private boolean pageReady;
+    private final Handler slowLoadHandler = new Handler(Looper.getMainLooper());
+    private final Runnable slowLoadHint = () -> {
+        if (!pageReady && progressBar != null && progressBar.getVisibility() == View.VISIBLE) {
+            UiUtils.toast(this, getString(R.string.loader_video_slow));
+        }
+    };
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -86,17 +95,30 @@ public class VideoActivity extends AppCompatActivity {
         fetchAndPlay(materialId);
     }
 
+    private void showVideoLoader() {
+        pageReady = false;
+        slowLoadHandler.removeCallbacks(slowLoadHint);
+        UiUtils.setLoaderVisible(progressBar, true);
+        slowLoadHandler.postDelayed(slowLoadHint, SLOW_LOAD_HINT_MS);
+    }
+
+    private void hideVideoLoader() {
+        pageReady = true;
+        slowLoadHandler.removeCallbacks(slowLoadHint);
+        UiUtils.setLoaderVisible(progressBar, false);
+    }
+
     private void fetchAndPlay(int materialId) {
-        progressBar.setVisibility(ProgressBar.VISIBLE);
+        showVideoLoader();
         api.get("/materials/" + materialId, true, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
                 runOnUiThread(() -> {
-                    progressBar.setVisibility(ProgressBar.GONE);
                     JSONObject data = json.optJSONObject("data");
                     JSONObject playback = data != null ? data.optJSONObject("playback") : null;
                     String embedUrl = playback != null ? playback.optString("embed_url") : "";
                     if (embedUrl.isEmpty()) {
+                        hideVideoLoader();
                         UiUtils.toast(VideoActivity.this, getString(R.string.video_load_failed));
                         finish();
                         return;
@@ -108,7 +130,7 @@ public class VideoActivity extends AppCompatActivity {
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    progressBar.setVisibility(ProgressBar.GONE);
+                    hideVideoLoader();
                     UiUtils.toast(VideoActivity.this, getString(R.string.video_load_failed));
                     finish();
                 });
@@ -180,7 +202,17 @@ public class VideoActivity extends AppCompatActivity {
         view.setOnCreateContextMenuListener((menu, v, info) -> menu.clear());
     }
 
-    private static class SecureWebViewClient extends WebViewClient {
+    private class SecureWebViewClient extends WebViewClient {
+        @Override
+        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            showVideoLoader();
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            hideVideoLoader();
+        }
+
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             String url = request.getUrl().toString().toLowerCase();
@@ -203,6 +235,12 @@ public class VideoActivity extends AppCompatActivity {
                 .replace("\"", "&quot;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
+    }
+
+    @Override
+    protected void onDestroy() {
+        slowLoadHandler.removeCallbacks(slowLoadHint);
+        super.onDestroy();
     }
 
     @Override

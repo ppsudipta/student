@@ -8,7 +8,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -27,7 +26,7 @@ import java.io.InputStream;
 public class ProfileFragment extends Fragment {
     private ApiClient api;
     private SessionManager session;
-    private ProgressBar progressBar;
+    private View progressBar;
     private ImageView profileImage;
     private ActivityResultLauncher<PickVisualMediaRequest> pickImageLauncher;
 
@@ -62,29 +61,30 @@ public class ProfileFragment extends Fragment {
                         .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
                         .build()));
 
-        setupMenuRow(view.findViewById(R.id.menuAccountDetails), R.drawable.ic_edit_profile,
+        setupMenuRow(view.findViewById(R.id.menuAccountDetails), R.drawable.ic_menu_profile,
                 getString(R.string.my_account_details),
                 v -> activity.showFragment(new ProfileAccountFragment(),
                         getString(R.string.my_account_details), true));
 
-        view.findViewById(R.id.btnPaymentMethod).setOnClickListener(v ->
-                activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees)));
+        setupMenuRow(view.findViewById(R.id.menuPaymentMethod), R.drawable.ic_menu_fees,
+                getString(R.string.payment_method),
+                v -> activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees)));
 
-        setupMenuRow(view.findViewById(R.id.menuChangePassword), R.drawable.ic_lock,
+        setupMenuRow(view.findViewById(R.id.menuChangePassword), R.drawable.ic_menu_lock,
                 getString(R.string.change_password),
                 v -> activity.showFragment(new ChangePasswordFragment(),
                         getString(R.string.change_password), true));
 
-        setupMenuRow(view.findViewById(R.id.menuNotifications), R.drawable.ic_bell,
+        setupMenuRow(view.findViewById(R.id.menuNotifications), R.drawable.ic_menu_notices,
                 getString(R.string.notifications_menu),
                 v -> activity.selectBottomNav(R.id.nav_notices));
 
-        setupMenuRow(view.findViewById(R.id.menuProgressReport), R.drawable.ic_attendance,
+        setupMenuRow(view.findViewById(R.id.menuProgressReport), R.drawable.ic_menu_attendance,
                 getString(R.string.progress_report),
                 v -> activity.showFragment(new AttendanceFragment(),
                         getString(R.string.progress_report), true));
 
-        setupMenuRow(view.findViewById(R.id.menuLegal), R.drawable.ic_shield,
+        setupMenuRow(view.findViewById(R.id.menuLegal), R.drawable.ic_menu_legal,
                 getString(R.string.legal_policies),
                 v -> activity.showFragment(new LegalPoliciesFragment(),
                         getString(R.string.legal_terms_title), true));
@@ -107,7 +107,8 @@ public class ProfileFragment extends Fragment {
     }
 
     private void setupMenuRow(View row, int iconRes, String label, View.OnClickListener click) {
-        ((ImageView) row.findViewById(R.id.menuIcon)).setImageResource(iconRes);
+        ImageView icon = row.findViewById(R.id.menuIcon);
+        icon.setImageResource(iconRes);
         ((TextView) row.findViewById(R.id.menuLabel)).setText(label);
         row.setOnClickListener(click);
     }
@@ -116,17 +117,17 @@ public class ProfileFragment extends Fragment {
         if (uri == null || !isAdded()) {
             return;
         }
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         try (InputStream input = requireContext().getContentResolver().openInputStream(uri)) {
             if (input == null) {
-                progressBar.setVisibility(View.GONE);
+                UiUtils.setLoaderVisible(progressBar, false);
                 UiUtils.toast(requireContext(), getString(R.string.network_error));
                 return;
             }
             ContentResolver resolver = requireContext().getContentResolver();
             String mimeType = resolver.getType(uri);
             if (mimeType == null || !mimeType.startsWith("image/")) {
-                progressBar.setVisibility(View.GONE);
+                UiUtils.setLoaderVisible(progressBar, false);
                 UiUtils.toast(requireContext(), getString(R.string.network_error));
                 return;
             }
@@ -147,7 +148,7 @@ public class ProfileFragment extends Fragment {
                                 return;
                             }
                             requireActivity().runOnUiThread(() -> {
-                                progressBar.setVisibility(View.GONE);
+                                UiUtils.setLoaderVisible(progressBar, false);
                                 UiUtils.toast(requireContext(), getString(R.string.photo_updated));
                                 JSONObject student = json.optJSONObject("student");
                                 if (student != null) {
@@ -167,19 +168,19 @@ public class ProfileFragment extends Fragment {
                                 return;
                             }
                             requireActivity().runOnUiThread(() -> {
-                                progressBar.setVisibility(View.GONE);
+                                UiUtils.setLoaderVisible(progressBar, false);
                                 UiUtils.toast(requireContext(), message);
                             });
                         }
                     });
         } catch (Exception e) {
-            progressBar.setVisibility(View.GONE);
+            UiUtils.setLoaderVisible(progressBar, false);
             UiUtils.toast(requireContext(), e.getMessage());
         }
     }
 
     private void loadProfile(View root) {
-        progressBar.setVisibility(View.VISIBLE);
+        UiUtils.setLoaderVisible(progressBar, true);
         api.get("/me", true, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
@@ -187,7 +188,7 @@ public class ProfileFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     JSONObject student = json.optJSONObject("student");
                     if (student == null) {
                         return;
@@ -211,7 +212,7 @@ public class ProfileFragment extends Fragment {
                     return;
                 }
                 requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
+                    UiUtils.setLoaderVisible(progressBar, false);
                     UiUtils.toast(requireContext(), message);
                 });
             }
