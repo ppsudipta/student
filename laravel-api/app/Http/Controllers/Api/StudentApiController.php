@@ -169,6 +169,7 @@ class StudentApiController extends Controller
             ),
             'notices_count' => $student ? Notice::query()->where('student_id', $student->id)->where('seen', 0)->count() : 0,
             'has_pending_fees' => $student ? $this->hasPendingFees($student) : false,
+            'unvoted_polls' => $student ? $this->unvotedPollsForStudent($student) : [],
         ]);
     }
 
@@ -1633,6 +1634,29 @@ class StudentApiController extends Controller
                 'percentage' => $total > 0 ? (int) round(($votes / $total) * 100) : 0,
             ];
         })->values()->all();
+    }
+
+    private function unvotedPollsForStudent(Student $student): array
+    {
+        $polls = $this->pollsVisibleToStudent($student);
+        if ($polls->isEmpty()) {
+            return [];
+        }
+
+        $votedIds = $this->table('poll_votes')
+            ->where('student_id', $student->id)
+            ->whereIn('poll_id', $polls->pluck('id'))
+            ->pluck('poll_id')
+            ->all();
+
+        return $polls
+            ->filter(fn ($poll) => ! in_array($poll->id, $votedIds, true))
+            ->map(fn ($poll) => [
+                'id' => $poll->id,
+                'question' => $poll->question,
+            ])
+            ->values()
+            ->all();
     }
 
     private function transformPaginator($paginator)

@@ -133,6 +133,28 @@
             android:textStyle="bold"
             android:visibility="gone" />
 
+        <LinearLayout
+            android:id="@+id/pollAlertSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/TextSectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/home_polls_title" />
+
+            <LinearLayout
+                android:id="@+id/pollAlertContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
         <TextView
             style="@style/TextSectionTitle"
             android:layout_width="wrap_content"

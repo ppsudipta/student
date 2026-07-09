@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.NumberPicker;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -16,7 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -26,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-import java.util.TimeZone;
 
 public class FeesFragment extends Fragment {
     private ApiClient api;
@@ -98,20 +98,55 @@ public class FeesFragment extends Fragment {
     }
 
     private void showMonthPicker() {
-        long initial = selectedPeriod.isEmpty()
-                ? monthToUtcMillis(periodKey(Calendar.getInstance()))
-                : monthToUtcMillis(selectedPeriod);
-        MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText(getString(R.string.set_month))
-                .setSelection(initial)
-                .build();
-        picker.addOnPositiveButtonClickListener(selection -> {
-            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            calendar.setTimeInMillis(selection);
-            selectedPeriod = periodKey(calendar);
-            updatePeriodLabel();
-        });
-        picker.show(getParentFragmentManager(), "fees_month_picker");
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_month_year_picker, null, false);
+        NumberPicker monthPicker = dialogView.findViewById(R.id.monthPicker);
+        NumberPicker yearPicker = dialogView.findViewById(R.id.yearPicker);
+
+        String[] monthLabels = new SimpleDateFormat("MMMM", Locale.getDefault())
+                .getDateFormatSymbols().getMonths();
+        List<String> months = new ArrayList<>();
+        for (String label : monthLabels) {
+            if (label != null && !label.trim().isEmpty()) {
+                months.add(label);
+            }
+        }
+        monthPicker.setMinValue(0);
+        monthPicker.setMaxValue(months.size() - 1);
+        monthPicker.setDisplayedValues(months.toArray(new String[0]));
+        monthPicker.setWrapSelectorWheel(false);
+
+        Calendar now = Calendar.getInstance();
+        int currentYear = now.get(Calendar.YEAR);
+        yearPicker.setMinValue(currentYear - 10);
+        yearPicker.setMaxValue(currentYear + 1);
+        yearPicker.setWrapSelectorWheel(false);
+
+        int initialMonth = now.get(Calendar.MONTH);
+        int initialYear = currentYear;
+        if (selectedPeriod != null && !selectedPeriod.isEmpty()) {
+            try {
+                String[] parts = selectedPeriod.split("-");
+                initialYear = Integer.parseInt(parts[0]);
+                initialMonth = Integer.parseInt(parts[1]) - 1;
+            } catch (Exception ignored) {
+            }
+        }
+        monthPicker.setValue(Math.max(0, Math.min(initialMonth, months.size() - 1)));
+        yearPicker.setValue(Math.max(yearPicker.getMinValue(),
+                Math.min(initialYear, yearPicker.getMaxValue())));
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.set_month)
+                .setView(dialogView)
+                .setPositiveButton(R.string.apply_filter, (dialog, which) -> {
+                    int monthIndex = monthPicker.getValue();
+                    int year = yearPicker.getValue();
+                    selectedPeriod = String.format(Locale.US, "%04d-%02d", year, monthIndex + 1);
+                    updatePeriodLabel();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void updatePeriodLabel() {
@@ -217,18 +252,6 @@ public class FeesFragment extends Fragment {
     private String periodKey(Calendar calendar) {
         return String.format(Locale.US, "%04d-%02d",
                 calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1);
-    }
-
-    private long monthToUtcMillis(String period) {
-        try {
-            String[] parts = period.split("-");
-            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            calendar.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1, 1, 0, 0, 0);
-            calendar.set(Calendar.MILLISECOND, 0);
-            return calendar.getTimeInMillis();
-        } catch (Exception e) {
-            return MaterialDatePicker.todayInUtcMilliseconds();
-        }
     }
 
     private String formatPeriodLabel(String period) {

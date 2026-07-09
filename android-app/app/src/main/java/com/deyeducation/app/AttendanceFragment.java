@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.NumberPicker;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -15,8 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -26,21 +26,15 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
-import java.util.TimeZone;
 
 public class AttendanceFragment extends Fragment {
     private ApiClient api;
     private View progressBar;
     private SwipeRefreshLayout swipeRefresh;
     private TextView selectedMonthView;
-    private TextView recordsTitleView;
     private TextView emptyView;
     private TextView studentNameView;
     private TextView studentClassView;
-    private TextView statTotalValue;
-    private TextView statPresentValue;
-    private TextView statAbsentValue;
-    private TextView statPercentValue;
     private AttendanceAdapter adapter;
     private String selectedMonth;
 
@@ -60,21 +54,10 @@ public class AttendanceFragment extends Fragment {
         progressBar = view.findViewById(R.id.attendanceProgress);
         swipeRefresh = view.findViewById(R.id.swipeRefresh);
         selectedMonthView = view.findViewById(R.id.tvSelectedMonth);
-        recordsTitleView = view.findViewById(R.id.tvRecordsTitle);
         emptyView = view.findViewById(R.id.tvEmptyAttendance);
         studentNameView = view.findViewById(R.id.tvStudentName);
         studentClassView = view.findViewById(R.id.tvStudentClass);
         RecyclerView list = view.findViewById(R.id.attendanceList);
-
-        bindStatCard(view.findViewById(R.id.statTotal), getString(R.string.total_days), R.color.primary);
-        bindStatCard(view.findViewById(R.id.statPresent), getString(R.string.present_days), R.color.success);
-        bindStatCard(view.findViewById(R.id.statAbsent), getString(R.string.absent_days), R.color.alert_text);
-        bindStatCard(view.findViewById(R.id.statPercent), getString(R.string.attendance_percent), R.color.accent_teal);
-
-        statTotalValue = view.findViewById(R.id.statTotal).findViewById(R.id.statValue);
-        statPresentValue = view.findViewById(R.id.statPresent).findViewById(R.id.statValue);
-        statAbsentValue = view.findViewById(R.id.statAbsent).findViewById(R.id.statValue);
-        statPercentValue = view.findViewById(R.id.statPercent).findViewById(R.id.statValue);
 
         adapter = new AttendanceAdapter();
         list.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -83,12 +66,11 @@ public class AttendanceFragment extends Fragment {
         selectedMonthView.setText(formatMonthLabel(selectedMonth));
         selectedMonthView.setOnClickListener(v -> showMonthPicker());
         view.findViewById(R.id.btnApplyMonth).setOnClickListener(v -> loadAttendance());
-        ((MaterialButton) view.findViewById(R.id.btnCurrentMonth))
-                .setOnClickListener(v -> {
-                    selectedMonth = monthKey(Calendar.getInstance());
-                    selectedMonthView.setText(formatMonthLabel(selectedMonth));
-                    loadAttendance();
-                });
+        view.findViewById(R.id.btnCurrentMonth).setOnClickListener(v -> {
+            selectedMonth = monthKey(Calendar.getInstance());
+            selectedMonthView.setText(formatMonthLabel(selectedMonth));
+            loadAttendance();
+        });
 
         UiUtils.setupColorfulSwipeRefresh(swipeRefresh);
         swipeRefresh.setOnRefreshListener(this::loadAttendance);
@@ -106,25 +88,56 @@ public class AttendanceFragment extends Fragment {
         }
     }
 
-    private void bindStatCard(View root, String label, int valueColor) {
-        ((TextView) root.findViewById(R.id.statLabel)).setText(label);
-        ((TextView) root.findViewById(R.id.statValue)).setTextColor(
-                ContextCompat.getColor(requireContext(), valueColor));
-    }
-
     private void showMonthPicker() {
-        long initial = monthToUtcMillis(selectedMonth);
-        MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText(getString(R.string.set_month))
-                .setSelection(initial)
-                .build();
-        picker.addOnPositiveButtonClickListener(selection -> {
-            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            calendar.setTimeInMillis(selection);
-            selectedMonth = monthKey(calendar);
-            selectedMonthView.setText(formatMonthLabel(selectedMonth));
-        });
-        picker.show(getParentFragmentManager(), "month_picker");
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_month_year_picker, null, false);
+        NumberPicker monthPicker = dialogView.findViewById(R.id.monthPicker);
+        NumberPicker yearPicker = dialogView.findViewById(R.id.yearPicker);
+
+        String[] monthLabels = new SimpleDateFormat("MMMM", Locale.getDefault())
+                .getDateFormatSymbols().getMonths();
+        List<String> months = new ArrayList<>();
+        for (String label : monthLabels) {
+            if (label != null && !label.trim().isEmpty()) {
+                months.add(label);
+            }
+        }
+        monthPicker.setMinValue(0);
+        monthPicker.setMaxValue(months.size() - 1);
+        monthPicker.setDisplayedValues(months.toArray(new String[0]));
+        monthPicker.setWrapSelectorWheel(false);
+
+        Calendar now = Calendar.getInstance();
+        int currentYear = now.get(Calendar.YEAR);
+        yearPicker.setMinValue(currentYear - 10);
+        yearPicker.setMaxValue(currentYear + 1);
+        yearPicker.setWrapSelectorWheel(false);
+
+        int initialMonth = now.get(Calendar.MONTH);
+        int initialYear = currentYear;
+        if (selectedMonth != null && !selectedMonth.isEmpty()) {
+            try {
+                String[] parts = selectedMonth.split("-");
+                initialYear = Integer.parseInt(parts[0]);
+                initialMonth = Integer.parseInt(parts[1]) - 1;
+            } catch (Exception ignored) {
+            }
+        }
+        monthPicker.setValue(Math.max(0, Math.min(initialMonth, months.size() - 1)));
+        yearPicker.setValue(Math.max(yearPicker.getMinValue(),
+                Math.min(initialYear, yearPicker.getMaxValue())));
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.set_month)
+                .setView(dialogView)
+                .setPositiveButton(R.string.apply_filter, (dialog, which) -> {
+                    int monthIndex = monthPicker.getValue();
+                    int year = yearPicker.getValue();
+                    selectedMonth = String.format(Locale.US, "%04d-%02d", year, monthIndex + 1);
+                    selectedMonthView.setText(formatMonthLabel(selectedMonth));
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void loadAttendance() {
@@ -141,20 +154,11 @@ public class AttendanceFragment extends Fragment {
                 requireActivity().runOnUiThread(() -> {
                     UiUtils.setLoaderVisible(progressBar, false);
                     swipeRefresh.setRefreshing(false);
-                    JSONObject summary = json.optJSONObject("summary");
                     JSONObject student = json.optJSONObject("student");
                     if (student != null) {
                         studentNameView.setText(student.optString("name", ""));
                         studentClassView.setText(student.optString("class", ""));
                     }
-                    if (summary != null) {
-                        statTotalValue.setText(String.valueOf(summary.optInt("total_days", 0)));
-                        statPresentValue.setText(String.valueOf(summary.optInt("present_days", 0)));
-                        statAbsentValue.setText(String.valueOf(summary.optInt("absent_days", 0)));
-                        statPercentValue.setText(summary.optInt("attendance_percentage", 0) + "%");
-                    }
-                    recordsTitleView.setText(getString(R.string.attendance_records_for,
-                            formatMonthLabel(selectedMonth)));
                     adapter.setItems(parseRecords(json));
                     boolean empty = adapter.getItemCount() == 0;
                     emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
@@ -206,18 +210,6 @@ public class AttendanceFragment extends Fragment {
                 calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1);
     }
 
-    private long monthToUtcMillis(String month) {
-        try {
-            String[] parts = month.split("-");
-            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            calendar.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1, 1, 0, 0, 0);
-            calendar.set(Calendar.MILLISECOND, 0);
-            return calendar.getTimeInMillis();
-        } catch (Exception e) {
-            return MaterialDatePicker.todayInUtcMilliseconds();
-        }
-    }
-
     private String formatMonthLabel(String month) {
         try {
             SimpleDateFormat input = new SimpleDateFormat("yyyy-MM", Locale.US);
@@ -248,17 +240,7 @@ public class AttendanceFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             JSONObject row = items.get(position);
-            String date = row.optString("attendance_date", "");
-            holder.date.setText(formatDisplayDate(date));
-            holder.day.setText(row.optString("day_name", ""));
-            holder.className.setText(row.optString("class_name", ""));
-            String title = row.optString("attendance_title", "");
-            if (title.isEmpty() || "null".equals(title)) {
-                holder.title.setVisibility(View.GONE);
-            } else {
-                holder.title.setVisibility(View.VISIBLE);
-                holder.title.setText(title);
-            }
+            holder.date.setText(formatDisplayDate(row.optString("attendance_date", "")));
             String status = row.optString("status", "");
             holder.status.setText(status);
             boolean present = "Present".equalsIgnoreCase(status);
@@ -270,6 +252,11 @@ public class AttendanceFragment extends Fragment {
             bg.setColor(ContextCompat.getColor(holder.itemView.getContext(),
                     present ? R.color.service_mint_bg : R.color.alert_bg));
             holder.status.setBackground(bg);
+
+            int bgColor = position % 2 == 0
+                    ? ContextCompat.getColor(holder.itemView.getContext(), R.color.surface_card)
+                    : ContextCompat.getColor(holder.itemView.getContext(), R.color.secondary_bg);
+            holder.itemView.setBackgroundColor(bgColor);
         }
 
         @Override
@@ -280,7 +267,7 @@ public class AttendanceFragment extends Fragment {
         private String formatDisplayDate(String value) {
             try {
                 SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-                SimpleDateFormat output = new SimpleDateFormat("MMM d, yyyy", Locale.getDefault());
+                SimpleDateFormat output = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
                 return output.format(input.parse(value));
             } catch (Exception e) {
                 return value;
@@ -289,17 +276,11 @@ public class AttendanceFragment extends Fragment {
 
         static class Holder extends RecyclerView.ViewHolder {
             final TextView date;
-            final TextView day;
-            final TextView className;
-            final TextView title;
             final TextView status;
 
             Holder(@NonNull View itemView) {
                 super(itemView);
                 date = itemView.findViewById(R.id.tvDate);
-                day = itemView.findViewById(R.id.tvDay);
-                className = itemView.findViewById(R.id.tvClass);
-                title = itemView.findViewById(R.id.tvTitle);
                 status = itemView.findViewById(R.id.tvStatus);
             }
         }

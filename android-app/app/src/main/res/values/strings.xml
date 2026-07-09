@@ -163,6 +163,7 @@
     <string name="poll_result_stats">%1$d votes · %2$d%%</string>
     <string name="poll_select_option">Please select an option.</string>
     <string name="poll_vote_saved">Your vote has been saved.</string>
+    <string name="home_polls_title">Vote in Poll</string>
     <string name="legal_policies">Legal and Policies</string>
     <string name="current_password">Current Password</string>
     <string name="new_password">New Password</string>

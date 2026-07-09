@@ -35,6 +35,8 @@ public class HomeFragment extends Fragment {
     private View progressBar;
     private SwipeRefreshLayout swipeRefresh;
     private TextView feeBanner;
+    private View pollAlertSection;
+    private LinearLayout pollAlertContainer;
     private View notificationDot;
     private ViewPager2 promoPager;
     private ViewPager2.OnPageChangeCallback promoPageCallback;
@@ -73,6 +75,8 @@ public class HomeFragment extends Fragment {
         progressBar = view.findViewById(R.id.homeProgress);
         swipeRefresh = view.findViewById(R.id.swipeRefresh);
         feeBanner = view.findViewById(R.id.feeAlertBanner);
+        pollAlertSection = view.findViewById(R.id.pollAlertSection);
+        pollAlertContainer = view.findViewById(R.id.pollAlertContainer);
         notificationDot = view.findViewById(R.id.notificationDot);
         GridLayout serviceGrid = view.findViewById(R.id.serviceGrid);
         LinearLayout coursesContainer = view.findViewById(R.id.coursesContainer);
@@ -244,6 +248,7 @@ public class HomeFragment extends Fragment {
                     }
                     feeBanner.setVisibility(json.optBoolean("has_pending_fees") ? View.VISIBLE : View.GONE);
                     notificationDot.setVisibility(json.optInt("notices_count") > 0 ? View.VISIBLE : View.GONE);
+                    bindUnvotedPolls(json.optJSONArray("unvoted_polls"));
                     bindCourses(coursesContainer, json.optJSONArray("events"));
                     bindPromotions(promoSection, promoDots, json.optJSONArray("promotions"));
                 });
@@ -259,6 +264,35 @@ public class HomeFragment extends Fragment {
                 });
             }
         });
+    }
+
+    private void bindUnvotedPolls(@Nullable JSONArray rows) {
+        if (pollAlertSection == null || pollAlertContainer == null) {
+            return;
+        }
+        pollAlertContainer.removeAllViews();
+        if (rows == null || rows.length() == 0) {
+            pollAlertSection.setVisibility(View.GONE);
+            return;
+        }
+        pollAlertSection.setVisibility(View.VISIBLE);
+        MainActivity activity = (MainActivity) requireActivity();
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.optJSONObject(i);
+            if (row == null) {
+                continue;
+            }
+            int pollId = row.optInt("id", 0);
+            String question = row.optString("question", getString(R.string.polls));
+            View item = inflater.inflate(R.layout.item_home_poll_alert, pollAlertContainer, false);
+            ((TextView) item.findViewById(R.id.tvPollQuestion)).setText(question);
+            item.setOnClickListener(v -> activity.showFragment(
+                    PollDetailFragment.newInstance(pollId, question),
+                    question,
+                    true));
+            pollAlertContainer.addView(item);
+        }
     }
 
     private void bindPromotions(View promoSection, LinearLayout dotsContainer, JSONArray rows) {
