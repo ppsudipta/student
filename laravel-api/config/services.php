@@ -39,7 +39,8 @@ return [
         'project_id' => env('FCM_PROJECT_ID'),
         'client_email' => env('FCM_CLIENT_EMAIL'),
         'private_key' => env('FCM_PRIVATE_KEY'),
-        'credentials' => env('FCM_CREDENTIALS', storage_path('app/firebase-service-account.json')),
+        // Empty FCM_CREDENTIALS= in .env must not override the default path.
+        'credentials' => env('FCM_CREDENTIALS') ?: storage_path('app/firebase-service-account.json'),
         'push_secret' => env('FCM_PUSH_SECRET', 'change-me-push-secret'),
     ],
 
