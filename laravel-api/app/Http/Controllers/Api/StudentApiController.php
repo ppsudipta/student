@@ -750,6 +750,7 @@ class StudentApiController extends Controller
     {
         $student = $this->studentFromRequest($request);
         $paginator = $this->enquiriesQuery($student)
+            ->orderByRaw($this->enquiryUnreadOrderSql())
             ->orderByDesc('created_at')
             ->paginate($request->integer('per_page', 20));
 
@@ -758,6 +759,7 @@ class StudentApiController extends Controller
         );
 
         return response()->json([
+            'unread_count' => $this->unreadEnquiryCount($student),
             'data' => $paginator,
         ]);
     }
@@ -770,6 +772,10 @@ class StudentApiController extends Controller
         if (! $enquiry) {
             return response()->json(['message' => 'Enquiry not found.'], 404);
         }
+
+        $this->markEnquirySeen((int) $id);
+
+        $enquiry = $this->enquiriesQuery($student)->where('id', $id)->first();
 
         return response()->json([
             'data' => $this->enquiryPayload((array) $enquiry, true),
@@ -801,6 +807,7 @@ class StudentApiController extends Controller
             'message' => $data['message'],
             'attachment' => $attachment,
             'created_at' => now(),
+            ...(Schema::hasColumn('enquiries', 'student_seen') ? ['student_seen' => 1] : []),
         ]);
 
         $this->insertEnquiryMessage((int) $id, 'student', $student->name, $data['message'], $attachment);
@@ -1434,6 +1441,11 @@ class StudentApiController extends Controller
         $row['has_admin_reply'] = collect($messages)->contains(fn ($message) => ($message['sender_type'] ?? '') === 'admin')
             || ! empty($row['reply_message']);
         $row['status'] = $row['has_admin_reply'] ? 'replied' : 'pending';
+        $studentSeen = ! array_key_exists('student_seen', $row)
+            || (int) ($row['student_seen'] ?? 1) === 1;
+        $row['student_seen'] = $studentSeen;
+        $row['has_unread_reply'] = $row['has_admin_reply'] && ! $studentSeen;
+        $row['unread'] = $row['has_unread_reply'];
         $row['last_message'] = $messages !== [] ? end($messages) : null;
 
         return $row;
@@ -1529,11 +1541,7 @@ class StudentApiController extends Controller
     {
         if (! Schema::hasTable('enquiry_messages')) {
             if ($senderType === 'admin') {
-                $this->table('enquiries')->where('id', $enquiryId)->update([
-                    'reply_message' => $message,
-                    'replied_at' => now(),
-                    'replied_by' => $senderName,
-                ]);
+                $this->table('enquiries')->where('id', $enquiryId)->update($this->adminReplyUpdate($message, $senderName));
             }
 
             return;
@@ -1549,12 +1557,53 @@ class StudentApiController extends Controller
         ]);
 
         if ($senderType === 'admin') {
-            $this->table('enquiries')->where('id', $enquiryId)->update([
-                'reply_message' => $message,
-                'replied_at' => now(),
-                'replied_by' => $senderName,
-            ]);
+            $this->table('enquiries')->where('id', $enquiryId)->update($this->adminReplyUpdate($message, $senderName));
         }
+    }
+
+    private function adminReplyUpdate(string $message, ?string $senderName): array
+    {
+        $update = [
+            'reply_message' => $message,
+            'replied_at' => now(),
+            'replied_by' => $senderName,
+        ];
+        if (Schema::hasColumn('enquiries', 'student_seen')) {
+            $update['student_seen'] = 0;
+        }
+
+        return $update;
+    }
+
+    private function markEnquirySeen(int $enquiryId): void
+    {
+        if ($enquiryId <= 0 || ! Schema::hasColumn('enquiries', 'student_seen')) {
+            return;
+        }
+
+        $this->table('enquiries')->where('id', $enquiryId)->update(['student_seen' => 1]);
+    }
+
+    private function unreadEnquiryCount(Student $student): int
+    {
+        if (! Schema::hasColumn('enquiries', 'student_seen')) {
+            return 0;
+        }
+
+        return (int) $this->enquiriesQuery($student)
+            ->where('student_seen', 0)
+            ->whereNotNull('reply_message')
+            ->where('reply_message', '!=', '')
+            ->count();
+    }
+
+    private function enquiryUnreadOrderSql(): string
+    {
+        if (! Schema::hasColumn('enquiries', 'student_seen')) {
+            return 'id DESC';
+        }
+
+        return '(CASE WHEN student_seen = 0 AND reply_message IS NOT NULL AND reply_message != \'\' THEN 0 ELSE 1 END) ASC';
     }
 
     private function saveUploadedFile($file, string $directory, string $databasePrefix): string

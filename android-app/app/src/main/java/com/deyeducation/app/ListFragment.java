@@ -399,7 +399,17 @@ public class ListFragment extends Fragment {
                 typeLabel = typeLabel.substring(0, 1).toUpperCase() + typeLabel.substring(1);
             }
             boolean replied = row.optBoolean("has_admin_reply", false) || !row.optString("reply_message").isEmpty();
-            item.subtitle = typeLabel + " · " + (replied ? getString(R.string.notice_read) : getString(R.string.pending_reply));
+            boolean unreadReply = row.optBoolean("has_unread_reply", false)
+                    || row.optBoolean("unread", false)
+                    || (replied && row.optInt("student_seen", 1) == 0);
+            item.seen = !unreadReply;
+            if (unreadReply) {
+                item.subtitle = typeLabel + " · " + getString(R.string.enquiry_new_reply);
+            } else if (replied) {
+                item.subtitle = typeLabel + " · " + getString(R.string.enquiry_answered);
+            } else {
+                item.subtitle = typeLabel + " · " + getString(R.string.pending_reply);
+            }
             item.raw = row;
             items.add(item);
         }
@@ -652,6 +662,8 @@ public class ListFragment extends Fragment {
             holder.subtitle.setText(item.subtitle);
             holder.action.setOnClickListener(null);
             holder.itemView.setOnClickListener(null);
+            holder.unreadDot.setVisibility(View.GONE);
+            holder.title.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary_text));
 
             if (TYPE_MATERIALS.equals(type)) {
                 holder.iconFrame.setVisibility(View.VISIBLE);
@@ -683,6 +695,10 @@ public class ListFragment extends Fragment {
                 holder.itemView.setOnClickListener(openFile);
             } else if (TYPE_ENQUIRIES.equals(type) && item.enquiryId > 0) {
                 holder.action.setVisibility(View.GONE);
+                holder.unreadDot.setVisibility(item.seen ? View.GONE : View.VISIBLE);
+                holder.title.setTextColor(ContextCompat.getColor(
+                        requireContext(),
+                        item.seen ? R.color.primary_text : R.color.primary));
                 View.OnClickListener openEnquiry = v -> openEnquiry(item);
                 holder.itemView.setOnClickListener(openEnquiry);
             } else if (TYPE_COURSES.equals(type) && item.eventId > 0) {
@@ -725,6 +741,7 @@ public class ListFragment extends Fragment {
             final TextView title;
             final TextView subtitle;
             final MaterialButton action;
+            final View unreadDot;
 
             DefaultHolder(@NonNull View itemView) {
                 super(itemView);
@@ -733,6 +750,7 @@ public class ListFragment extends Fragment {
                 title = itemView.findViewById(R.id.itemTitle);
                 subtitle = itemView.findViewById(R.id.itemSubtitle);
                 action = itemView.findViewById(R.id.btnAction);
+                unreadDot = itemView.findViewById(R.id.itemUnreadDot);
             }
         }
 

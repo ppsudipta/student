@@ -104,9 +104,35 @@ if ($stmt->execute()) {
         $result = $info->get_result();
         if ($row = $result->fetch_assoc()) {
             $student_id = (int) ($row['student_id'] ?? 0);
+            // student_id may be registration code string — keep for push lookup
+            if ($student_id <= 0 && !empty($row['student_id'])) {
+                // Prefer numeric student id from students table when stored as registration code
+                $sid = $row['student_id'];
+                $lookup = $con->prepare("SELECT id FROM students WHERE id = ? OR registration_code = ? LIMIT 1");
+                if ($lookup) {
+                    $lookup->bind_param("ss", $sid, $sid);
+                    $lookup->execute();
+                    $found = $lookup->get_result()->fetch_assoc();
+                    if ($found) {
+                        $student_id = (int) $found['id'];
+                    }
+                    $lookup->close();
+                }
+            }
             $subject = (string) ($row['subject'] ?? '');
         }
         $info->close();
+    }
+
+    // Mark as unread for the student app until they open the enquiry.
+    $colCheck = $con->query("SHOW COLUMNS FROM enquiries LIKE 'student_seen'");
+    if ($colCheck && $colCheck->num_rows > 0) {
+        $seenStmt = $con->prepare("UPDATE enquiries SET student_seen = 0 WHERE id = ?");
+        if ($seenStmt) {
+            $seenStmt->bind_param("i", $enquiry_id);
+            $seenStmt->execute();
+            $seenStmt->close();
+        }
     }
 
     if ($student_id > 0) {

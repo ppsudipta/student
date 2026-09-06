@@ -65,6 +65,14 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
+        <View
+            android:id="@+id/itemUnreadDot"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_notification_dot"
+            android:visibility="gone" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAction"
             style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"

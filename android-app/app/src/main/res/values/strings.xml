@@ -195,6 +195,8 @@
     <string name="you">You</string>
     <string name="admin_reply">Admin</string>
     <string name="pending_reply">Waiting for admin reply</string>
+    <string name="enquiry_answered">Answered</string>
+    <string name="enquiry_new_reply">New reply</string>
     <string name="change_photo">Change profile photo</string>
     <string name="photo_updated">Profile photo updated.</string>
     <string name="select_category">Select category</string>
