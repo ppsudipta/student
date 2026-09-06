@@ -76,6 +76,7 @@ public class LoginActivity extends AppCompatActivity {
                         if (student != null) {
                             session.setStudentName(student.optString("name"));
                         }
+                        PushNotificationHelper.registerCurrentToken(LoginActivity.this);
                         openMain();
                     });
                 }

@@ -282,9 +282,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
       $stmt->bind_param("iiss", $random_id, $sid, $notice_type, $notice_content);
       $stmt->execute();
     }
-   
 
-  
+    require_once __DIR__ . '/push_helper.php';
+    send_notice_push($student_ids, $notice_type, $notice_content);
+
     header("Location: allnotice.php");
     exit();
   }

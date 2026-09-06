@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "11635873496",
+    "project_id": "deyeducation-e60d5",
+    "storage_bucket": "deyeducation-e60d5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:11635873496:android:8a44c8e5441c25e35269ad",
+        "android_client_info": {
+          "package_name": "com.deyeducation.student"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPJPgwCXh98LKPxYfEaOCAa3ya9Pp4I-4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

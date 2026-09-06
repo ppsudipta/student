@@ -122,6 +122,9 @@
     <string name="payment_method">Payment Method</string>
     <string name="change_password">Change Password</string>
     <string name="notifications_menu">Notifications</string>
+    <string name="push_channel_notices">Notices</string>
+    <string name="push_channel_notices_desc">New notices from the academy</string>
+    <string name="push_default_body">You have a new notice.</string>
     <string name="progress_report">My Attendance</string>
     <string name="attendance_report_title">My Attendance Report</string>
     <string name="attendance_report_subtitle">Track your attendance records</string>
@@ -143,6 +146,7 @@
     <string name="all_months">All Months</string>
     <string name="clear_filter">Clear</string>
     <string name="label_date">Date</string>
+    <string name="label_title">Title</string>
     <string name="label_month">Month</string>
     <string name="label_name_value">Name: %1$s</string>
     <string name="label_registration_value">Registration Code: %1$s</string>
@@ -163,7 +167,7 @@
     <string name="poll_result_stats">%1$d votes · %2$d%%</string>
     <string name="poll_select_option">Please select an option.</string>
     <string name="poll_vote_saved">Your vote has been saved.</string>
-    <string name="home_polls_title">Vote in Poll</string>
+    <string name="home_poll_vote_hint">You have a poll to vote</string>
     <string name="legal_policies">Legal and Policies</string>
     <string name="current_password">Current Password</string>
     <string name="new_password">New Password</string>

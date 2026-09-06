@@ -82,7 +82,7 @@ public class ProfileFragment extends Fragment {
         setupMenuRow(view.findViewById(R.id.menuProgressReport), R.drawable.ic_menu_attendance,
                 getString(R.string.progress_report),
                 v -> activity.showFragment(new AttendanceFragment(),
-                        getString(R.string.progress_report), true));
+                        getString(R.string.attendance_report_title), true));
 
         setupMenuRow(view.findViewById(R.id.menuLegal), R.drawable.ic_menu_legal,
                 getString(R.string.legal_policies),
@@ -90,9 +90,16 @@ public class ProfileFragment extends Fragment {
                         getString(R.string.legal_terms_title), true));
 
         logout.setOnClickListener(v -> {
-            session.clear();
-            startActivity(new Intent(requireContext(), LoginActivity.class));
-            requireActivity().finish();
+            PushNotificationHelper.unregisterCurrentToken(requireContext(), () -> {
+                if (!isAdded()) {
+                    return;
+                }
+                requireActivity().runOnUiThread(() -> {
+                    session.clear();
+                    startActivity(new Intent(requireContext(), LoginActivity.class));
+                    requireActivity().finish();
+                });
+            });
         });
 
         loadProfile(view);

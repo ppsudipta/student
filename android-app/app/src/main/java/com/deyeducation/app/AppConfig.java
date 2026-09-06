@@ -8,6 +8,7 @@ public final class AppConfig {
     public static final String KEY_BASE_URL = "base_url";
     public static final String KEY_ACCESS_TOKEN = "access_token";
     public static final String KEY_STUDENT_NAME = "student_name";
+    public static final String KEY_FCM_TOKEN = "fcm_token";
 
     private AppConfig() {
     }

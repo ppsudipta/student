@@ -68,6 +68,34 @@
             </LinearLayout>
 
             <FrameLayout
+                android:id="@+id/pollIconWrap"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_marginEnd="8dp"
+                android:visibility="gone">
+
+                <ImageButton
+                    android:id="@+id/btnPollVote"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_icon_button_white"
+                    android:contentDescription="@string/home_poll_vote_hint"
+                    android:padding="11dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_menu_poll"
+                    app:tint="@color/accent_teal" />
+
+                <View
+                    android:id="@+id/pollVoteDot"
+                    android:layout_width="11dp"
+                    android:layout_height="11dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="9dp"
+                    android:layout_marginEnd="9dp"
+                    android:background="@drawable/bg_notification_dot" />
+            </FrameLayout>
+
+            <FrameLayout
                 android:layout_width="46dp"
                 android:layout_height="46dp"
                 android:layout_marginEnd="8dp">
@@ -132,28 +160,6 @@
             android:textSize="13sp"
             android:textStyle="bold"
             android:visibility="gone" />
-
-        <LinearLayout
-            android:id="@+id/pollAlertSection"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <TextView
-                style="@style/TextSectionTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/home_polls_title" />
-
-            <LinearLayout
-                android:id="@+id/pollAlertContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-        </LinearLayout>
 
         <TextView
             style="@style/TextSectionTitle"

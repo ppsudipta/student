@@ -8,7 +8,9 @@ use App\Models\Donation;
 use App\Models\Notice;
 use App\Models\ProgressReport;
 use App\Models\Student;
+use App\Models\StudentDeviceToken;
 use App\Models\StudentMaterial;
+use App\Services\FcmService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -524,6 +526,87 @@ class StudentApiController extends Controller
             'message' => $updated ? 'Notice marked as seen.' : 'Notice not found.',
             'updated' => (bool) $updated,
         ], $updated ? 200 : 404);
+    }
+
+    public function registerDeviceToken(Request $request): JsonResponse
+    {
+        $student = $this->studentFromRequest($request);
+        $data = $request->validate([
+            'token' => ['required', 'string', 'max:512'],
+            'platform' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        StudentDeviceToken::query()->updateOrCreate(
+            ['token' => $data['token']],
+            [
+                'student_id' => $student->id,
+                'platform' => $data['platform'] ?? 'android',
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Device token registered.',
+        ]);
+    }
+
+    public function unregisterDeviceToken(Request $request): JsonResponse
+    {
+        $student = $this->studentFromRequest($request);
+        $data = $request->validate([
+            'token' => ['required', 'string', 'max:512'],
+        ]);
+
+        StudentDeviceToken::query()
+            ->where('student_id', $student->id)
+            ->where('token', $data['token'])
+            ->delete();
+
+        return response()->json([
+            'message' => 'Device token removed.',
+        ]);
+    }
+
+    public function pushNotices(Request $request, FcmService $fcm): JsonResponse
+    {
+        $secret = (string) $request->header('X-Push-Secret', $request->input('secret', ''));
+        $expected = (string) config('services.fcm.push_secret');
+        if ($expected === '' || ! hash_equals($expected, $secret)) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        $data = $request->validate([
+            'student_ids' => ['required', 'array', 'min:1'],
+            'student_ids.*' => ['integer'],
+            'title' => ['nullable', 'string', 'max:120'],
+            'body' => ['nullable', 'string', 'max:500'],
+            'notice_type' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        $title = trim((string) ($data['title'] ?? 'New notice'));
+        $body = trim((string) ($data['body'] ?? 'You have a new notice.'));
+        if ($title === '') {
+            $title = 'New notice';
+        }
+        if ($body === '') {
+            $body = 'You have a new notice.';
+        }
+
+        $result = $fcm->sendToStudents(
+            $data['student_ids'],
+            $title,
+            $body,
+            [
+                'type' => 'notice',
+                'screen' => 'notices',
+                'notice_type' => (string) ($data['notice_type'] ?? 'text'),
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Push dispatch completed.',
+            'result' => $result,
+            'configured' => $fcm->isConfigured(),
+        ]);
     }
 
     public function attendance(Request $request): JsonResponse

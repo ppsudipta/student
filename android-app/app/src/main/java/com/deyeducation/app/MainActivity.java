@@ -52,6 +52,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_main);
+        PushNotificationHelper.ensureChannel(this);
+        PushNotificationHelper.requestPermissionIfNeeded(this);
+        PushNotificationHelper.registerCurrentToken(this);
         drawerLayout = findViewById(R.id.drawerLayout);
         bottomNav = findViewById(R.id.bottomNav);
         toolbar = findViewById(R.id.toolbar);
@@ -169,6 +172,32 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openScreenFromIntent(intent);
+    }
+
+    private void openScreenFromIntent(Intent intent) {
+        if (intent == null || bottomNav == null) {
+            return;
+        }
+        String screen = intent.getStringExtra(EXTRA_SCREEN);
+        if (screen == null || screen.isEmpty()) {
+            screen = intent.getStringExtra("screen");
+        }
+        if ("notices".equals(screen)) {
+            selectBottomNav(R.id.nav_notices);
+        } else if ("materials".equals(screen)) {
+            selectBottomNav(R.id.nav_explore);
+        } else if ("gallery".equals(screen)) {
+            selectBottomNav(R.id.nav_gallery);
+        } else if ("profile".equals(screen)) {
+            selectBottomNav(R.id.nav_profile);
+        }
+    }
+
     private void setupDrawerMenu() {
         View panel = findViewById(R.id.drawerPanel);
         navUserName = panel.findViewById(R.id.navUserName);
@@ -203,9 +232,11 @@ public class MainActivity extends AppCompatActivity {
 
         panel.findViewById(R.id.btnDrawerLogout).setOnClickListener(v -> {
             drawerLayout.closeDrawer(GravityCompat.START);
-            session.clear();
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
+            PushNotificationHelper.unregisterCurrentToken(this, () -> runOnUiThread(() -> {
+                session.clear();
+                startActivity(new Intent(this, LoginActivity.class));
+                finish();
+            }));
         });
     }
 

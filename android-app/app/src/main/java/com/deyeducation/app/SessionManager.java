@@ -34,6 +34,14 @@ public class SessionManager {
         prefs.edit().putString(AppConfig.KEY_STUDENT_NAME, name).apply();
     }
 
+    public String getFcmToken() {
+        return prefs.getString(AppConfig.KEY_FCM_TOKEN, "");
+    }
+
+    public void setFcmToken(String token) {
+        prefs.edit().putString(AppConfig.KEY_FCM_TOKEN, token == null ? "" : token).apply();
+    }
+
     public boolean isLoggedIn() {
         return !getToken().isEmpty();
     }
@@ -42,6 +50,7 @@ public class SessionManager {
         prefs.edit()
                 .remove(AppConfig.KEY_ACCESS_TOKEN)
                 .remove(AppConfig.KEY_STUDENT_NAME)
+                .remove(AppConfig.KEY_FCM_TOKEN)
                 .apply();
     }
 }

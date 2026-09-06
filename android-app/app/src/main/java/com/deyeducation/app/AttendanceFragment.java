@@ -84,7 +84,7 @@ public class AttendanceFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (getActivity() instanceof MainActivity) {
-            ((MainActivity) getActivity()).setScreenTitle(getString(R.string.progress_report));
+            ((MainActivity) getActivity()).setScreenTitle(getString(R.string.attendance_report_title));
         }
     }
 
@@ -241,6 +241,11 @@ public class AttendanceFragment extends Fragment {
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             JSONObject row = items.get(position);
             holder.date.setText(formatDisplayDate(row.optString("attendance_date", "")));
+            String title = row.optString("attendance_title", "");
+            if (title.isEmpty() || "null".equals(title)) {
+                title = row.optString("class_name", "");
+            }
+            holder.title.setText(title);
             String status = row.optString("status", "");
             holder.status.setText(status);
             boolean present = "Present".equalsIgnoreCase(status);
@@ -276,11 +281,13 @@ public class AttendanceFragment extends Fragment {
 
         static class Holder extends RecyclerView.ViewHolder {
             final TextView date;
+            final TextView title;
             final TextView status;
 
             Holder(@NonNull View itemView) {
                 super(itemView);
                 date = itemView.findViewById(R.id.tvDate);
+                title = itemView.findViewById(R.id.tvTitle);
                 status = itemView.findViewById(R.id.tvStatus);
             }
         }
