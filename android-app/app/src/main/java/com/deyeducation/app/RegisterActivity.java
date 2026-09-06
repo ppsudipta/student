@@ -19,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
 import org.json.JSONArray;
@@ -286,8 +287,15 @@ public class RegisterActivity extends AppCompatActivity {
                             setLoading(false);
                             String message = json.optString("message",
                                     getString(R.string.registration_submitted));
-                            UiUtils.toast(RegisterActivity.this, message);
-                            finish();
+                            if (message.isEmpty()) {
+                                message = getString(R.string.registration_submitted);
+                            }
+                            new MaterialAlertDialogBuilder(RegisterActivity.this)
+                                    .setTitle(R.string.registration_success_title)
+                                    .setMessage(message)
+                                    .setCancelable(false)
+                                    .setPositiveButton(R.string.ok, (dialog, which) -> finish())
+                                    .show();
                         });
                     }
 

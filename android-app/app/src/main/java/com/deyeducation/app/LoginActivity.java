@@ -7,9 +7,12 @@ import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
 import org.json.JSONObject;
+
+import java.util.Locale;
 
 public class LoginActivity extends AppCompatActivity {
     private SessionManager session;
@@ -50,7 +53,7 @@ public class LoginActivity extends AppCompatActivity {
             String phone = mobile.getText() == null ? "" : mobile.getText().toString().trim();
             String pass = password.getText() == null ? "" : password.getText().toString();
             if (base.isEmpty() || phone.isEmpty() || pass.isEmpty()) {
-                UiUtils.toast(this, "Please fill all fields");
+                UiUtils.toast(this, getString(R.string.fill_all_fields));
                 return;
             }
             session.setBaseUrl(base);
@@ -85,11 +88,31 @@ public class LoginActivity extends AppCompatActivity {
                 public void onError(String message) {
                     runOnUiThread(() -> {
                         setLoading(false);
-                        UiUtils.toast(LoginActivity.this, message);
+                        showLoginError(message);
                     });
                 }
             });
         });
+    }
+
+    private void showLoginError(String message) {
+        if (message == null || message.isEmpty()) {
+            message = getString(R.string.login_failed);
+        }
+        String lower = message.toLowerCase(Locale.US);
+        boolean needsDialog = lower.contains("approval")
+                || lower.contains("not active")
+                || lower.contains("completed")
+                || lower.contains("pending");
+        if (needsDialog) {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.account_pending_title)
+                    .setMessage(message)
+                    .setPositiveButton(R.string.ok, null)
+                    .show();
+        } else {
+            UiUtils.toast(this, message);
+        }
     }
 
     private void setLoading(boolean loading) {

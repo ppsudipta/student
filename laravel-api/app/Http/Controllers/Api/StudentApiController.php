@@ -60,8 +60,14 @@ class StudentApiController extends Controller
         }
 
         if ($student->status !== 'ongoing') {
+            $status = strtolower((string) $student->status);
+            $message = match ($status) {
+                'completed' => 'Your course is already completed. Please contact the admin/principal.',
+                default => 'Your account is pending admin approval. Please wait until the admin activates your account.',
+            };
+
             return response()->json([
-                'message' => 'Your account is not active.',
+                'message' => $message,
                 'status' => $student->status,
             ], 403);
         }
@@ -147,7 +153,7 @@ class StudentApiController extends Controller
         $student->save();
 
         return response()->json([
-            'message' => 'Registration submitted. Please contact admin for approval.',
+            'message' => 'Registration successful! Please wait for admin approval before logging in.',
             'student' => $this->studentPayload($student),
         ], 201);
     }

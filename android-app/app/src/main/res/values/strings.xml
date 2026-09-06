@@ -23,7 +23,10 @@
     <string name="choose_photo">Choose Photo</string>
     <string name="no_file_chosen">No file chosen</string>
     <string name="register_now">Register Now</string>
-    <string name="registration_submitted">Registration submitted. Please contact admin for approval.</string>
+    <string name="registration_success_title">Registration Successful</string>
+    <string name="registration_submitted">Registration successful! Please wait for admin approval before logging in.</string>
+    <string name="account_pending_title">Account Not Active</string>
+    <string name="account_pending_approval">Your account is pending admin approval. Please wait until the admin activates your account.</string>
     <string name="select_class_error">Please select at least one class</string>
     <string name="select_session_error">Please select a session</string>
     <string name="select_photo_error">Please upload a photo</string>
@@ -80,6 +83,7 @@
     <string name="message">Message</string>
     <string name="network_error">Network error. Check connection and API URL.</string>
     <string name="login_failed">Invalid mobile number or password.</string>
+    <string name="ok">OK</string>
     <string name="materials_tab_all">All Materials</string>
     <string name="materials_tab_videos">Videos</string>
     <string name="materials_tab_worksheet">Worksheet</string>
