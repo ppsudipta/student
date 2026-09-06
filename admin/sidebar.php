@@ -15,6 +15,46 @@ if (isset($con) && !$con->connect_error) {
 
 $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
 ?>
+<style>
+  /* Keep left panel consistently navy blue (previous design) */
+  .main-sidebar,
+  .left-side,
+  .main-sidebar .sidebar {
+    background-color: #060f71 !important;
+  }
+  .sidebar-menu > li.header {
+    color: #c2c7d8 !important;
+    background: transparent !important;
+  }
+  .sidebar-menu > li > a {
+    color: #ffffff !important;
+  }
+  .sidebar-menu > li:hover > a,
+  .sidebar-menu > li.active > a,
+  .sidebar-menu > li.menu-open > a {
+    color: #ffffff !important;
+    background: rgba(0, 0, 0, 0.18) !important;
+  }
+  .sidebar-menu .treeview-menu {
+    background: #050c5c !important;
+  }
+  .sidebar-menu .treeview-menu > li > a {
+    color: #dbe2ff !important;
+  }
+  .sidebar-menu .treeview-menu > li.active > a,
+  .sidebar-menu .treeview-menu > li > a:hover {
+    color: #ffffff !important;
+    background: rgba(0, 0, 0, 0.15) !important;
+  }
+  .user-panel > .info,
+  .user-panel > .info > p,
+  .user-panel > .info > a {
+    color: #ffffff !important;
+  }
+  .sidebar a {
+    color: #ffffff;
+  }
+</style>
       <!-- Sidebar user panel -->
       <div class="user-panel">
         <div class="pull-left image">
