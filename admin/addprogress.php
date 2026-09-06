@@ -25,12 +25,32 @@ while ($row = $res2->fetch_assoc()) {
 $classList = array_unique($classList);
 sort($classList);
 
+$months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+$boardTypes = ['WB Board', 'Competitive', 'ICSE/CBSE'];
+$currentYear = (int) date('Y');
+$years = range($currentYear - 1, $currentYear + 2);
+
 // Handle form submit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $attendance_type = $_POST['attendance_type'];
     $attendance_date = $_POST['attendance_date'];
     $day_name = date('l', strtotime($attendance_date));
-    $attendance_title = $_POST['attendance_title'];
+
+    $title_year = trim((string) ($_POST['title_year'] ?? ''));
+    $title_month = trim((string) ($_POST['title_month'] ?? ''));
+    $title_day = trim((string) ($_POST['title_day'] ?? ''));
+    $title_board = trim((string) ($_POST['title_board'] ?? ''));
+
+    if ($title_year === '' || $title_month === '' || $title_day === '' || $title_board === '') {
+        echo "<script>alert('Please complete Attendance Title (Year, Month, Day, Board Type)'); history.back();</script>";
+        exit();
+    }
+
+    // Stored format matches existing records: "2025 - December - 1 - Competitive"
+    $attendance_title = $title_year . ' - ' . $title_month . ' - ' . $title_day . ' - ' . $title_board;
 
     $student_ids = [];
     $class_name = "";
@@ -50,6 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    $student_ids = array_values(array_unique(array_filter(array_map('intval', $student_ids))));
+
     foreach ($student_ids as $sid) {
         $stmt = $con->prepare("INSERT INTO attendance (student_id, class_name, attendance_date, day_name, attendance_title, status) VALUES (?, ?, ?, ?, ?, 'Present')");
         $stmt->bind_param("issss", $sid, $class_name, $attendance_date, $day_name, $attendance_title);
@@ -57,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     echo "<script>alert('Attendance added successfully'); window.location.href='allprogress.php';</script>";
+    exit();
 }
 
 // Function to get classes for a specific student
@@ -78,7 +101,7 @@ function getStudentClasses($con, $student_id) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Add Progress Report</title>
+  <title>Add Attendance Report</title>
   <meta content="width=device-width, initial-scale=1" name="viewport">
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/font-awesome.min.css">
@@ -99,6 +122,9 @@ function getStudentClasses($con, $student_id) {
     #students_list div {
       margin-bottom: 5px;
     }
+    .attendance-title-row .form-group {
+      margin-bottom: 0;
+    }
   </style>
 </head>
 <body class="hold-transition skin-blue sidebar-mini">
@@ -113,11 +139,11 @@ function getStudentClasses($con, $student_id) {
 
   <div class="content-wrapper">
     <section class="content-header">
-      <h1>Add Progress Report</h1>
+      <h1>Add Attendance Report</h1>
       <ol class="breadcrumb">
         <li><a href="dashboard.php"><i class="fa fa-dashboard"></i> Home</a></li>
-        <li><a href="allprogress.php">Progress Reports</a></li>
-        <li class="active">Add Report</li>
+        <li><a href="allprogress.php">Attendance Reports</a></li>
+        <li class="active">Add Attendance</li>
       </ol>
     </section>
 
@@ -126,11 +152,11 @@ function getStudentClasses($con, $student_id) {
         <div class="col-xs-12">
           <div class="box box-primary">
             <div class="box-header with-border">
-              <h3 class="box-title">Progress Report Details</h3>
+              <h3 class="box-title">Attendance Report Details</h3>
             </div>
-          <div class="container mt-4">
-  <h2>Add Attendance</h2>
-  <form method="post">
+            <div class="box-body">
+  <h4>Add Attendance</h4>
+  <form method="post" id="attendanceForm">
     <div class="form-group">
       <label>Attendance Type</label>
       <select name="attendance_type" id="attendance_type" class="form-control" required>
@@ -146,7 +172,7 @@ function getStudentClasses($con, $student_id) {
       <select name="class_name" id="class_name" class="form-control">
         <option value="">-- Select Class --</option>
         <?php foreach($classList as $cl): ?>
-          <option value="<?php echo $cl; ?>"><?php echo $cl; ?></option>
+          <option value="<?php echo htmlspecialchars($cl); ?>"><?php echo htmlspecialchars($cl); ?></option>
         <?php endforeach; ?>
       </select>
     </div>
@@ -162,7 +188,7 @@ function getStudentClasses($con, $student_id) {
         <option value="">-- Select Student --</option>
         <?php foreach ($students as $st): ?>
           <option value="<?php echo $st['id']; ?>">
-            <?php echo $st['name']." (".$st['registration_code'].")"; ?>
+            <?php echo htmlspecialchars($st['name']." (".$st['registration_code'].")"); ?>
           </option>
         <?php endforeach; ?>
       </select>
@@ -182,12 +208,47 @@ function getStudentClasses($con, $student_id) {
 
     <div class="form-group">
       <label>Attendance Title</label>
-      <input type="text" name="attendance_title" class="form-control" placeholder="e.g. Day 1" required>
+      <div class="row attendance-title-row">
+        <div class="col-sm-3 col-xs-6">
+          <select name="title_year" id="title_year" class="form-control" required>
+            <option value="">Year</option>
+            <?php foreach ($years as $year): ?>
+              <option value="<?= $year ?>" <?= $year === $currentYear ? 'selected' : '' ?>><?= $year ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-sm-3 col-xs-6">
+          <select name="title_month" id="title_month" class="form-control" required>
+            <option value="">Month</option>
+            <?php foreach ($months as $month): ?>
+              <option value="<?= $month ?>" <?= $month === date('F') ? 'selected' : '' ?>><?= $month ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-sm-3 col-xs-6" style="margin-top:8px;">
+          <select name="title_day" id="title_day" class="form-control" required>
+            <option value="">Day</option>
+            <?php for ($d = 1; $d <= 60; $d++): ?>
+              <option value="<?= $d ?>"><?= $d ?></option>
+            <?php endfor; ?>
+          </select>
+        </div>
+        <div class="col-sm-3 col-xs-6" style="margin-top:8px;">
+          <select name="title_board" id="title_board" class="form-control" required>
+            <option value="">Board Type</option>
+            <?php foreach ($boardTypes as $board): ?>
+              <option value="<?= htmlspecialchars($board) ?>"><?= htmlspecialchars($board) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+      <p class="help-block" id="titlePreview" style="margin-top:8px;">Title preview: —</p>
+      <input type="hidden" name="attendance_title" id="attendance_title" value="">
     </div>
 
     <button type="submit" class="btn btn-primary">Save Attendance</button>
   </form>
-</div>
+            </div>
           </div>
         </div>
       </div>
@@ -201,12 +262,30 @@ function getStudentClasses($con, $student_id) {
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
+  function updateAttendanceTitlePreview() {
+    var year = $('#title_year').val();
+    var month = $('#title_month').val();
+    var day = $('#title_day').val();
+    var board = $('#title_board').val();
+    if (year && month && day && board) {
+      var title = year + ' - ' + month + ' - ' + day + ' - ' + board;
+      $('#attendance_title').val(title);
+      $('#titlePreview').text('Title preview: ' + title);
+    } else {
+      $('#attendance_title').val('');
+      $('#titlePreview').text('Title preview: —');
+    }
+  }
+
   $(document).ready(function() {
     $('#student_id').select2({
       placeholder: "-- Select Student --",
       allowClear: true,
       width: '100%'
     });
+
+    $('#title_year, #title_month, #title_day, #title_board').on('change', updateAttendanceTitlePreview);
+    updateAttendanceTitlePreview();
 
     $('#attendance_type').change(function(){
       var type = $(this).val();
