@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -18,6 +19,7 @@ import org.json.JSONObject;
 public final class PushNotificationHelper {
     public static final String CHANNEL_ID = "notices";
     public static final int PERMISSION_REQUEST_CODE = 2401;
+    private static final String TAG = "PushNotify";
 
     private PushNotificationHelper() {
     }
@@ -57,17 +59,21 @@ public final class PushNotificationHelper {
     public static void registerCurrentToken(Context context) {
         SessionManager session = new SessionManager(context.getApplicationContext());
         if (!session.isLoggedIn()) {
+            Log.w(TAG, "skip register: not logged in");
             return;
         }
         ensureChannel(context);
         FirebaseMessaging.getInstance().getToken()
                 .addOnSuccessListener(token -> {
                     if (token == null || token.isEmpty()) {
+                        Log.w(TAG, "FCM token empty");
                         return;
                     }
+                    Log.i(TAG, "FCM token acquired, length=" + token.length());
                     session.setFcmToken(token);
                     sendTokenToServer(context, token);
-                });
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "FCM getToken failed", e));
     }
 
     public static void sendTokenToServer(Context context, String token) {
@@ -85,10 +91,12 @@ public final class PushNotificationHelper {
         api.post("/device-token", body, true, new ApiClient.Callback() {
             @Override
             public void onSuccess(JSONObject json) {
+                Log.i(TAG, "device token registered: " + json.optString("message"));
             }
 
             @Override
             public void onError(String message) {
+                Log.e(TAG, "device token register failed: " + message);
             }
         });
     }

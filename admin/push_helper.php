@@ -1,7 +1,7 @@
 <?php
 /**
  * Fire-and-forget push to Laravel after notices are saved.
- * Configure LARAVEL_API_PUSH_URL and FCM_PUSH_SECRET in admin/push_config.php
+ * Configure api_push_url / push_secret in admin/push_config.php
  */
 function send_notice_push(array $student_ids, string $notice_type, string $notice_content): void
 {
@@ -16,8 +16,9 @@ function send_notice_push(array $student_ids, string $notice_type, string $notic
         $config = [];
     }
 
-    $apiUrl = rtrim((string) ($config['api_push_url'] ?? 'http://127.0.0.1/admin/laravel-api/public/api/push/notices'), '/');
+    $apiUrl = rtrim((string) ($config['api_push_url'] ?? 'http://187.127.187.70/api/api/push/notices'), '/');
     $secret = (string) ($config['push_secret'] ?? 'change-me-push-secret');
+    $debug = ! empty($config['debug']);
 
     if ($notice_type === 'text') {
         $body = trim($notice_content);
@@ -47,7 +48,10 @@ function send_notice_push(array $student_ids, string $notice_type, string $notic
         return;
     }
 
-    // Prefer cURL when available.
+    $httpCode = 0;
+    $responseBody = '';
+    $curlError = '';
+
     if (function_exists('curl_init')) {
         $ch = curl_init($apiUrl);
         curl_setopt_array($ch, [
@@ -59,22 +63,39 @@ function send_notice_push(array $student_ids, string $notice_type, string $notic
             ],
             CURLOPT_POSTFIELDS => $payload,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 8,
-            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_CONNECTTIMEOUT => 5,
         ]);
-        curl_exec($ch);
+        $responseBody = (string) curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = (string) curl_error($ch);
         curl_close($ch);
-        return;
+    } else {
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/json\r\nAccept: application/json\r\nX-Push-Secret: {$secret}\r\n",
+                'content' => $payload,
+                'timeout' => 20,
+                'ignore_errors' => true,
+            ],
+        ]);
+        $responseBody = (string) @file_get_contents($apiUrl, false, $context);
+        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+            $httpCode = (int) $m[1];
+        }
     }
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-Type: application/json\r\nAccept: application/json\r\nX-Push-Secret: {$secret}\r\n",
-            'content' => $payload,
-            'timeout' => 8,
-            'ignore_errors' => true,
-        ],
-    ]);
-    @file_get_contents($apiUrl, false, $context);
+    if ($debug) {
+        $line = sprintf(
+            "[%s] url=%s students=%s http=%s curl_error=%s response=%s\n",
+            date('Y-m-d H:i:s'),
+            $apiUrl,
+            implode(',', $student_ids),
+            $httpCode,
+            $curlError,
+            $responseBody
+        );
+        @file_put_contents(__DIR__ . '/push_debug.log', $line, FILE_APPEND);
+    }
 }

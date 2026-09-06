@@ -48,6 +48,10 @@ class FcmService
             ->all();
 
         if ($tokens === []) {
+            Log::warning('FCM skip: no device tokens for students', [
+                'student_ids' => $studentIds,
+            ]);
+
             return ['sent' => 0, 'failed' => 0, 'skipped' => count($studentIds)];
         }
 

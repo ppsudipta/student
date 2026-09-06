@@ -532,7 +532,7 @@ class StudentApiController extends Controller
     {
         $student = $this->studentFromRequest($request);
         $data = $request->validate([
-            'token' => ['required', 'string', 'max:512'],
+            'token' => ['required', 'string', 'max:4096'],
             'platform' => ['nullable', 'string', 'max:32'],
         ]);
 
@@ -546,6 +546,7 @@ class StudentApiController extends Controller
 
         return response()->json([
             'message' => 'Device token registered.',
+            'student_id' => $student->id,
         ]);
     }
 
@@ -553,7 +554,7 @@ class StudentApiController extends Controller
     {
         $student = $this->studentFromRequest($request);
         $data = $request->validate([
-            'token' => ['required', 'string', 'max:512'],
+            'token' => ['required', 'string', 'max:4096'],
         ]);
 
         StudentDeviceToken::query()
