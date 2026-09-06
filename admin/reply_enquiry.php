@@ -95,6 +95,25 @@ $stmt = $con->prepare("UPDATE enquiries SET reply_message = ?, replied_at = NOW(
 $stmt->bind_param("ssi", $reply_message, $replied_by, $enquiry_id);
 
 if ($stmt->execute()) {
+    $student_id = 0;
+    $subject = '';
+    $info = $con->prepare("SELECT student_id, subject FROM enquiries WHERE id = ? LIMIT 1");
+    if ($info) {
+        $info->bind_param("i", $enquiry_id);
+        $info->execute();
+        $result = $info->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $student_id = (int) ($row['student_id'] ?? 0);
+            $subject = (string) ($row['subject'] ?? '');
+        }
+        $info->close();
+    }
+
+    if ($student_id > 0) {
+        require_once __DIR__ . '/push_helper.php';
+        send_enquiry_reply_push($student_id, $enquiry_id, $subject, $reply_message);
+    }
+
     echo json_encode(['success' => true, 'message' => 'Reply sent successfully']);
 } else {
     echo json_encode(['success' => false, 'message' => 'Error sending reply: ' . $stmt->error]);

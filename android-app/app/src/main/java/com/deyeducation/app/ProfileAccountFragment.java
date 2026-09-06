@@ -51,9 +51,6 @@ public class ProfileAccountFragment extends Fragment {
                     addRow(container, getString(R.string.label_session), student.optString("session"));
                     addRow(container, getString(R.string.label_course), student.optString("course"));
                     addRow(container, getString(R.string.label_registration), student.optString("registration_code"));
-                    addRow(container, getString(R.string.label_total_fees), student.optString("total_fees"));
-                    addRow(container, getString(R.string.label_paid_fees), student.optString("paid_fees"));
-                    addRow(container, getString(R.string.label_due_fees), student.optString("due_fees"));
                     addRow(container, getString(R.string.label_status), student.optString("status"));
                 });
             }

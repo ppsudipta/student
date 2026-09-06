@@ -48,8 +48,25 @@ public class DeyFirebaseMessagingService extends FirebaseMessagingService {
 
         Intent intent = new Intent(this, MainActivity.class);
         intent.putExtra(MainActivity.EXTRA_SCREEN, "notices");
-        if (data != null && data.containsKey("screen")) {
-            intent.putExtra(MainActivity.EXTRA_SCREEN, data.get("screen"));
+        int enquiryId = 0;
+        if (data != null) {
+            if (data.containsKey("screen") && data.get("screen") != null && !data.get("screen").isEmpty()) {
+                intent.putExtra(MainActivity.EXTRA_SCREEN, data.get("screen"));
+            }
+            if (data.containsKey("enquiry_id")) {
+                try {
+                    enquiryId = Integer.parseInt(String.valueOf(data.get("enquiry_id")));
+                } catch (Exception ignored) {
+                    enquiryId = 0;
+                }
+                if (enquiryId > 0) {
+                    intent.putExtra(MainActivity.EXTRA_ENQUIRY_ID, enquiryId);
+                    intent.putExtra(MainActivity.EXTRA_SCREEN, "enquiry");
+                }
+            }
+            if (data.containsKey("enquiry_subject") && data.get("enquiry_subject") != null) {
+                intent.putExtra(MainActivity.EXTRA_ENQUIRY_SUBJECT, data.get("enquiry_subject"));
+            }
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
@@ -57,7 +74,8 @@ public class DeyFirebaseMessagingService extends FirebaseMessagingService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             flags |= PendingIntent.FLAG_IMMUTABLE;
         }
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 1001, intent, flags);
+        int requestCode = enquiryId > 0 ? enquiryId : 1001;
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, requestCode, intent, flags);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, PushNotificationHelper.CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_notice)
@@ -69,7 +87,9 @@ public class DeyFirebaseMessagingService extends FirebaseMessagingService {
                 .setContentIntent(pendingIntent);
 
         try {
-            NotificationManagerCompat.from(this).notify((int) System.currentTimeMillis(), builder.build());
+            NotificationManagerCompat.from(this).notify(
+                    enquiryId > 0 ? enquiryId : (int) System.currentTimeMillis(),
+                    builder.build());
         } catch (SecurityException ignored) {
             // POST_NOTIFICATIONS denied on Android 13+
         }

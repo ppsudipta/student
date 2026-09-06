@@ -581,26 +581,51 @@ class StudentApiController extends Controller
             'title' => ['nullable', 'string', 'max:120'],
             'body' => ['nullable', 'string', 'max:500'],
             'notice_type' => ['nullable', 'string', 'max:32'],
+            'type' => ['nullable', 'string', 'max:64'],
+            'screen' => ['nullable', 'string', 'max:64'],
+            'enquiry_id' => ['nullable'],
+            'enquiry_subject' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $title = trim((string) ($data['title'] ?? 'New notice'));
+        $type = trim((string) ($data['type'] ?? 'notice'));
+        if ($type === '') {
+            $type = 'notice';
+        }
+        $screen = trim((string) ($data['screen'] ?? ($type === 'enquiry_reply' ? 'enquiry' : 'notices')));
+        if ($screen === '') {
+            $screen = 'notices';
+        }
+
+        $title = trim((string) ($data['title'] ?? ($type === 'enquiry_reply' ? 'Enquiry reply' : 'New notice')));
         $body = trim((string) ($data['body'] ?? 'You have a new notice.'));
         if ($title === '') {
-            $title = 'New notice';
+            $title = $type === 'enquiry_reply' ? 'Enquiry reply' : 'New notice';
         }
         if ($body === '') {
-            $body = 'You have a new notice.';
+            $body = $type === 'enquiry_reply'
+                ? 'You have a new reply on your enquiry.'
+                : 'You have a new notice.';
+        }
+
+        $payload = [
+            'type' => $type,
+            'screen' => $screen,
+        ];
+        if (! empty($data['notice_type'])) {
+            $payload['notice_type'] = (string) $data['notice_type'];
+        }
+        if (isset($data['enquiry_id']) && $data['enquiry_id'] !== null && $data['enquiry_id'] !== '') {
+            $payload['enquiry_id'] = (string) $data['enquiry_id'];
+        }
+        if (! empty($data['enquiry_subject'])) {
+            $payload['enquiry_subject'] = (string) $data['enquiry_subject'];
         }
 
         $result = $fcm->sendToStudents(
             $data['student_ids'],
             $title,
             $body,
-            [
-                'type' => 'notice',
-                'screen' => 'notices',
-                'notice_type' => (string) ($data['notice_type'] ?? 'text'),
-            ]
+            $payload
         );
 
         return response()->json([
@@ -1556,14 +1581,15 @@ class StudentApiController extends Controller
 
     private function hasPendingFees(Student $student): bool
     {
+        // Banner when both of the last 2 months are unpaid (no amounts shown in app).
         $periods = [
+            [
+                'month' => now()->subMonths(2)->format('F'),
+                'year' => now()->subMonths(2)->year,
+            ],
             [
                 'month' => now()->subMonth()->format('F'),
                 'year' => now()->subMonth()->year,
-            ],
-            [
-                'month' => now()->format('F'),
-                'year' => now()->year,
             ],
         ];
 
@@ -1575,12 +1601,12 @@ class StudentApiController extends Controller
                 ->where('status', 'success')
                 ->exists();
 
-            if (! $paid) {
-                return true;
+            if ($paid) {
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     private function canAccessMaterial(Student $student, StudentMaterial $material): bool

@@ -54,9 +54,6 @@ public class ProfileAccountActivity extends AppCompatActivity {
           addRow(container, "Session", student.optString("session"));
           addRow(container, "Course", student.optString("course"));
           addRow(container, "Registration", student.optString("registration_code"));
-          addRow(container, "Total Fees", student.optString("total_fees"));
-          addRow(container, "Paid Fees", student.optString("paid_fees"));
-          addRow(container, "Due Fees", student.optString("due_fees"));
           addRow(container, "Status", student.optString("status"));
         });
       }

@@ -25,6 +25,8 @@ import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
     public static final String EXTRA_SCREEN = "screen";
+    public static final String EXTRA_ENQUIRY_ID = "enquiry_id";
+    public static final String EXTRA_ENQUIRY_SUBJECT = "enquiry_subject";
 
     private DrawerLayout drawerLayout;
     private BottomNavigationView bottomNav;
@@ -123,26 +125,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         if (savedInstanceState == null) {
-            String screen = getIntent().getStringExtra(EXTRA_SCREEN);
-            if ("materials".equals(screen)) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_MATERIALS), getString(R.string.materials));
-                bottomNav.setSelectedItemId(R.id.nav_explore);
-            } else if ("notices".equals(screen)) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_NOTICES), getString(R.string.notices));
-                bottomNav.setSelectedItemId(R.id.nav_notices);
-            } else if ("gallery".equals(screen)) {
-                showFragment(new GalleryFragment(), getString(R.string.gallery));
-                bottomNav.setSelectedItemId(R.id.nav_gallery);
-            } else if ("profile".equals(screen)) {
-                showFragment(new ProfileFragment(), getString(R.string.profile));
-                bottomNav.setSelectedItemId(R.id.nav_profile);
-            } else if ("fees".equals(screen)) {
-                showFragment(new FeesFragment(), getString(R.string.fees));
-            } else if ("enquiry".equals(screen)) {
-                showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry));
-            } else if ("polls".equals(screen)) {
-                showFragment(new PollsFragment(), getString(R.string.polls));
-            } else {
+            if (!openScreenFromIntent(getIntent())) {
                 showFragment(new HomeFragment(), getString(R.string.home));
                 bottomNav.setSelectedItemId(R.id.nav_home);
             }
@@ -179,23 +162,65 @@ public class MainActivity extends AppCompatActivity {
         openScreenFromIntent(intent);
     }
 
-    private void openScreenFromIntent(Intent intent) {
+    /** @return true if a non-home destination was opened */
+    private boolean openScreenFromIntent(Intent intent) {
         if (intent == null || bottomNav == null) {
-            return;
+            return false;
         }
+
+        int enquiryId = intent.getIntExtra(EXTRA_ENQUIRY_ID, 0);
+        if (enquiryId <= 0) {
+            String rawId = intent.getStringExtra(EXTRA_ENQUIRY_ID);
+            if (rawId != null && !rawId.isEmpty()) {
+                try {
+                    enquiryId = Integer.parseInt(rawId);
+                } catch (Exception ignored) {
+                    enquiryId = 0;
+                }
+            }
+        }
+        if (enquiryId > 0) {
+            String subject = intent.getStringExtra(EXTRA_ENQUIRY_SUBJECT);
+            if (subject == null || subject.isEmpty() || "null".equals(subject)) {
+                subject = getString(R.string.enquiry);
+            }
+            showFragment(EnquiryDetailFragment.newInstance(enquiryId, subject), subject, true);
+            return true;
+        }
+
         String screen = intent.getStringExtra(EXTRA_SCREEN);
         if (screen == null || screen.isEmpty()) {
             screen = intent.getStringExtra("screen");
         }
         if ("notices".equals(screen)) {
             selectBottomNav(R.id.nav_notices);
-        } else if ("materials".equals(screen)) {
-            selectBottomNav(R.id.nav_explore);
-        } else if ("gallery".equals(screen)) {
-            selectBottomNav(R.id.nav_gallery);
-        } else if ("profile".equals(screen)) {
-            selectBottomNav(R.id.nav_profile);
+            return true;
         }
+        if ("materials".equals(screen)) {
+            selectBottomNav(R.id.nav_explore);
+            return true;
+        }
+        if ("gallery".equals(screen)) {
+            selectBottomNav(R.id.nav_gallery);
+            return true;
+        }
+        if ("profile".equals(screen)) {
+            selectBottomNav(R.id.nav_profile);
+            return true;
+        }
+        if ("fees".equals(screen)) {
+            showFragment(new FeesFragment(), getString(R.string.fees));
+            return true;
+        }
+        if ("enquiry".equals(screen)) {
+            showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry));
+            return true;
+        }
+        if ("polls".equals(screen)) {
+            showFragment(new PollsFragment(), getString(R.string.polls));
+            return true;
+        }
+        return false;
     }
 
     private void setupDrawerMenu() {

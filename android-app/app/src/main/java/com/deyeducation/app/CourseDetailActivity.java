@@ -71,13 +71,14 @@ public class CourseDetailActivity extends AppCompatActivity {
                     title.setText(name);
                     toolbar.setTitle(name);
 
-                    String price = data.optString("price", "0");
                     String date = data.optString("date", "");
-                    StringBuilder metaText = new StringBuilder("Price: ₹").append(price);
                     if (!date.isEmpty() && !"null".equals(date)) {
-                        metaText.append("\nStarts: ").append(date);
+                        meta.setText("Starts: " + date);
+                        meta.setVisibility(android.view.View.VISIBLE);
+                    } else {
+                        meta.setText("");
+                        meta.setVisibility(android.view.View.GONE);
                     }
-                    meta.setText(metaText.toString());
 
                     UiUtils.bindHtml(description, data.optString("description", ""));
                     UiUtils.loadImage(CourseDetailActivity.this,

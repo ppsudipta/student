@@ -83,13 +83,14 @@ public class CourseDetailFragment extends Fragment {
                         ((MainActivity) getActivity()).setScreenTitle(name);
                     }
 
-                    String price = data.optString("price", "0");
                     String date = data.optString("date", "");
-                    StringBuilder metaText = new StringBuilder(getString(R.string.course_price, price));
                     if (!date.isEmpty() && !"null".equals(date)) {
-                        metaText.append("\n").append(getString(R.string.course_date, date));
+                        meta.setText(getString(R.string.course_date, date));
+                        meta.setVisibility(View.VISIBLE);
+                    } else {
+                        meta.setText("");
+                        meta.setVisibility(View.GONE);
                     }
-                    meta.setText(metaText.toString());
 
                     UiUtils.bindHtml(description, data.optString("description", ""));
                     UiUtils.loadImage(requireContext(),
