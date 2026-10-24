@@ -31,7 +31,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="200dp"
                     android:contentDescription="@null"
-                    android:scaleType="centerCrop"
+                    android:background="@color/surface_muted"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
                     android:src="@drawable/bg_image_placeholder" />
 
                 <LinearLayout

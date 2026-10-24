@@ -46,29 +46,51 @@ public class DeyFirebaseMessagingService extends FirebaseMessagingService {
             }
         }
 
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.putExtra(MainActivity.EXTRA_SCREEN, "notices");
+        Intent intent;
         int enquiryId = 0;
+        String linkUrl = null;
         if (data != null) {
-            if (data.containsKey("screen") && data.get("screen") != null && !data.get("screen").isEmpty()) {
-                intent.putExtra(MainActivity.EXTRA_SCREEN, data.get("screen"));
-            }
-            if (data.containsKey("enquiry_id")) {
-                try {
-                    enquiryId = Integer.parseInt(String.valueOf(data.get("enquiry_id")));
-                } catch (Exception ignored) {
-                    enquiryId = 0;
-                }
-                if (enquiryId > 0) {
-                    intent.putExtra(MainActivity.EXTRA_ENQUIRY_ID, enquiryId);
-                    intent.putExtra(MainActivity.EXTRA_SCREEN, "enquiry");
-                }
-            }
-            if (data.containsKey("enquiry_subject") && data.get("enquiry_subject") != null) {
-                intent.putExtra(MainActivity.EXTRA_ENQUIRY_SUBJECT, data.get("enquiry_subject"));
+            if (data.containsKey("url") && data.get("url") != null && !data.get("url").isEmpty()) {
+                linkUrl = data.get("url");
+            } else if (data.containsKey("link") && data.get("link") != null && !data.get("link").isEmpty()) {
+                linkUrl = data.get("link");
             }
         }
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        if (linkUrl == null || linkUrl.isEmpty()) {
+            linkUrl = LinkOpener.extractFirstUrl(body);
+        }
+        if (linkUrl == null || linkUrl.isEmpty()) {
+            linkUrl = LinkOpener.extractFirstUrl(title);
+        }
+
+        if (linkUrl != null && !linkUrl.isEmpty()) {
+            // YouTube / Meet / any https link → related app if installed, else browser.
+            intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(LinkOpener.normalizeUrl(linkUrl)));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        } else {
+            intent = new Intent(this, MainActivity.class);
+            intent.putExtra(MainActivity.EXTRA_SCREEN, "notices");
+            if (data != null) {
+                if (data.containsKey("screen") && data.get("screen") != null && !data.get("screen").isEmpty()) {
+                    intent.putExtra(MainActivity.EXTRA_SCREEN, data.get("screen"));
+                }
+                if (data.containsKey("enquiry_id")) {
+                    try {
+                        enquiryId = Integer.parseInt(String.valueOf(data.get("enquiry_id")));
+                    } catch (Exception ignored) {
+                        enquiryId = 0;
+                    }
+                    if (enquiryId > 0) {
+                        intent.putExtra(MainActivity.EXTRA_ENQUIRY_ID, enquiryId);
+                        intent.putExtra(MainActivity.EXTRA_SCREEN, "enquiry");
+                    }
+                }
+                if (data.containsKey("enquiry_subject") && data.get("enquiry_subject") != null) {
+                    intent.putExtra(MainActivity.EXTRA_ENQUIRY_SUBJECT, data.get("enquiry_subject"));
+                }
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        }
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

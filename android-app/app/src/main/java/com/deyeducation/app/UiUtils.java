@@ -21,8 +21,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.resource.bitmap.CenterCrop;
-import com.bumptech.glide.load.resource.bitmap.CircleCrop;
+import com.bumptech.glide.load.resource.bitmap.FitCenter;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 
 public final class UiUtils {
@@ -36,6 +35,10 @@ public final class UiUtils {
         Toast.makeText(context, message, Toast.LENGTH_LONG).show();
     }
 
+    /**
+     * Loads remote images with fitCenter so landscape and portrait both show fully
+     * (letterboxed) inside a fixed-size container — no cropping.
+     */
     public static void loadImage(Context context, String url, ImageView view, int cornerRadiusDp) {
         if (!isContextValid(context) || view == null) {
             return;
@@ -45,15 +48,16 @@ public final class UiUtils {
         }
         int placeholder = R.drawable.bg_image_placeholder;
         int radius = (int) (cornerRadiusDp * context.getResources().getDisplayMetrics().density);
+        view.setScaleType(ImageView.ScaleType.FIT_CENTER);
         var request = Glide.with(view)
                 .load(url)
                 .placeholder(placeholder)
                 .error(placeholder)
                 .fallback(placeholder);
         if (radius > 0) {
-            request = request.transform(new CenterCrop(), new RoundedCorners(radius));
+            request = request.transform(new FitCenter(), new RoundedCorners(radius));
         } else {
-            request = request.centerCrop();
+            request = request.fitCenter();
         }
         request.into(view);
     }

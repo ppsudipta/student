@@ -119,13 +119,30 @@ public class NoticeDetailActivity extends AppCompatActivity {
             default:
                 typeLabel.setText(R.string.notice_type_text);
                 textView.setVisibility(View.VISIBLE);
-                textView.setText(content == null ? "" : content);
+                LinkOpener.bindClickableLinks(textView, content);
                 break;
         }
+
+        // Image/video notices can still carry a URL in the text content.
+        if (!"text".equals(noticeType) && LinkOpener.extractFirstUrl(content) != null) {
+            textView.setVisibility(View.VISIBLE);
+            LinkOpener.bindClickableLinks(textView, content);
+        }
+        maybeShowOpenLinkButton(content);
 
         if (!seen && noticeId > 0) {
             markAsRead();
         }
+    }
+
+    private void maybeShowOpenLinkButton(String content) {
+        String url = LinkOpener.extractFirstUrl(content);
+        View openLink = findViewById(R.id.noticeOpenLink);
+        if (openLink == null || url == null || url.isEmpty()) {
+            return;
+        }
+        openLink.setVisibility(View.VISIBLE);
+        openLink.setOnClickListener(v -> LinkOpener.open(this, url));
     }
 
     private void markAsRead() {

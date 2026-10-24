@@ -123,7 +123,9 @@
     <string name="label_paid_fees">Paid Fees</string>
     <string name="label_due_fees">Due Fees</string>
     <string name="label_status">Status</string>
-    <string name="payment_method">Payment Method</string>
+    <string name="payment_method">Remuneration Status</string>
+    <string name="link_open_failed">Unable to open this link.</string>
+    <string name="open_link">Open Link</string>
     <string name="change_password">Change Password</string>
     <string name="notifications_menu">Notifications</string>
     <string name="push_channel_notices">Notices</string>

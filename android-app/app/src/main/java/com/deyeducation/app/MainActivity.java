@@ -168,6 +168,16 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
+        // Notification / deep-link URL (YouTube, Meet, etc.)
+        String link = intent.getStringExtra("url");
+        if (link == null || link.isEmpty()) {
+            link = intent.getStringExtra("link");
+        }
+        if (link != null && !link.isEmpty()) {
+            LinkOpener.open(this, link);
+            return true;
+        }
+
         int enquiryId = intent.getIntExtra(EXTRA_ENQUIRY_ID, 0);
         if (enquiryId <= 0) {
             String rawId = intent.getStringExtra(EXTRA_ENQUIRY_ID);

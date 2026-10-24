@@ -20,9 +20,10 @@
             android:id="@+id/galleryImage"
             android:layout_width="match_parent"
             android:layout_height="160dp"
-            android:background="@drawable/bg_image_placeholder"
+            android:background="@color/surface_muted"
             android:contentDescription="@string/gallery"
-            android:scaleType="centerCrop" />
+            android:padding="4dp"
+            android:scaleType="fitCenter" />
 
         <TextView
             android:id="@+id/galleryTitle"

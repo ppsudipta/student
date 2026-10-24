@@ -13,6 +13,7 @@
     <color name="secondary_bg">#EEE9FF</color>
     <color name="surface">#FDFCFF</color>
     <color name="surface_card">#FFFFFF</color>
+    <color name="surface_muted">#EEF1F6</color>
     <color name="background">#F0EDFF</color>
     <color name="background_end">#E5FAFF</color>
     <color name="border">#D8D2F0</color>

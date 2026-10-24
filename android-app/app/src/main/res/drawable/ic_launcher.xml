@@ -2,11 +2,17 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/primary" />
+            <solid android:color="#FFFFFF" />
             <corners android:radius="16dp" />
         </shape>
     </item>
     <item
-        android:drawable="@drawable/ic_launcher_foreground"
-        android:gravity="center" />
+        android:bottom="6dp"
+        android:left="6dp"
+        android:right="6dp"
+        android:top="6dp">
+        <bitmap
+            android:gravity="fill"
+            android:src="@drawable/ic_dey_logo" />
+    </item>
 </layer-list>

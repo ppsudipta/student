@@ -646,6 +646,8 @@ class StudentApiController extends Controller
             'notice_type' => ['nullable', 'string', 'max:32'],
             'type' => ['nullable', 'string', 'max:64'],
             'screen' => ['nullable', 'string', 'max:64'],
+            'url' => ['nullable', 'string', 'max:1000'],
+            'link' => ['nullable', 'string', 'max:1000'],
             'enquiry_id' => ['nullable'],
             'enquiry_subject' => ['nullable', 'string', 'max:255'],
         ]);
@@ -676,6 +678,17 @@ class StudentApiController extends Controller
         ];
         if (! empty($data['notice_type'])) {
             $payload['notice_type'] = (string) $data['notice_type'];
+        }
+        $link = trim((string) ($data['url'] ?? $data['link'] ?? ''));
+        if ($link === '' && preg_match('/(https?:\/\/[^\s]+|(?:www\.)[^\s]+)/i', $body, $m)) {
+            $link = rtrim($m[1], '.,);]');
+        }
+        if ($link !== '') {
+            if (! preg_match('/^https?:\/\//i', $link)) {
+                $link = 'https://'.$link;
+            }
+            $payload['url'] = $link;
+            $payload['link'] = $link;
         }
         if (isset($data['enquiry_id']) && $data['enquiry_id'] !== null && $data['enquiry_id'] !== '') {
             $payload['enquiry_id'] = (string) $data['enquiry_id'];

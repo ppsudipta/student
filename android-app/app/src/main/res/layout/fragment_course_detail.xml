@@ -18,8 +18,10 @@
                 android:id="@+id/courseImage"
                 android:layout_width="match_parent"
                 android:layout_height="220dp"
+                android:background="@color/surface_muted"
                 android:contentDescription="@null"
-                android:scaleType="centerCrop"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
                 android:src="@drawable/bg_image_placeholder" />
 
             <LinearLayout

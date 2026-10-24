@@ -2,14 +2,16 @@
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/surface_muted">
 
     <ImageView
         android:id="@+id/sliderImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="@null"
-        android:scaleType="centerCrop"
+        android:padding="4dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/bg_image_placeholder" />
 
     <TextView

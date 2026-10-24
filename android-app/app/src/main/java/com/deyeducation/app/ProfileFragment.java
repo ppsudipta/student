@@ -66,9 +66,9 @@ public class ProfileFragment extends Fragment {
                 v -> activity.showFragment(new ProfileAccountFragment(),
                         getString(R.string.my_account_details), true));
 
-        setupMenuRow(view.findViewById(R.id.menuPaymentMethod), R.drawable.ic_menu_fees,
+        setupMenuRow(view.findViewById(R.id.menuPaymentMethod), R.drawable.ic_dey_logo,
                 getString(R.string.payment_method),
-                v -> activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.fees)));
+                v -> activity.showFragment(ListFragment.newInstance(ListFragment.TYPE_FEES), getString(R.string.payment_method)));
 
         setupMenuRow(view.findViewById(R.id.menuChangePassword), R.drawable.ic_menu_lock,
                 getString(R.string.change_password),

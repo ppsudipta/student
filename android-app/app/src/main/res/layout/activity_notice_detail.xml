@@ -55,6 +55,14 @@
                 android:textSize="16sp"
                 android:visibility="gone" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/noticeOpenLink"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/open_link"
+                android:visibility="gone" />
+
             <ImageView
                 android:id="@+id/noticeImage"
                 android:layout_width="match_parent"
