@@ -21,6 +21,8 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.CenterCrop;
+import com.bumptech.glide.load.resource.bitmap.CircleCrop;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 
 public final class UiUtils {
@@ -49,11 +51,31 @@ public final class UiUtils {
                 .error(placeholder)
                 .fallback(placeholder);
         if (radius > 0) {
-            request.transform(new RoundedCorners(radius)).centerCrop();
+            request = request.transform(new CenterCrop(), new RoundedCorners(radius));
         } else {
-            request.centerCrop();
+            request = request.centerCrop();
         }
         request.into(view);
+    }
+
+    public static void loadCircleImage(Context context, String url, ImageView view) {
+        loadCircleImage(context, url, view, R.drawable.ic_menu_profile);
+    }
+
+    public static void loadCircleImage(Context context, String url, ImageView view, int placeholderRes) {
+        if (!isContextValid(context) || view == null) {
+            return;
+        }
+        if (isBlankUrl(url)) {
+            url = null;
+        }
+        var request = Glide.with(view).load(url);
+        if (placeholderRes != 0) {
+            request = request.placeholder(placeholderRes)
+                    .error(placeholderRes)
+                    .fallback(placeholderRes);
+        }
+        request.circleCrop().into(view);
     }
 
     public static void loadZoomImage(Context context, String url, ImageView view) {

@@ -97,6 +97,22 @@
                                 android:textSize="14sp" />
 
                             <TextView
+                                android:id="@+id/centersSectionTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp"
+                                android:text="@string/our_centers"
+                                android:textColor="@color/primary"
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
+
+                            <LinearLayout
+                                android:id="@+id/centersContainer"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical" />
+
+                            <TextView
                                 android:id="@+id/aboutAddress"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"

@@ -151,6 +151,17 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
           </ul>
         </li>
 
+        <li class="treeview <?= in_array($currentPage, ['allcenters.php', 'addcenter.php', 'editcenter.php'], true) ? 'active' : '' ?>">
+          <a href="#">
+            <i class="fa fa-map-marker"></i> <span>Center Locations</span>
+            <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+          </a>
+          <ul class="treeview-menu">
+            <li class="<?= $currentPage === 'allcenters.php' ? 'active' : '' ?>"><a href="allcenters.php"><i class="fa fa-circle-o"></i> All Centers</a></li>
+            <li class="<?= $currentPage === 'addcenter.php' ? 'active' : '' ?>"><a href="addcenter.php"><i class="fa fa-circle-o"></i> Add Center</a></li>
+          </ul>
+        </li>
+
         <li class="treeview <?= in_array($currentPage, ['viewtransactions.php', 'allfees.php', 'view_all_fees.php', 'addfees.php', 'edit_transaction.php'], true) ? 'active' : '' ?>">
           <a href="#">
             <i class="fa fa-money"></i> <span>Fees Management</span>

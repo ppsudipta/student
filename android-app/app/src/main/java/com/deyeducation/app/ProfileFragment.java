@@ -159,9 +159,9 @@ public class ProfileFragment extends Fragment {
                                 UiUtils.toast(requireContext(), getString(R.string.photo_updated));
                                 JSONObject student = json.optJSONObject("student");
                                 if (student != null) {
-                                    UiUtils.loadImage(requireContext(),
+                                    UiUtils.loadCircleImage(requireContext(),
                                             UrlHelper.imageFromJson(session.getBaseUrl(), student),
-                                            profileImage, 36);
+                                            profileImage);
                                     if (requireActivity() instanceof MainActivity) {
                                         ((MainActivity) requireActivity()).refreshNavProfileImage(student);
                                     }
@@ -208,7 +208,7 @@ public class ProfileFragment extends Fragment {
                     String address = student.optString("address");
                     location.setText(address.isEmpty() || "null".equals(address)
                             ? student.optString("class") : address);
-                    UiUtils.loadImage(requireContext(), UrlHelper.imageFromJson(session.getBaseUrl(), student), profileImage, 36);
+                    UiUtils.loadCircleImage(requireContext(), UrlHelper.imageFromJson(session.getBaseUrl(), student), profileImage);
                     session.setStudentName(student.optString("name"));
                 });
             }

@@ -181,12 +181,64 @@ class StudentApiController extends Controller
         ]);
     }
 
+    protected function getCenters(): array
+    {
+        $centers = [];
+        if (Schema::hasTable('centers')) {
+            $centers = DB::table('centers')
+                ->orderByDesc('is_primary')
+                ->orderBy('sort_order', 'asc')
+                ->orderBy('id', 'asc')
+                ->get()
+                ->map(function ($c) {
+                    $item = (array) $c;
+                    if (empty($item['map_url']) && ! empty($item['address'])) {
+                        $item['map_url'] = 'https://www.google.com/maps/search/?api=1&query='.urlencode($item['address']);
+                    }
+
+                    return $item;
+                })
+                ->toArray();
+        }
+
+        if (empty($centers)) {
+            $comp = Company::query()->first();
+            if ($comp && ! empty($comp->address)) {
+                $centers[] = [
+                    'id' => 1,
+                    'name' => 'Main Center',
+                    'address' => $comp->address,
+                    'map_url' => 'https://www.google.com/maps/search/?api=1&query='.urlencode($comp->address),
+                    'phone' => $comp->ph1 ?? '',
+                    'email' => $comp->email ?? '',
+                    'is_primary' => 1,
+                    'sort_order' => 1,
+                ];
+            }
+        }
+
+        return $centers;
+    }
+
+    public function centers(): JsonResponse
+    {
+        return response()->json([
+            'data' => $this->getCenters(),
+        ]);
+    }
+
     public function company(): JsonResponse
     {
         $company = Company::query()->first();
+        $centers = $this->getCenters();
+        $companyData = $company ? $this->withImageUrl($company->toArray()) : null;
+        if ($companyData) {
+            $companyData['centers'] = $centers;
+        }
 
         return response()->json([
-            'data' => $company ? $this->withImageUrl($company->toArray()) : null,
+            'data' => $companyData,
+            'centers' => $centers,
         ]);
     }
 
@@ -194,15 +246,20 @@ class StudentApiController extends Controller
     {
         $company = Company::query()->first();
         $blog = $this->table('blog')->orderByDesc('id')->first();
+        $centers = $this->getCenters();
         $companyData = $company ? $this->withImageUrl($company->toArray()) : null;
 
-        if ($companyData && ! empty($companyData['address'])) {
-            $companyData['map_url'] = 'https://www.google.com/maps/search/?api=1&query='.urlencode($companyData['address']);
+        if ($companyData) {
+            $companyData['centers'] = $centers;
+            if (! empty($companyData['address'])) {
+                $companyData['map_url'] = 'https://www.google.com/maps/search/?api=1&query='.urlencode($companyData['address']);
+            }
         }
 
         return response()->json([
             'data' => [
                 'company' => $companyData,
+                'centers' => $centers,
                 'about' => $blog ? [
                     'title' => $blog->name ?? 'About Us',
                     'details' => $blog->details ?? '',

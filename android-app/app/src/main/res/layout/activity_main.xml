@@ -29,15 +29,21 @@
                 app:title=""
                 app:titleTextColor="@color/white">
 
-                <ImageButton
+                <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/btnToolbarProfile"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_gravity="end"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:layout_gravity="end|center_vertical"
                     android:layout_marginEnd="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
                     android:contentDescription="@string/profile"
-                    android:src="@drawable/ic_profile_white" />
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_profile_white"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.DeyEducation.Circle"
+                    app:strokeColor="#80FFFFFF"
+                    app:strokeWidth="1.5dp" />
             </com.google.android.material.appbar.MaterialToolbar>
         </com.google.android.material.appbar.AppBarLayout>
 

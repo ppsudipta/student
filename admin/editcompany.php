@@ -127,7 +127,10 @@ Company Information Details
 				  
                 </div>
 				<div class="form-group">
-                  <label for="productid">Address</label>
+                  <label for="productid">Address (Head Office)</label>
+                  <a href="allcenters.php" class="btn btn-info btn-xs pull-right" style="margin-bottom: 5px;">
+                    <i class="fa fa-map-marker"></i> Manage Multiple Centers &amp; Google Maps
+                  </a>
                   <input class="form-control" value="<?php echo $address; ?>" name="address"  required  placeholder="Enter Address" type="text">
                 </div>
 				

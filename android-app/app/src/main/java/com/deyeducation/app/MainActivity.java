@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private ApiClient api;
     private String whatsappPhone = "";
     private ImageView navAvatar;
-    private ImageButton toolbarProfileBtn;
+    private ImageView toolbarProfileBtn;
     private TextView navUserName;
     private ActionBarDrawerToggle drawerToggle;
     private MaterialToolbar toolbar;
@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
         drawerLayout = findViewById(R.id.drawerLayout);
         bottomNav = findViewById(R.id.bottomNav);
         toolbar = findViewById(R.id.toolbar);
-        ImageButton profileBtn = findViewById(R.id.btnToolbarProfile);
+        ImageView profileBtn = findViewById(R.id.btnToolbarProfile);
 
         setSupportActionBar(toolbar);
         drawerToggle = new ActionBarDrawerToggle(
@@ -227,10 +227,17 @@ public class MainActivity extends AppCompatActivity {
         View panel = findViewById(R.id.drawerPanel);
         navUserName = panel.findViewById(R.id.navUserName);
         navAvatar = panel.findViewById(R.id.navAvatar);
-        navAvatar.setOnClickListener(v -> {
+        View avatarContainer = panel.findViewById(R.id.navAvatarContainer);
+        View.OnClickListener openProfile = v -> {
             drawerLayout.closeDrawer(GravityCompat.START);
             selectBottomNav(R.id.nav_profile);
-        });
+        };
+        if (navAvatar != null) {
+            navAvatar.setOnClickListener(openProfile);
+        }
+        if (avatarContainer != null) {
+            avatarContainer.setOnClickListener(openProfile);
+        }
 
         LinearLayout mainItems = panel.findViewById(R.id.drawerMainItems);
         LinearLayout serviceItems = panel.findViewById(R.id.drawerServiceItems);
@@ -423,10 +430,10 @@ public class MainActivity extends AppCompatActivity {
     private void applyNavProfileImage(JSONObject student) {
         String imageUrl = UrlHelper.imageFromJson(session.getBaseUrl(), student);
         if (navAvatar != null) {
-            UiUtils.loadImage(this, imageUrl, navAvatar, 28);
+            UiUtils.loadCircleImage(this, imageUrl, navAvatar, R.drawable.ic_menu_profile);
         }
         if (toolbarProfileBtn != null) {
-            UiUtils.loadImage(this, imageUrl, toolbarProfileBtn, 20);
+            UiUtils.loadCircleImage(this, imageUrl, toolbarProfileBtn, R.drawable.ic_profile_white);
         }
     }
 }

@@ -135,7 +135,7 @@ function delete_id(id)
 				  <th>Facebook Link</th>
 				  <th>Youtube Link</th>
 				  <th>Instagram Link</th>
-				 
+				  <th>Centers</th>
 				  <th>Edit</th>
                  
                 </tr>
@@ -168,6 +168,7 @@ function delete_id(id)
 				<td><?php echo $row['fb'] ?></td>
 				<td><?php echo $row['you'] ?></td>
 				<td><?php echo $row['insta'] ?></td>
+				<td><a href="allcenters.php" class="btn btn-info btn-sm"><i class="fa fa-map-marker"></i> Manage Centers</a></td>
                 <td><a href="editcompany.php?id=<?php echo $row['id']?>"><button class="btn btn-warning">
 				  <i class="fa fa-pencil"></i></button></a></td>
                   

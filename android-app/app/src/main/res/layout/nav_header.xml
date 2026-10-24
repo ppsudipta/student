@@ -10,18 +10,22 @@
     android:padding="18dp">
 
     <FrameLayout
+        android:id="@+id/navAvatarContainer"
         android:layout_width="68dp"
         android:layout_height="68dp"
-        android:background="@drawable/bg_nav_avatar_ring">
+        android:background="@drawable/bg_nav_avatar_ring"
+        android:clickable="true"
+        android:focusable="true">
 
-        <ImageView
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/navAvatar"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="62dp"
+            android:layout_height="62dp"
             android:layout_gravity="center"
             android:contentDescription="@string/profile"
             android:scaleType="centerCrop"
-            android:src="@drawable/ic_menu_profile" />
+            android:src="@drawable/ic_menu_profile"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.DeyEducation.Circle" />
     </FrameLayout>
 
     <LinearLayout

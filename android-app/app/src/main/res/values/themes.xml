@@ -64,6 +64,11 @@
         <item name="cornerSize">14dp</item>
     </style>
 
+    <style name="ShapeAppearance.DeyEducation.Circle" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
     <style name="TextDrawerSection">
         <item name="android:textSize">13sp</item>
         <item name="android:textColor">@color/primary</item>

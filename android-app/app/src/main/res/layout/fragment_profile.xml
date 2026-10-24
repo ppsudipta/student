@@ -23,14 +23,16 @@
             android:orientation="horizontal"
             android:padding="16dp">
 
-            <ImageView
+            <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/profileImage"
                 android:layout_width="72dp"
                 android:layout_height="72dp"
-                android:background="@drawable/bg_image_rounded"
                 android:contentDescription="@string/profile"
                 android:scaleType="centerCrop"
-                android:src="@drawable/ic_menu_profile" />
+                android:src="@drawable/ic_menu_profile"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.DeyEducation.Circle"
+                app:strokeColor="@color/white"
+                app:strokeWidth="2.5dp" />
 
             <LinearLayout
                 android:layout_width="0dp"

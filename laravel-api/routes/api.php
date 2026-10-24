@@ -14,6 +14,7 @@ Route::get('/home', [StudentApiController::class, 'home']);
 Route::get('/dashboard', [StudentApiController::class, 'home']);
 Route::get('/company', [StudentApiController::class, 'company']);
 Route::get('/about', [StudentApiController::class, 'about']);
+Route::get('/centers', [StudentApiController::class, 'centers']);
 Route::get('/legal-policies', [StudentApiController::class, 'legalPolicies']);
 Route::get('/enquiry-categories', [StudentApiController::class, 'enquiryCategories']);
 Route::get('/classes', [StudentApiController::class, 'classes']);
