@@ -1,29 +1,34 @@
-<?php 
+<?php
 session_start();
 if (!isset($_SESSION['username']) || $_SESSION['username'] != true) {
     header('location:index.php');
     exit;
 }
 include('config.php');
+include('centers_helper.php');
 
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+centers_ensure_table($con);
+
+$id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($id <= 0) {
     header('location:allcenters.php');
     exit;
 }
 
-$stmt = $con->prepare("SELECT * FROM centers WHERE id = ?");
-$stmt->bind_param("i", $id);
-$stmt->execute();
-$res = $stmt->get_result();
-$center = $res->fetch_assoc();
-
+$center = centers_find($con, $id);
 if (!$center) {
     echo "<script>alert('Center location not found!'); window.location.href='allcenters.php';</script>";
     exit;
 }
 
 $error = '';
+$name = $center['name'];
+$address = $center['address'];
+$map_url = $center['map_url'];
+$phone = $center['phone'];
+$email = $center['email'];
+$sort_order = (int) $center['sort_order'];
+$is_primary = (int) $center['is_primary'];
 
 if (isset($_POST['submit'])) {
     $name = trim($_POST['name'] ?? '');
@@ -31,40 +36,36 @@ if (isset($_POST['submit'])) {
     $map_url = trim($_POST['map_url'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $sort_order = (int)($_POST['sort_order'] ?? 0);
+    $sort_order = (int) ($_POST['sort_order'] ?? 0);
     $is_primary = isset($_POST['is_primary']) ? 1 : 0;
 
-    if (empty($name)) {
+    if ($name === '') {
         $error = 'Please enter the Center Name.';
-    } elseif (empty($address)) {
+    } elseif ($address === '') {
         $error = 'Please enter the Center Address.';
     } else {
-        if (empty($map_url)) {
+        if ($map_url === '') {
             $map_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($address);
         }
 
         if ($is_primary === 1) {
-            $con->query("UPDATE centers SET is_primary = 0 WHERE id != $id");
+            $con->query('UPDATE centers SET is_primary = 0 WHERE id != ' . (int) $id);
         }
 
-        $upStmt = $con->prepare("UPDATE centers SET name = ?, address = ?, map_url = ?, phone = ?, email = ?, is_primary = ?, sort_order = ? WHERE id = ?");
-        $upStmt->bind_param("sssssiii", $name, $address, $map_url, $phone, $email, $is_primary, $sort_order, $id);
-        
-        if ($upStmt->execute()) {
-            echo "<script>alert('Center location updated successfully!'); window.location.href='allcenters.php';</script>";
-            exit;
-        } else {
+        $upStmt = $con->prepare('UPDATE centers SET name = ?, address = ?, map_url = ?, phone = ?, email = ?, is_primary = ?, sort_order = ? WHERE id = ?');
+        if (!$upStmt) {
             $error = 'Database Error: ' . $con->error;
+        } else {
+            $upStmt->bind_param('sssssiii', $name, $address, $map_url, $phone, $email, $is_primary, $sort_order, $id);
+            if ($upStmt->execute()) {
+                $upStmt->close();
+                echo "<script>alert('Center location updated successfully!'); window.location.href='allcenters.php';</script>";
+                exit;
+            }
+            $error = 'Database Error: ' . ($upStmt->error ?: $con->error);
+            $upStmt->close();
         }
     }
-} else {
-    $name = $center['name'];
-    $address = $center['address'];
-    $map_url = $center['map_url'];
-    $phone = $center['phone'];
-    $email = $center['email'];
-    $sort_order = $center['sort_order'];
-    $is_primary = $center['is_primary'];
 }
 ?>
 <!DOCTYPE html>
@@ -84,7 +85,7 @@ if (isset($_POST['submit'])) {
 <body class="hold-transition skin-blue sidebar-mini">
 <div class="wrapper">
   <?php include 'header.php'; ?>
-  
+
   <aside class="main-sidebar">
     <section class="sidebar">
       <?php include 'sidebar.php'; ?>
@@ -116,21 +117,21 @@ if (isset($_POST['submit'])) {
 
           <div class="box box-warning">
             <div class="box-header with-border">
-              <h3 class="box-title"><i class="fa fa-pencil text-warning"></i> Edit Details: <?= htmlspecialchars($center['name']) ?></h3>
+              <h3 class="box-title"><i class="fa fa-pencil text-warning"></i> Edit Details: <?= htmlspecialchars((string) $center['name']) ?></h3>
             </div>
             <form role="form" method="post" accept-charset="utf-8">
               <div class="box-body">
                 <div class="form-group">
                   <label for="centerName">Center / Branch Name <span class="text-danger">*</span></label>
-                  <input class="form-control" id="centerName" name="name" required 
-                         placeholder="e.g. Bonhoogly Center, Dunlop Branch" 
-                         type="text" value="<?= htmlspecialchars($name) ?>">
+                  <input class="form-control" id="centerName" name="name" required
+                         placeholder="e.g. Bonhoogly Center, Dunlop Branch"
+                         type="text" value="<?= htmlspecialchars((string) $name) ?>">
                 </div>
 
                 <div class="form-group">
                   <label for="centerAddress">Full Address <span class="text-danger">*</span></label>
                   <textarea class="form-control" id="centerAddress" name="address" rows="3" required
-                            placeholder="Enter the full street address, landmark, city, pin code"><?= htmlspecialchars($address) ?></textarea>
+                            placeholder="Enter the full street address, landmark, city, pin code"><?= htmlspecialchars((string) $address) ?></textarea>
                 </div>
 
                 <div class="form-group">
@@ -138,10 +139,10 @@ if (isset($_POST['submit'])) {
                   <div class="input-group">
                     <input class="form-control" id="centerMapUrl" name="map_url" type="url"
                            placeholder="e.g. https://maps.app.goo.gl/xxxx or https://www.google.com/maps/..."
-                           value="<?= htmlspecialchars($map_url) ?>">
+                           value="<?= htmlspecialchars((string) $map_url) ?>">
                     <?php if (!empty($map_url)): ?>
                       <span class="input-group-btn">
-                        <a href="<?= htmlspecialchars($map_url) ?>" target="_blank" class="btn btn-info" rel="noopener noreferrer">
+                        <a href="<?= htmlspecialchars((string) $map_url) ?>" target="_blank" class="btn btn-info" rel="noopener noreferrer">
                           <i class="fa fa-external-link"></i> Test Link
                         </a>
                       </span>
@@ -158,14 +159,14 @@ if (isset($_POST['submit'])) {
                     <div class="form-group">
                       <label for="centerPhone">Contact Phone Number (Optional)</label>
                       <input class="form-control" id="centerPhone" name="phone" type="text"
-                             placeholder="e.g. 9038495748" value="<?= htmlspecialchars($phone) ?>">
+                             placeholder="e.g. 9038495748" value="<?= htmlspecialchars((string) $phone) ?>">
                     </div>
                   </div>
                   <div class="col-sm-6">
                     <div class="form-group">
                       <label for="centerEmail">Contact Email (Optional)</label>
                       <input class="form-control" id="centerEmail" name="email" type="email"
-                             placeholder="e.g. center@deyeducation.com" value="<?= htmlspecialchars($email) ?>">
+                             placeholder="e.g. center@deyeducation.com" value="<?= htmlspecialchars((string) $email) ?>">
                     </div>
                   </div>
                 </div>
@@ -175,7 +176,7 @@ if (isset($_POST['submit'])) {
                     <div class="form-group">
                       <label for="centerSort">Display Sort Order</label>
                       <input class="form-control" id="centerSort" name="sort_order" type="number" min="0"
-                             value="<?= htmlspecialchars($sort_order) ?>">
+                             value="<?= htmlspecialchars((string) $sort_order) ?>">
                       <small class="text-muted">Lower numbers appear first.</small>
                     </div>
                   </div>

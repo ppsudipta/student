@@ -76,6 +76,7 @@ public class AboutContentFragment extends Fragment {
         addressView = view.findViewById(R.id.aboutAddress);
         contactCard = view.findViewById(R.id.contactCard);
         mapsButton = view.findViewById(R.id.btnOpenMaps);
+        View youtubeButton = view.findViewById(R.id.btnSubscribeYoutube);
         centersSectionTitle = view.findViewById(R.id.centersSectionTitle);
         centersContainer = view.findViewById(R.id.centersContainer);
         teachersSectionTitle = view.findViewById(R.id.teachersSectionTitle);
@@ -90,6 +91,15 @@ public class AboutContentFragment extends Fragment {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(mapUrl)));
             }
         });
+        if (youtubeButton != null) {
+            youtubeButton.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).openYoutube();
+                } else {
+                    LinkOpener.open(requireContext(), AppConfig.DEFAULT_YOUTUBE_URL);
+                }
+            });
+        }
 
         loadAbout();
     }

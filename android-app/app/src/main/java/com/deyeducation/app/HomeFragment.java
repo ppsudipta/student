@@ -108,6 +108,7 @@ public class HomeFragment extends Fragment {
                 activity.selectBottomNav(R.id.nav_notices));
         btnPollVote.setOnClickListener(v -> openPendingPoll(activity));
         view.findViewById(R.id.btnWhatsapp).setOnClickListener(v -> activity.openWhatsapp());
+        view.findViewById(R.id.btnYoutube).setOnClickListener(v -> activity.openYoutube());
 
         UiUtils.setupColorfulSwipeRefresh(swipeRefresh);
         swipeRefresh.setOnRefreshListener(() -> loadHome(view, coursesContainer, promoSection, promoDots));
@@ -213,6 +214,10 @@ public class HomeFragment extends Fragment {
         addServiceItem(moreGrid, R.drawable.ic_menu_whatsapp, getString(R.string.contact), v -> {
             dialog.dismiss();
             activity.openWhatsapp();
+        });
+        addServiceItem(moreGrid, R.drawable.ic_menu_youtube, getString(R.string.youtube_channel), v -> {
+            dialog.dismiss();
+            activity.openYoutube();
         });
         addServiceItem(moreGrid, R.drawable.ic_menu_enquiry, getString(R.string.enquiry), v -> {
             dialog.dismiss();
@@ -484,8 +489,8 @@ public class HomeFragment extends Fragment {
                 holder.title.setVisibility(View.VISIBLE);
                 holder.title.setText(title);
             }
-            UiUtils.loadImage(holder.image.getContext(),
-                    UrlHelper.imageFromJson(baseUrl, row), holder.image, 12);
+            UiUtils.loadPromoImage(holder.image.getContext(),
+                    UrlHelper.imageFromJson(baseUrl, row), holder.image);
         }
 
         @Override

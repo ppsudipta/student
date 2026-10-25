@@ -1,48 +1,47 @@
-<?php 
+<?php
 session_start();
 if (!isset($_SESSION['username']) || $_SESSION['username'] != true) {
     header('location:index.php');
     exit;
 }
 include('config.php');
+include('centers_helper.php');
 
-// Ensure centers table exists
-$con->query("CREATE TABLE IF NOT EXISTS `centers` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `address` text NOT NULL,
-  `map_url` text DEFAULT NULL,
-  `phone` varchar(50) DEFAULT NULL,
-  `email` varchar(150) DEFAULT NULL,
-  `is_primary` tinyint(1) DEFAULT 0,
-  `sort_order` int(11) DEFAULT 0,
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+centers_ensure_table($con);
 
 // Handle Delete
 if (isset($_GET['delete_id'])) {
-    $delId = (int)$_GET['delete_id'];
-    $stmt = $con->prepare("DELETE FROM centers WHERE id = ?");
-    $stmt->bind_param("i", $delId);
-    $stmt->execute();
+    $delId = (int) $_GET['delete_id'];
+    $stmt = $con->prepare('DELETE FROM centers WHERE id = ?');
+    if ($stmt) {
+        $stmt->bind_param('i', $delId);
+        $stmt->execute();
+        $stmt->close();
+    }
     echo "<script>alert('Center location deleted successfully!'); window.location.href='allcenters.php';</script>";
     exit;
 }
 
 // Handle Set Primary
 if (isset($_GET['make_primary'])) {
-    $primId = (int)$_GET['make_primary'];
-    $con->query("UPDATE centers SET is_primary = 0");
-    $stmt = $con->prepare("UPDATE centers SET is_primary = 1 WHERE id = ?");
-    $stmt->bind_param("i", $primId);
-    $stmt->execute();
+    $primId = (int) $_GET['make_primary'];
+    $con->query('UPDATE centers SET is_primary = 0');
+    $stmt = $con->prepare('UPDATE centers SET is_primary = 1 WHERE id = ?');
+    if ($stmt) {
+        $stmt->bind_param('i', $primId);
+        $stmt->execute();
+        $stmt->close();
+    }
     echo "<script>window.location.href='allcenters.php';</script>";
     exit;
 }
 
-$res = $con->query("SELECT * FROM centers ORDER BY is_primary DESC, sort_order ASC, id ASC");
+$dbError = '';
+$centers = centers_all($con);
+if ($con->error && empty($centers)) {
+    $dbError = $con->error;
+}
+$totalCenters = count($centers);
 ?>
 <!DOCTYPE html>
 <html>
@@ -78,15 +77,13 @@ $res = $con->query("SELECT * FROM centers ORDER BY is_primary DESC, sort_order A
       border-radius: 4px;
       display: inline-block;
     }
-    .map-btn:hover {
-      background-color: #3367D6;
-    }
+    .map-btn:hover { background-color: #3367D6; }
   </style>
 </head>
 <body class="hold-transition skin-blue sidebar-mini">
 <div class="wrapper">
   <?php include 'header.php'; ?>
-  
+
   <aside class="main-sidebar">
     <section class="sidebar">
       <?php include 'sidebar.php'; ?>
@@ -97,7 +94,7 @@ $res = $con->query("SELECT * FROM centers ORDER BY is_primary DESC, sort_order A
     <section class="content-header">
       <h1>
         Center Locations &amp; Google Maps
-        <small>Manage multiple coaching centers and branches</small>
+        <small>Manage multiple coaching centers and branches (<?= (int) $totalCenters ?> total)</small>
       </h1>
       <ol class="breadcrumb">
         <li><a href="index.php"><i class="fa fa-dashboard"></i> Home</a></li>
@@ -108,6 +105,12 @@ $res = $con->query("SELECT * FROM centers ORDER BY is_primary DESC, sort_order A
     <section class="content">
       <div class="row">
         <div class="col-xs-12">
+          <?php if ($dbError !== ''): ?>
+            <div class="alert alert-danger">
+              <i class="fa fa-warning"></i> Database error loading centers: <?= htmlspecialchars($dbError) ?>
+            </div>
+          <?php endif; ?>
+
           <div class="box box-primary">
             <div class="box-header with-border" style="display:flex; justify-content:space-between; align-items:center;">
               <h3 class="box-title"><i class="fa fa-map-marker text-primary"></i> All Centers</h3>
@@ -125,30 +128,30 @@ $res = $con->query("SELECT * FROM centers ORDER BY is_primary DESC, sort_order A
                     <th>Google Maps Location</th>
                     <th>Contact Phone</th>
                     <th>Sort</th>
-                    <th style="width: 140px;">Actions</th>
+                    <th style="width: 180px;">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                <?php 
-                $count = 1;
-                if ($res && $res->num_rows > 0) {
-                  while ($row = $res->fetch_assoc()) { 
-                    $mapLink = trim($row['map_url'] ?? '');
-                    if (empty($mapLink) && !empty($row['address'])) {
-                      $mapLink = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($row['address']);
-                    }
-                ?>
+                <?php if ($totalCenters > 0): ?>
+                  <?php $count = 1; foreach ($centers as $row): ?>
+                    <?php
+                      $mapLink = trim((string) ($row['map_url'] ?? ''));
+                      if ($mapLink === '' && !empty($row['address'])) {
+                          $mapLink = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($row['address']);
+                      }
+                      $centerId = (int) $row['id'];
+                    ?>
                   <tr>
                     <td><?= $count++ ?></td>
                     <td>
-                      <strong><?= htmlspecialchars($row['name']) ?></strong>
+                      <strong><?= htmlspecialchars((string) $row['name']) ?></strong>
                       <?php if (!empty($row['is_primary'])): ?>
                         <span class="badge-primary-center"><i class="fa fa-check-circle"></i> Primary</span>
                       <?php endif; ?>
                     </td>
-                    <td><?= nl2br(htmlspecialchars($row['address'])) ?></td>
+                    <td><?= nl2br(htmlspecialchars((string) $row['address'])) ?></td>
                     <td>
-                      <?php if (!empty($mapLink)): ?>
+                      <?php if ($mapLink !== ''): ?>
                         <a href="<?= htmlspecialchars($mapLink) ?>" target="_blank" class="map-btn" rel="noopener noreferrer">
                           <i class="fa fa-map-marker"></i> Open in Maps
                         </a>
@@ -156,36 +159,33 @@ $res = $con->query("SELECT * FROM centers ORDER BY is_primary DESC, sort_order A
                         <span class="text-muted"><i class="fa fa-minus"></i> No Map Link</span>
                       <?php endif; ?>
                     </td>
-                    <td><?= htmlspecialchars($row['phone'] ?: '-') ?></td>
-                    <td><?= (int)$row['sort_order'] ?></td>
+                    <td><?= htmlspecialchars((string) ($row['phone'] ?: '-')) ?></td>
+                    <td><?= (int) $row['sort_order'] ?></td>
                     <td>
-                      <a href="editcenter.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-xs" title="Edit Center">
+                      <a href="editcenter.php?id=<?= $centerId ?>" class="btn btn-warning btn-xs" title="Edit Center">
                         <i class="fa fa-pencil"></i> Edit
                       </a>
-                      <a href="allcenters.php?delete_id=<?= $row['id'] ?>" class="btn btn-danger btn-xs" 
+                      <a href="allcenters.php?delete_id=<?= $centerId ?>" class="btn btn-danger btn-xs"
                          onclick="return confirm('Are you sure you want to delete this center location?');" title="Delete Center">
                         <i class="fa fa-trash"></i> Delete
                       </a>
                       <?php if (empty($row['is_primary'])): ?>
-                        <a href="allcenters.php?make_primary=<?= $row['id'] ?>" class="btn btn-default btn-xs" title="Set as Main Center">
+                        <a href="allcenters.php?make_primary=<?= $centerId ?>" class="btn btn-default btn-xs" title="Set as Main Center">
                           <i class="fa fa-star text-yellow"></i> Make Main
                         </a>
                       <?php endif; ?>
                     </td>
                   </tr>
-                <?php 
-                  }
-                } else { 
-                ?>
-                  <tr>
-                    <td colspan="7" class="text-center text-muted" style="padding: 30px;">
-                      <i class="fa fa-map-marker fa-2x" style="color:#ccc;"></i><br>
-                      No centers added yet. Click <strong>"Add New Center"</strong> above to add your first branch.
-                    </td>
-                  </tr>
-                <?php } ?>
+                  <?php endforeach; ?>
+                <?php endif; ?>
                 </tbody>
               </table>
+              <?php if ($totalCenters === 0 && $dbError === ''): ?>
+                <div class="text-center text-muted" style="padding: 30px;">
+                  <i class="fa fa-map-marker fa-2x" style="color:#ccc;"></i><br>
+                  No centers added yet. Click <strong>"Add New Center"</strong> above to add your first branch.
+                </div>
+              <?php endif; ?>
             </div>
           </div>
         </div>
@@ -206,14 +206,16 @@ $res = $con->query("SELECT * FROM centers ORDER BY is_primary DESC, sort_order A
 <script src="js/adminlte.min.js"></script>
 <script>
   $(function () {
-    $('#centersTable').DataTable({
-      "paging": true,
-      "lengthChange": true,
-      "searching": true,
-      "ordering": true,
-      "info": true,
-      "autoWidth": false
-    });
+    if ($('#centersTable tbody tr').length > 0) {
+      $('#centersTable').DataTable({
+        "paging": true,
+        "lengthChange": true,
+        "searching": true,
+        "ordering": true,
+        "info": true,
+        "autoWidth": false
+      });
+    }
   });
 </script>
 </body>

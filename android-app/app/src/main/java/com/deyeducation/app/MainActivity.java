@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private SessionManager session;
     private ApiClient api;
     private String whatsappPhone = "";
+    private String youtubeUrl = AppConfig.DEFAULT_YOUTUBE_URL;
     private ImageView navAvatar;
     private ImageView toolbarProfileBtn;
     private TextView navUserName;
@@ -116,6 +117,10 @@ public class MainActivity extends AppCompatActivity {
                 org.json.JSONObject company = json.optJSONObject("data");
                 if (company != null) {
                     whatsappPhone = company.optString("ph1", company.optString("phone", ""));
+                    String you = company.optString("you", company.optString("youtube", ""));
+                    if (you != null && !you.isEmpty() && !"null".equalsIgnoreCase(you)) {
+                        youtubeUrl = you;
+                    }
                 }
             }
 
@@ -268,6 +273,8 @@ public class MainActivity extends AppCompatActivity {
                 () -> showFragment(ListFragment.newInstance(ListFragment.TYPE_ENQUIRIES), getString(R.string.enquiry)));
         addDrawerItem(serviceItems, R.drawable.ic_menu_poll, R.string.polls,
                 () -> showFragment(new PollsFragment(), getString(R.string.polls)));
+        addDrawerItem(serviceItems, R.drawable.ic_menu_youtube, R.string.youtube_channel,
+                this::openYoutube);
 
         addDrawerItem(accountItems, R.drawable.ic_menu_profile, R.string.profile,
                 () -> selectBottomNav(R.id.nav_profile));
@@ -308,6 +315,27 @@ public class MainActivity extends AppCompatActivity {
         }
         String digits = whatsappPhone.replaceAll("\\D+", "");
         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/" + digits)));
+    }
+
+    /** Opens the academy YouTube channel + subscribe prompt (app if installed). */
+    public void openYoutube() {
+        String url = youtubeUrl;
+        if (url == null || url.isEmpty() || "null".equalsIgnoreCase(url)
+                || !LinkOpener.isYoutubeUrl(url)) {
+            url = AppConfig.DEFAULT_YOUTUBE_URL;
+        }
+        // Always prefer the official handle so Search page never opens.
+        if (!url.toLowerCase(java.util.Locale.US).contains("tanoykumardey")) {
+            url = AppConfig.DEFAULT_YOUTUBE_URL;
+        }
+        LinkOpener.openYoutubeChannel(this, url);
+    }
+
+    public String getYoutubeUrl() {
+        if (youtubeUrl == null || youtubeUrl.isEmpty() || "null".equalsIgnoreCase(youtubeUrl)) {
+            return AppConfig.DEFAULT_YOUTUBE_URL;
+        }
+        return youtubeUrl;
     }
 
     public void showFragment(Fragment fragment, String title) {

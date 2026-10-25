@@ -62,6 +62,28 @@ public final class UiUtils {
         request.into(view);
     }
 
+    /**
+     * Promo carousel: never crop. Image aligns to the top; any leftover space
+     * stays as blank band at the bottom (fitStart).
+     */
+    public static void loadPromoImage(Context context, String url, ImageView view) {
+        if (!isContextValid(context) || view == null) {
+            return;
+        }
+        if (isBlankUrl(url)) {
+            url = null;
+        }
+        int placeholder = R.drawable.bg_image_placeholder;
+        view.setScaleType(ImageView.ScaleType.FIT_START);
+        Glide.with(view)
+                .load(url)
+                .placeholder(placeholder)
+                .error(placeholder)
+                .fallback(placeholder)
+                .fitCenter()
+                .into(view);
+    }
+
     public static void loadCircleImage(Context context, String url, ImageView view) {
         loadCircleImage(context, url, view, R.drawable.ic_menu_profile);
     }

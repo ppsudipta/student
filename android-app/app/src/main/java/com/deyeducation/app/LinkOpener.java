@@ -68,6 +68,10 @@ public final class LinkOpener {
         if (url.isEmpty()) {
             return false;
         }
+        // YouTube @handles often open as Search in the YouTube app — use dedicated opener.
+        if (isYoutubeUrl(url)) {
+            return openYoutubeChannel(context, url);
+        }
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
@@ -80,6 +84,74 @@ public final class LinkOpener {
             UiUtils.toast(context, context.getString(R.string.link_open_failed));
             return false;
         }
+    }
+
+    public static boolean isYoutubeUrl(@Nullable String url) {
+        if (url == null) {
+            return false;
+        }
+        String lower = url.toLowerCase();
+        return lower.contains("youtube.com") || lower.contains("youtu.be");
+    }
+
+    /**
+     * Opens a YouTube channel (and subscribe prompt) reliably.
+     * Encodes {@code @} so the app does not fall back to a search page.
+     */
+    public static boolean openYoutubeChannel(@Nullable Context context, @Nullable String rawUrl) {
+        if (context == null) {
+            return false;
+        }
+        String url = normalizeYoutubeChannelUrl(rawUrl);
+        if (url.isEmpty()) {
+            url = AppConfig.DEFAULT_YOUTUBE_URL;
+        }
+        if (!url.contains("sub_confirmation=")) {
+            url = url + (url.contains("?") ? "&" : "?") + "sub_confirmation=1";
+        }
+
+        // Encode @ → %40 so YouTube app opens the channel, not Search.
+        Uri uri = Uri.parse(url.replace("@", "%40"));
+
+        Intent appIntent = new Intent(Intent.ACTION_VIEW, uri);
+        appIntent.setPackage("com.google.android.youtube");
+        appIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            context.startActivity(appIntent);
+            return true;
+        } catch (Exception ignored) {
+            // Fall through to browser / any handler.
+        }
+
+        Intent browser = new Intent(Intent.ACTION_VIEW, uri);
+        browser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            context.startActivity(browser);
+            return true;
+        } catch (ActivityNotFoundException e) {
+            UiUtils.toast(context, context.getString(R.string.link_open_failed));
+            return false;
+        } catch (Exception e) {
+            UiUtils.toast(context, context.getString(R.string.link_open_failed));
+            return false;
+        }
+    }
+
+    @NonNull
+    public static String normalizeYoutubeChannelUrl(@Nullable String raw) {
+        String url = normalizeUrl(raw);
+        if (url.isEmpty()) {
+            return AppConfig.DEFAULT_YOUTUBE_URL;
+        }
+        // Bare handle: TanoyKumarDey or @TanoyKumarDey
+        if (!url.contains("://") && !url.contains("youtube") && !url.contains("youtu.be")) {
+            String handle = url.startsWith("@") ? url : "@" + url;
+            return "https://www.youtube.com/" + handle;
+        }
+        // youtube.com without www / with mobile host
+        url = url.replace("://m.youtube.com", "://www.youtube.com")
+                .replace("://youtube.com", "://www.youtube.com");
+        return url;
     }
 
     /** Makes every URL in the text tappable and opens it in the related app/browser. */

@@ -10,6 +10,10 @@ public final class AppConfig {
     public static final String KEY_STUDENT_NAME = "student_name";
     public static final String KEY_FCM_TOKEN = "fcm_token";
 
+    /** Official YouTube channel — opens channel + subscribe in YouTube app when installed. */
+    public static final String DEFAULT_YOUTUBE_URL = "https://www.youtube.com/@TanoyKumarDey";
+    public static final String DEFAULT_YOUTUBE_HANDLE = "@TanoyKumarDey";
+
     private AppConfig() {
     }
 }

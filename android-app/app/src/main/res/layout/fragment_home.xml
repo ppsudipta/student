@@ -2,6 +2,7 @@
 <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/swipeRefresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -126,11 +127,22 @@
                 android:id="@+id/btnWhatsapp"
                 android:layout_width="46dp"
                 android:layout_height="46dp"
+                android:layout_marginEnd="8dp"
                 android:background="@drawable/bg_icon_button_white"
                 android:contentDescription="@string/contact"
                 android:padding="10dp"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_whatsapp" />
+
+            <ImageButton
+                android:id="@+id/btnYoutube"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:background="@drawable/bg_icon_button_white"
+                android:contentDescription="@string/youtube_channel"
+                android:padding="10dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_youtube" />
         </LinearLayout>
 
         <TextView
@@ -197,13 +209,34 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/promoPager"
+            <!-- Portrait 3:4 frame — matches promotional poster images, no blank bands -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/promo_image_height"
-                android:clipChildren="false"
-                android:clipToPadding="false"
-                android:nestedScrollingEnabled="false" />
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/surface_muted"
+                app:cardCornerRadius="@dimen/radius_16"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/border"
+                app:strokeWidth="1dp">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <androidx.viewpager2.widget.ViewPager2
+                        android:id="@+id/promoPager"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:clipChildren="true"
+                        android:clipToPadding="true"
+                        android:nestedScrollingEnabled="false"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintDimensionRatio="3:4"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <LinearLayout
                 android:id="@+id/promoDots"

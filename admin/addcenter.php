@@ -1,13 +1,15 @@
-<?php 
+<?php
 session_start();
 if (!isset($_SESSION['username']) || $_SESSION['username'] != true) {
     header('location:index.php');
     exit;
 }
 include('config.php');
+include('centers_helper.php');
+
+centers_ensure_table($con);
 
 $error = '';
-$success = '';
 
 if (isset($_POST['submit'])) {
     $name = trim($_POST['name'] ?? '');
@@ -15,32 +17,34 @@ if (isset($_POST['submit'])) {
     $map_url = trim($_POST['map_url'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $sort_order = (int)($_POST['sort_order'] ?? 0);
+    $sort_order = (int) ($_POST['sort_order'] ?? 0);
     $is_primary = isset($_POST['is_primary']) ? 1 : 0;
 
-    if (empty($name)) {
+    if ($name === '') {
         $error = 'Please enter the Center Name.';
-    } elseif (empty($address)) {
+    } elseif ($address === '') {
         $error = 'Please enter the Center Address.';
     } else {
-        // If map_url is blank, auto-generate standard Google Maps search link from address
-        if (empty($map_url)) {
+        if ($map_url === '') {
             $map_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode($address);
         }
 
-        // If this is set as primary, unmark other primary centers
         if ($is_primary === 1) {
-            $con->query("UPDATE centers SET is_primary = 0");
+            $con->query('UPDATE centers SET is_primary = 0');
         }
 
-        $stmt = $con->prepare("INSERT INTO centers (name, address, map_url, phone, email, is_primary, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssssii", $name, $address, $map_url, $phone, $email, $is_primary, $sort_order);
-        
-        if ($stmt->execute()) {
-            echo "<script>alert('Center location added successfully!'); window.location.href='allcenters.php';</script>";
-            exit;
-        } else {
+        $stmt = $con->prepare('INSERT INTO centers (name, address, map_url, phone, email, is_primary, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        if (!$stmt) {
             $error = 'Database Error: ' . $con->error;
+        } else {
+            $stmt->bind_param('sssssii', $name, $address, $map_url, $phone, $email, $is_primary, $sort_order);
+            if ($stmt->execute()) {
+                $stmt->close();
+                echo "<script>alert('Center location added successfully!'); window.location.href='allcenters.php';</script>";
+                exit;
+            }
+            $error = 'Database Error: ' . ($stmt->error ?: $con->error);
+            $stmt->close();
         }
     }
 }

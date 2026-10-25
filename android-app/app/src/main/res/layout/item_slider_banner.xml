@@ -5,13 +5,14 @@
     android:layout_height="match_parent"
     android:background="@color/surface_muted">
 
+    <!-- Full image, no crop — blank space only under the image -->
     <ImageView
         android:id="@+id/sliderImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="@null"
-        android:padding="4dp"
-        android:scaleType="fitCenter"
+        android:scaleType="fitStart"
+        android:adjustViewBounds="true"
         android:src="@drawable/bg_image_placeholder" />
 
     <TextView
