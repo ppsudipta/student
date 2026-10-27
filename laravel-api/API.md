@@ -126,7 +126,7 @@ PUBLIC_ASSET_BASE=http://localhost/admin
 Production example:
 
 ```
-PUBLIC_ASSET_BASE=http://187.127.187.70
+PUBLIC_ASSET_BASE=https://deyeducation.cloud
 ```
 
 Responses include `image_url` next to `image` on home events, promotions, gallery, and student profile.

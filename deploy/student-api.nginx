@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name _;
+    server_name deyeducation.cloud www.deyeducation.cloud;
 
     root /var/www/student;
     index index.php index.html;

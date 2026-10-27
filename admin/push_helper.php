@@ -70,7 +70,7 @@ function send_app_push(array $student_ids, string $title, string $body, array $d
         $config = [];
     }
 
-    $apiUrl = rtrim((string) ($config['api_push_url'] ?? 'http://187.127.187.70/api/api/push/notices'), '/');
+    $apiUrl = rtrim((string) ($config['api_push_url'] ?? 'https://deyeducation.cloud/api/api/push/notices'), '/');
     $secret = (string) ($config['push_secret'] ?? 'change-me-push-secret');
     $debug = ! empty($config['debug']);
 

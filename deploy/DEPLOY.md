@@ -31,7 +31,7 @@ git pull origin main
 ## 2. Laravel `.env`
 
 ```env
-PUBLIC_ASSET_BASE=http://187.127.187.70
+PUBLIC_ASSET_BASE=https://deyeducation.cloud
 ```
 
 ```bash
@@ -108,7 +108,7 @@ curl -s http://127.0.0.1/api/api/home | grep -o '"image_url":"[^"]*"' | head -3
 curl -I http://127.0.0.1/admin/event/012.png
 ```
 
-Expect full `http://187.127.187.70/admin/...` URLs and `Content-Type: image/png` or `image/jpeg`.
+Expect full `https://deyeducation.cloud/admin/...` URLs and `Content-Type: image/png` or `image/jpeg`.
 
 ## 7. Android
 

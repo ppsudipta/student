@@ -45,7 +45,7 @@ Release APK:
 
 Production default:
 
-`http://187.127.187.70/api/api`
+`http://16.176.196.172/api/api`
 
 Local XAMPP (on phone use your PC LAN IP):
 
@@ -57,7 +57,7 @@ Images live in the legacy PHP folders (`admin/event/`, `admin/promotional/`, `im
 Set this in `laravel-api/.env` on the server so the API returns correct full URLs:
 
 ```
-PUBLIC_ASSET_BASE=http://187.127.187.70
+PUBLIC_ASSET_BASE=https://deyeducation.cloud
 ```
 
 Local XAMPP:
