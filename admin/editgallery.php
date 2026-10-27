@@ -59,8 +59,8 @@ $row = $res->fetch_assoc();
             <div class="form-group">
               <label>Image Type</label>
               <select name="type" class="form-control" required>
-                <option value="Promotional" <?php if ($row['type'] === 'Promotional') echo 'selected'; ?>>Promotional</option>
-                <option value="Gallery" <?php if ($row['type'] === 'Gallery') echo 'selected'; ?>>Gallery</option>
+                <option value="promotional" <?php if (strtolower((string) $row['type']) === 'promotional') echo 'selected'; ?>>Promotional (App Home)</option>
+                <option value="gallery" <?php if (strtolower((string) $row['type']) !== 'promotional') echo 'selected'; ?>>Gallery</option>
               </select>
             </div>
 
@@ -94,22 +94,31 @@ $row = $res->fetch_assoc();
 <?php
 if (isset($_POST['submit'])) {
   $gallery_name = mysqli_real_escape_string($con, $_POST['gallery_name']);
-  $type = mysqli_real_escape_string($con, $_POST['type']);
+  $rawType = strtolower(trim((string) ($_POST['type'] ?? 'gallery')));
+  $type = $rawType === 'promotional' ? 'promotional' : 'gallery';
   $date = date('d-m-Y');
 
   if (!empty($_FILES['image1']['name'])) {
-    $filename = basename($_FILES['image1']['name']);
-    $path1 = 'gallery/' . uniqid() . '_' . $filename;
+    $folder = $type === 'promotional' ? 'promotional' : 'gallery';
+    if (!is_dir($folder)) {
+      mkdir($folder, 0777, true);
+    }
+    $safeName = preg_replace('/[^A-Za-z0-9._-]+/', '_', basename((string) $_FILES['image1']['name']));
+    if ($safeName === '' || $safeName === '_' || $safeName === '.') {
+      $safeName = 'image.jpg';
+    }
+    $path1 = $folder . '/' . uniqid() . '_' . $safeName;
     move_uploaded_file($_FILES['image1']['tmp_name'], $path1);
   } else {
     $path1 = $row['image']; // keep old image
   }
 
+  $path1 = mysqli_real_escape_string($con, $path1);
   $update = "UPDATE gallery SET name='$gallery_name', image='$path1', type='$type', date='$date' WHERE id=$id";
   if ($con->query($update)) {
     echo "<script>alert('Gallery updated successfully'); window.location.href='allgallery.php';</script>";
   } else {
-    echo "<script>alert('Update failed: " . $con->error . "');</script>";
+    echo "<script>alert('Update failed: " . addslashes($con->error) . "');</script>";
   }
 }
 ?>

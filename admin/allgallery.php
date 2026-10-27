@@ -70,7 +70,7 @@ if (isset($_GET['del_id'])) {
               ?>
                 <tr>
                   <td>
-                    <span class="label label-<?php echo $row['type'] === 'Promotional' ? 'info' : 'success'; ?>">
+                    <span class="label label-<?php echo strtolower((string) $row['type']) === 'promotional' ? 'info' : 'success'; ?>">
                       <?php echo htmlspecialchars($row['type']); ?>
                     </span>
                   </td>

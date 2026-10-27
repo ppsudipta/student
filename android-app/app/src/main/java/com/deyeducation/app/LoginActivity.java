@@ -23,6 +23,8 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         session = new SessionManager(this);
+        // Always sync to current production URL (clears old IP from previous installs).
+        session.setBaseUrl(AppConfig.DEFAULT_BASE_URL);
         api = new ApiClient(session);
 
         if (session.isLoggedIn()) {

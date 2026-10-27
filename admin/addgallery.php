@@ -53,7 +53,14 @@ include('config.php');
                 <input class="form-control" name="Slider_name" required placeholder="Enter Image Name" type="text">
               </div>
 
-           
+              <div class="form-group">
+                <label for="image_type">Image Type</label>
+                <select class="form-control" name="image_type" id="image_type" required>
+                  <option value="promotional" selected>Promotional (App Home carousel)</option>
+                  <option value="gallery">Gallery</option>
+                </select>
+                <small class="text-muted">Choose <strong>Promotional</strong> for images that must appear in the Android app home slider.</small>
+              </div>
 
               <div class="form-group">
                 <label for="image1">Upload Image</label>
@@ -85,28 +92,33 @@ include('config.php');
 <?php
 if (isset($_POST['submit'])) {
   $Slider_name = mysqli_real_escape_string($con, $_POST['Slider_name']);
-  $image_type = "Promotional"; // 'Promotional' or 'Gallery'
+  // Must match MySQL ENUM('gallery','promotional') — capital "Promotional" breaks on strict VPS.
+  $rawType = strtolower(trim((string) ($_POST['image_type'] ?? 'promotional')));
+  $image_type = $rawType === 'gallery' ? 'gallery' : 'promotional';
   $date = date('d-m-Y');
 
-  $image = $_FILES['image1']['name'];
-  $temp = $_FILES['image1']['tmp_name'];
+  $image = $_FILES['image1']['name'] ?? '';
+  $temp = $_FILES['image1']['tmp_name'] ?? '';
 
-  $folder = $image_type === 'Promotional' ? 'promotional' : 'gallery';
-  $filename = uniqid() . '_' . basename($image);
+  $folder = $image_type === 'promotional' ? 'promotional' : 'gallery';
+  $safeName = preg_replace('/[^A-Za-z0-9._-]+/', '_', basename((string) $image));
+  if ($safeName === '' || $safeName === '_' || $safeName === '.') {
+    $safeName = 'image.jpg';
+  }
+  $filename = uniqid() . '_' . $safeName;
   $path = $folder . '/' . $filename;
 
   if (!is_dir($folder)) {
     mkdir($folder, 0777, true);
   }
 
-  if (move_uploaded_file($temp, $path)) {
-    // Save image type to DB too
+  if ($temp !== '' && move_uploaded_file($temp, $path)) {
     $sql = "INSERT INTO gallery (name, image, date, type) VALUES ('$Slider_name', '$path', '$date', '$image_type')";
     if ($con->query($sql)) {
       echo "<script>alert('Image added successfully!')</script>";
       echo "<script>window.location.href='allgallery.php'</script>";
     } else {
-      echo "<script>alert('DB error: " . $con->error . "')</script>";
+      echo "<script>alert('DB error: " . addslashes($con->error) . "')</script>";
     }
   } else {
     echo "<script>alert('Failed to upload image.')</script>";

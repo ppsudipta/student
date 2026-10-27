@@ -170,9 +170,14 @@ class StudentApiController extends Controller
             'events' => $this->mapImageUrls($this->table('event')->latest('id')->limit(10)->get()),
             'promotions' => $this->mapImageUrls(
                 $this->table('gallery')
-                    ->whereIn('type', ['promotional', 'Promotional'])
-                    ->latest('id')
-                    ->limit(10)
+                    // ENUM is lowercase `promotional`; also accept legacy casing / path-based rows.
+                    ->where(function ($q) {
+                        $q->whereRaw('LOWER(COALESCE(type, "")) = ?', ['promotional'])
+                            ->orWhere('image', 'like', 'promotional/%')
+                            ->orWhere('image', 'like', '%/promotional/%');
+                    })
+                    ->orderByDesc('id')
+                    ->limit(20)
                     ->get()
             ),
             'notices_count' => $student ? Notice::query()->where('student_id', $student->id)->where('seen', 0)->count() : 0,
