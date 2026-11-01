@@ -6,6 +6,22 @@ if (!isset($_SESSION['username'])) {
 }
 include('config.php');
 include_once __DIR__ . '/students_helper.php';
+
+$titleMonths = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+$boardTypes = ['WB Board', 'Competitive', 'ICSE/CBSE'];
+$currentYear = (int) date('Y');
+$titleYears = range($currentYear - 5, $currentYear + 2);
+
+$filterClass = trim((string) ($_GET['class_name'] ?? ''));
+$filterStudent = trim((string) ($_GET['student_id'] ?? ''));
+$filterReg = trim((string) ($_GET['reg_code'] ?? ''));
+$filterYear = trim((string) ($_GET['title_year'] ?? ''));
+$filterMonth = trim((string) ($_GET['title_month'] ?? ''));
+$filterDay = trim((string) ($_GET['title_day'] ?? ''));
+$filterBoard = trim((string) ($_GET['title_board'] ?? ''));
 ?>
 
 <!DOCTYPE html>
@@ -29,6 +45,27 @@ include_once __DIR__ . '/students_helper.php';
       padding: 15px;
       background-color: #f9f9f9;
       border-radius: 5px;
+    }
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      align-items: flex-end;
+    }
+    .filter-row .form-group {
+      margin: 0;
+      min-width: 140px;
+    }
+    .filter-row label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .filter-actions {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      padding-bottom: 1px;
     }
   </style>
 </head>
@@ -56,102 +93,109 @@ include_once __DIR__ . '/students_helper.php';
             </div>
 
             <div class="box-body">
-              <form method="get" class="form-inline">
+              <form method="get">
+                <div class="filter-row">
+                  <div class="form-group">
+                    <label for="class_filter">Class</label>
+                    <select class="form-control select2" id="class_filter" name="class_name" style="width: 160px;">
+                      <option value="">All Classes</option>
+                      <?php
+                      $all_classes = students_split_unique_values(
+                        $con,
+                        "SELECT class_name FROM attendance WHERE class_name IS NOT NULL AND class_name != ''",
+                        'class_name'
+                      );
+                      foreach ($all_classes as $cls):
+                      ?>
+                        <option value="<?= htmlspecialchars($cls) ?>" <?= $filterClass === $cls ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($cls) ?>
+                        </option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
 
-                <!-- Class Filter -->
-                <div class="form-group">
-                  <label for="class_filter">Class:</label>
-                  <select class="form-control select2" id="class_filter" name="class_name" style="width: 180px;">
-                    <option value="">All Classes</option>
-                    <?php
-                    $all_classes = students_split_unique_values(
-                      $con,
-                      "SELECT class_name FROM attendance WHERE class_name IS NOT NULL AND class_name != ''",
-                      'class_name'
-                    );
-                    foreach($all_classes as $cls):
-                    ?>
-                      <option value="<?= htmlspecialchars($cls) ?>" <?= (isset($_GET['class_name']) && $_GET['class_name'] == $cls) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($cls) ?>
-                      </option>
-                    <?php endforeach; ?>
-                  </select>
+                  <div class="form-group">
+                    <label for="student_filter">Student</label>
+                    <select class="form-control select2" id="student_filter" name="student_id" style="width: 200px;">
+                      <option value="">All Students</option>
+                      <?php
+                      $students = $con->query("SELECT s.id, s.name, s.registration_code
+                                                FROM students s
+                                                JOIN attendance a ON s.id = a.student_id
+                                                GROUP BY s.id
+                                                ORDER BY s.name");
+                      while ($student = $students->fetch_assoc()):
+                      ?>
+                        <option value="<?= (int) $student['id'] ?>" <?= $filterStudent === (string) $student['id'] ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($student['name']) ?> (<?= htmlspecialchars($student['registration_code']) ?>)
+                        </option>
+                      <?php endwhile; ?>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="reg_code_filter">Roll Number</label>
+                    <select class="form-control select2" id="reg_code_filter" name="reg_code" style="width: 150px;">
+                      <option value="">All Roll Numbers</option>
+                      <?php
+                      $reg_codes = $con->query("SELECT DISTINCT registration_code FROM students WHERE registration_code != '' ORDER BY registration_code");
+                      while ($rc = $reg_codes->fetch_assoc()):
+                      ?>
+                        <option value="<?= htmlspecialchars($rc['registration_code']) ?>" <?= $filterReg === $rc['registration_code'] ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($rc['registration_code']) ?>
+                        </option>
+                      <?php endwhile; ?>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="title_year">Title Year</label>
+                    <select class="form-control select2" id="title_year" name="title_year" style="width: 120px;">
+                      <option value="">All Years</option>
+                      <?php foreach ($titleYears as $year): ?>
+                        <option value="<?= $year ?>" <?= $filterYear === (string) $year ? 'selected' : '' ?>><?= $year ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="title_month">Title Month</label>
+                    <select class="form-control select2" id="title_month" name="title_month" style="width: 140px;">
+                      <option value="">All Months</option>
+                      <?php foreach ($titleMonths as $month): ?>
+                        <option value="<?= $month ?>" <?= $filterMonth === $month ? 'selected' : '' ?>><?= $month ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="title_day">Title Day</label>
+                    <select class="form-control select2" id="title_day" name="title_day" style="width: 110px;">
+                      <option value="">All Days</option>
+                      <?php for ($d = 1; $d <= 60; $d++): ?>
+                        <option value="<?= $d ?>" <?= $filterDay === (string) $d ? 'selected' : '' ?>><?= $d ?></option>
+                      <?php endfor; ?>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="title_board">Board Type</label>
+                    <select class="form-control select2" id="title_board" name="title_board" style="width: 150px;">
+                      <option value="">All Types</option>
+                      <?php foreach ($boardTypes as $board): ?>
+                        <option value="<?= htmlspecialchars($board) ?>" <?= $filterBoard === $board ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($board) ?>
+                        </option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
+
+                  <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <a href="allprogress.php" class="btn btn-default">Reset</a>
+                  </div>
                 </div>
-
-                <!-- Student Filter -->
-                <div class="form-group" style="margin-left: 15px;">
-                  <label for="student_filter">Student:</label>
-                  <select class="form-control select2" id="student_filter" name="student_id" style="width: 180px;">
-                    <option value="">All Students</option>
-                    <?php
-                    $students = $con->query("SELECT s.id, s.name, s.registration_code 
-                                              FROM students s 
-                                              JOIN attendance a ON s.id = a.student_id 
-                                              GROUP BY s.id 
-                                              ORDER BY s.name");
-                    while($student = $students->fetch_assoc()):
-                    ?>
-                      <option value="<?= $student['id'] ?>" <?= (isset($_GET['student_id']) && $_GET['student_id'] == $student['id']) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($student['name']) ?> (<?= htmlspecialchars($student['registration_code']) ?>)
-                      </option>
-                    <?php endwhile; ?>
-                  </select>
-                </div>
-
-                <!-- Roll Number Filter -->
-                <div class="form-group" style="margin-left: 15px;">
-                  <label for="reg_code_filter">Roll Number:</label>
-                  <select class="form-control select2" id="reg_code_filter" name="reg_code" style="width: 180px;">
-                    <option value="">All Roll Numbers</option>
-                    <?php
-                    $reg_codes = $con->query("SELECT DISTINCT registration_code FROM students WHERE registration_code != '' ORDER BY registration_code");
-                    while($rc = $reg_codes->fetch_assoc()):
-                    ?>
-                      <option value="<?= $rc['registration_code'] ?>" <?= (isset($_GET['reg_code']) && $_GET['reg_code'] == $rc['registration_code']) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($rc['registration_code']) ?>
-                      </option>
-                    <?php endwhile; ?>
-                  </select>
-                </div>
-
-                <!-- Month Filter -->
-                <div class="form-group" style="margin-left: 15px;">
-                  <label for="month_filter">Month:</label>
-                  <select class="form-control" id="month_filter" name="month" style="width: 150px;">
-                    <option value="">All Months</option>
-                    <?php
-                    $months = [
-                      '01'=>'January','02'=>'February','03'=>'March','04'=>'April',
-                      '05'=>'May','06'=>'June','07'=>'July','08'=>'August',
-                      '09'=>'September','10'=>'October','11'=>'November','12'=>'December'
-                    ];
-                    foreach ($months as $num=>$name): 
-                    ?>
-                      <option value="<?= $num ?>" <?= (isset($_GET['month']) && $_GET['month'] == $num) ? 'selected' : '' ?>>
-                        <?= $name ?>
-                      </option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-
-                <!-- Title Filter -->
-                <div class="form-group" style="margin-left: 15px;">
-                  <label for="title_filter">Title:</label>
-                  <select class="form-control select2" id="title_filter" name="attendance_title" style="width: 200px;">
-                    <option value="">All Titles</option>
-                    <?php
-                    $titles = $con->query("SELECT DISTINCT attendance_title FROM attendance WHERE attendance_title != '' ORDER BY attendance_title");
-                    while($t = $titles->fetch_assoc()):
-                    ?>
-                      <option value="<?= $t['attendance_title'] ?>" <?= (isset($_GET['attendance_title']) && $_GET['attendance_title'] == $t['attendance_title']) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($t['attendance_title']) ?>
-                      </option>
-                    <?php endwhile; ?>
-                  </select>
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="margin-left: 15px;">Filter</button>
-                <a href="allprogress.php" class="btn btn-default" style="margin-left: 10px;">Reset</a>
+                <p class="help-block" style="margin:10px 0 0;">Title format matches insert: Year - Month - Day - Board Type (e.g. 2025 - December - 1 - Competitive)</p>
               </form>
             </div>
           </div>
@@ -189,47 +233,57 @@ include_once __DIR__ . '/students_helper.php';
                   $params = [];
                   $types = '';
 
-                  if(isset($_GET['class_name']) && !empty($_GET['class_name'])) {
+                  if ($filterClass !== '') {
                     $query .= " AND a.class_name LIKE ?";
-                    $params[] = '%' . $_GET['class_name'] . '%';
+                    $params[] = '%' . $filterClass . '%';
                     $types .= 's';
                   }
 
-                  if(isset($_GET['student_id']) && !empty($_GET['student_id'])) {
+                  if ($filterStudent !== '' && ctype_digit($filterStudent)) {
                     $query .= " AND a.student_id = ?";
-                    $params[] = $_GET['student_id'];
+                    $params[] = (int) $filterStudent;
                     $types .= 'i';
                   }
 
-                  if(isset($_GET['reg_code']) && !empty($_GET['reg_code'])) {
+                  if ($filterReg !== '') {
                     $query .= " AND s.registration_code = ?";
-                    $params[] = $_GET['reg_code'];
+                    $params[] = $filterReg;
                     $types .= 's';
                   }
 
-                  if(isset($_GET['month']) && !empty($_GET['month'])) {
-                    $query .= " AND MONTH(a.attendance_date) = ?";
-                    $params[] = $_GET['month'];
+                  // Title parts match insert format: "2025 - December - 1 - Competitive"
+                  if ($filterYear !== '') {
+                    $query .= " AND a.attendance_title LIKE ?";
+                    $params[] = $filterYear . ' - %';
                     $types .= 's';
                   }
-
-                  if(isset($_GET['attendance_title']) && !empty($_GET['attendance_title'])) {
-                    $query .= " AND a.attendance_title = ?";
-                    $params[] = $_GET['attendance_title'];
+                  if ($filterMonth !== '') {
+                    $query .= " AND a.attendance_title LIKE ?";
+                    $params[] = '% - ' . $filterMonth . ' - %';
+                    $types .= 's';
+                  }
+                  if ($filterDay !== '') {
+                    $query .= " AND a.attendance_title LIKE ?";
+                    $params[] = '% - ' . $filterDay . ' - %';
+                    $types .= 's';
+                  }
+                  if ($filterBoard !== '') {
+                    $query .= " AND a.attendance_title LIKE ?";
+                    $params[] = '% - ' . $filterBoard;
                     $types .= 's';
                   }
 
                   $query .= " ORDER BY a.attendance_date DESC, a.class_name, s.name";
                   $stmt = $con->prepare($query);
 
-                  if(!empty($params)) {
+                  if (!empty($params)) {
                     $stmt->bind_param($types, ...$params);
                   }
 
                   $stmt->execute();
                   $result = $stmt->get_result();
 
-                  while($attendance = $result->fetch_assoc()):
+                  while ($attendance = $result->fetch_assoc()):
                     $status_class = ($attendance['status'] == 'Present') ? 'attendance-present' : 'attendance-absent';
                   ?>
                   <tr class="<?= $status_class ?>">
@@ -272,7 +326,6 @@ include_once __DIR__ . '/students_helper.php';
 <script>
   $(function () {
     $('.select2').select2({
-      placeholder: "-- Select Option --",
       allowClear: true,
       width: 'resolve'
     });
