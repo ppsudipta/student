@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Full logo as adaptive-icon foreground (safe zone kept tight — art already has border). -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <shape android:shape="rectangle">
-            <solid android:color="#0B1F5C" />
-        </shape>
-    </item>
-    <item
-        android:bottom="8dp"
-        android:left="8dp"
-        android:right="8dp"
-        android:top="8dp">
-        <bitmap
-            android:gravity="fill"
-            android:src="@drawable/ic_dey_logo" />
-    </item>
-</layer-list>
+<!-- Full-bleed logo for adaptive icon (fills circular/squircle mask, no white pad). -->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:gravity="fill"
+    android:src="@drawable/ic_dey_logo" />

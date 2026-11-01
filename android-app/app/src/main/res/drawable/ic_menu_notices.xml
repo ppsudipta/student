@@ -7,7 +7,12 @@
     <path
         android:fillColor="#FF7675"
         android:pathData="M14,2C7.925,2 3,6.925 3,13s4.925,11 11,11 11,-4.925 11,-11S20.075,2 14,2z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M14,21c0.83,0 1.5,-0.67 1.5,-1.5h-3c0,0.83 0.67,1.5 1.5,1.5zM18.5,15v-4.5c0,-3.07 -1.63,-5.64 -4.5,-6.32V3.5c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68c-2.87,0.68 -4.5,3.25 -4.5,6.32V15l-1.5,1.5V18h14v-1.5l-1.5,-1.5z" />
+    <!-- Bell glyph centered at (14,14) — standard 24dp icon shifted +2,+1.5 -->
+    <group
+        android:translateX="2"
+        android:translateY="1.5">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.9,2 2,2zM18,16v-5c0,-3.07 -1.63,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.64,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z" />
+    </group>
 </vector>

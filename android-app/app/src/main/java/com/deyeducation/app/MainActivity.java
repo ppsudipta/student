@@ -412,6 +412,10 @@ public class MainActivity extends AppCompatActivity {
             BadgeDrawable badge = bottomNav.getOrCreateBadge(R.id.nav_notices);
             badge.setVisible(true);
             badge.setNumber(Math.min(count, 99));
+            // Keep the count bubble tight to the centered bell icon.
+            badge.setHorizontalOffset(0);
+            badge.setVerticalOffset(0);
+            badge.setBadgeGravity(BadgeDrawable.TOP_END);
         } else {
             bottomNav.removeBadge(R.id.nav_notices);
         }

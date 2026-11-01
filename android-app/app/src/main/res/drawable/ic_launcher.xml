@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Legacy / non-adaptive fallback: logo fills the icon bounds. -->
 <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
     android:gravity="fill"
     android:src="@drawable/ic_dey_logo" />
