@@ -6,17 +6,13 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.GridLayout;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -38,12 +34,7 @@ public class HomeFragment extends Fragment {
     private View progressBar;
     private SwipeRefreshLayout swipeRefresh;
     private TextView feeBanner;
-    private View pollIconWrap;
-    private ImageButton btnPollVote;
     private View notificationDot;
-    private Animation pollPulseAnimation;
-    private int pendingPollId;
-    private String pendingPollQuestion = "";
     private ViewPager2 promoPager;
     private ViewPager2.OnPageChangeCallback promoPageCallback;
     private final Handler promoHandler = new Handler(Looper.getMainLooper());
@@ -81,8 +72,6 @@ public class HomeFragment extends Fragment {
         progressBar = view.findViewById(R.id.homeProgress);
         swipeRefresh = view.findViewById(R.id.swipeRefresh);
         feeBanner = view.findViewById(R.id.feeAlertBanner);
-        pollIconWrap = view.findViewById(R.id.pollIconWrap);
-        btnPollVote = view.findViewById(R.id.btnPollVote);
         notificationDot = view.findViewById(R.id.notificationDot);
         GridLayout serviceGrid = view.findViewById(R.id.serviceGrid);
         LinearLayout coursesContainer = view.findViewById(R.id.coursesContainer);
@@ -103,7 +92,6 @@ public class HomeFragment extends Fragment {
 
         view.findViewById(R.id.btnNotifications).setOnClickListener(v ->
                 activity.selectBottomNav(R.id.nav_notices));
-        btnPollVote.setOnClickListener(v -> openPendingPoll(activity));
         view.findViewById(R.id.btnWhatsapp).setOnClickListener(v -> activity.openWhatsapp());
         view.findViewById(R.id.btnYoutube).setOnClickListener(v -> activity.openYoutube());
 
@@ -125,7 +113,6 @@ public class HomeFragment extends Fragment {
             ((MainActivity) getActivity()).setScreenTitle(getString(R.string.home));
             ((MainActivity) getActivity()).refreshUnreadNoticesBadge();
         }
-        refreshPollBadge();
     }
 
     public void updateNotificationDot(int count) {
@@ -136,14 +123,12 @@ public class HomeFragment extends Fragment {
 
     @Override
     public void onPause() {
-        stopPollAnimation();
         stopPromoAutoScroll();
         super.onPause();
     }
 
     @Override
     public void onDestroyView() {
-        stopPollAnimation();
         stopPromoAutoScroll();
         if (promoPager != null && promoPageCallback != null) {
             promoPager.unregisterOnPageChangeCallback(promoPageCallback);
@@ -252,7 +237,6 @@ public class HomeFragment extends Fragment {
                     }
                     feeBanner.setVisibility(json.optBoolean("has_pending_fees") ? View.VISIBLE : View.GONE);
                     notificationDot.setVisibility(json.optInt("notices_count") > 0 ? View.VISIBLE : View.GONE);
-                    bindUnvotedPolls(json.optJSONArray("unvoted_polls"));
                     bindCourses(coursesContainer, json.optJSONArray("events"));
                     bindPromotions(promoSection, promoDots, json.optJSONArray("promotions"));
                 });
@@ -268,79 +252,6 @@ public class HomeFragment extends Fragment {
                 });
             }
         });
-    }
-
-    private void bindUnvotedPolls(@Nullable JSONArray rows) {
-        if (pollIconWrap == null || btnPollVote == null) {
-            return;
-        }
-        pendingPollId = 0;
-        pendingPollQuestion = "";
-        if (rows != null) {
-            for (int i = 0; i < rows.length(); i++) {
-                JSONObject row = rows.optJSONObject(i);
-                if (row == null) {
-                    continue;
-                }
-                pendingPollId = row.optInt("id", 0);
-                pendingPollQuestion = row.optString("question", getString(R.string.polls));
-                break;
-            }
-        }
-        if (pendingPollId > 0) {
-            pollIconWrap.setVisibility(View.VISIBLE);
-            startPollAnimation();
-            return;
-        }
-        stopPollAnimation();
-        pollIconWrap.setVisibility(View.GONE);
-    }
-
-    private void openPendingPoll(MainActivity activity) {
-        if (pendingPollId <= 0) {
-            activity.showFragment(new PollsFragment(), getString(R.string.polls));
-            return;
-        }
-        activity.showFragment(
-                PollDetailFragment.newInstance(pendingPollId, pendingPollQuestion),
-                pendingPollQuestion,
-                true);
-    }
-
-    private void refreshPollBadge() {
-        if (api == null || !isAdded()) {
-            return;
-        }
-        api.get("/home", true, new ApiClient.Callback() {
-            @Override
-            public void onSuccess(JSONObject json) {
-                if (!isAdded()) {
-                    return;
-                }
-                requireActivity().runOnUiThread(() ->
-                        bindUnvotedPolls(json.optJSONArray("unvoted_polls")));
-            }
-
-            @Override
-            public void onError(String message) {
-            }
-        });
-    }
-
-    private void startPollAnimation() {
-        if (pollIconWrap == null || !isAdded()) {
-            return;
-        }
-        if (pollPulseAnimation == null) {
-            pollPulseAnimation = AnimationUtils.loadAnimation(requireContext(), R.anim.poll_pulse);
-        }
-        pollIconWrap.startAnimation(pollPulseAnimation);
-    }
-
-    private void stopPollAnimation() {
-        if (pollIconWrap != null) {
-            pollIconWrap.clearAnimation();
-        }
     }
 
     private void bindPromotions(View promoSection, LinearLayout dotsContainer, JSONArray rows) {
