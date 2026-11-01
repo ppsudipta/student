@@ -51,7 +51,7 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
   .user-panel > .info > a {
     color: #ffffff !important;
   }
-  .sidebar a {
+  .main-sidebar .sidebar a {
     color: #ffffff;
   }
 </style>
@@ -177,12 +177,12 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
           </ul>
         </li>
 
-        <li class="treeview <?= in_array($currentPage, ['allprogress.php', 'addprogress.php', 'edit_allprogress.php'], true) ? 'active' : '' ?>">
+        <li class="treeview <?= in_array($currentPage, ['allprogress.php', 'addprogress.php', 'edit_allprogress.php'], true) ? 'active menu-open' : '' ?>">
           <a href="#">
             <i class="fa fa-calendar-check-o"></i> <span>Attendance Report</span>
             <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
           </a>
-          <ul class="treeview-menu">
+          <ul class="treeview-menu" <?= in_array($currentPage, ['allprogress.php', 'addprogress.php', 'edit_allprogress.php'], true) ? 'style="display:block;"' : '' ?>>
             <li class="<?= $currentPage === 'allprogress.php' ? 'active' : '' ?>"><a href="allprogress.php"><i class="fa fa-circle-o"></i> All Reports</a></li>
             <li class="<?= $currentPage === 'addprogress.php' ? 'active' : '' ?>"><a href="addprogress.php"><i class="fa fa-circle-o"></i> Add Attendance</a></li>
           </ul>

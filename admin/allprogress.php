@@ -67,6 +67,10 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
       align-items: flex-end;
       padding-bottom: 1px;
     }
+    /* Hide Select2 clear (×) inside filter fields */
+    .filter-row .select2-selection__clear {
+      display: none !important;
+    }
   </style>
 </head>
 
@@ -325,9 +329,10 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
 
 <script>
   $(function () {
-    $('.select2').select2({
-      allowClear: true,
-      width: 'resolve'
+    $('.filter-row select.select2').select2({
+      allowClear: false,
+      width: '100%',
+      minimumResultsForSearch: 8
     });
 
     $('#attendanceTable').DataTable({
