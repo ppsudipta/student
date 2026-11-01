@@ -316,29 +316,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                     <div class="form-group">
                       <label>Upload Type*</label>
                       <?php $isVideoMaterial = strtolower((string) ($material['material_type'] ?? '')) === 'video'; ?>
-                      <select name="upload_kind" id="upload_kind" class="form-control select2" required>
-                        <option value="video" <?= $isVideoMaterial ? 'selected' : '' ?>>Video (Vimeo link only)</option>
-                        <option value="other" <?= !$isVideoMaterial ? 'selected' : '' ?>>Other (file upload)</option>
+                      <select name="upload_kind" id="upload_kind" class="form-control" required onchange="updateMaterialTypeFields()">
+                        <option value="video" <?= $isVideoMaterial ? 'selected' : '' ?>>Video</option>
+                        <option value="other" <?= !$isVideoMaterial ? 'selected' : '' ?>>Other</option>
                       </select>
                     </div>
                   </div>
-                </div>
-
-                <div class="form-group" id="material_category_group">
-                  <label>Category*</label>
-                  <?php
-                    $currentCategory = (string) ($material['material_category'] ?? '');
-                    $categories = ['Worksheet', 'Question Paper', 'RPS', 'Others'];
-                  ?>
-                  <select name="material_category" id="material_category" class="form-control select2">
-                    <option value="">-- Select Category --</option>
-                    <?php foreach ($categories as $cat): ?>
-                      <option value="<?= htmlspecialchars($cat) ?>" <?= $currentCategory === $cat ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($cat) ?>
-                      </option>
-                    <?php endforeach; ?>
-                  </select>
-                  <p class="help-block">App tabs: Worksheet, Question Paper, RPS, Others.</p>
                 </div>
 
                 <div class="form-group">
@@ -366,17 +349,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                   </div>
                 </div>
 
-                <div class="form-group" id="video_url_group">
+                <div class="form-group" id="video_url_group" style="display:none;">
                   <label>Vimeo Video Link*</label>
                   <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789"
                          value="<?php echo filter_var($material['file_path'], FILTER_VALIDATE_URL) ? htmlspecialchars($material['file_path']) : ''; ?>">
-                  <p class="help-block">Video materials must use a Vimeo link. File upload is not used for videos.</p>
+                  <p class="help-block">Paste Vimeo link only for Video.</p>
                 </div>
 
-                <div class="form-group" id="file_upload_group">
-                  <label>Replace File (optional)</label>
-                  <input type="file" name="new_file" id="new_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png">
-                  <p class="help-block">Allowed: PDF, Word, PowerPoint, JPG, PNG (Max 10MB). Not for video materials.</p>
+                <div id="other_fields_group" style="display:none;">
+                  <div class="form-group">
+                    <label>Sub Category*</label>
+                    <?php
+                      $currentCategory = (string) ($material['material_category'] ?? '');
+                      $categories = ['Worksheet', 'Question Paper', 'RPS', 'Others'];
+                    ?>
+                    <select name="material_category" id="material_category" class="form-control">
+                      <option value="">-- Select Sub Category --</option>
+                      <?php foreach ($categories as $cat): ?>
+                        <option value="<?= htmlspecialchars($cat) ?>" <?= $currentCategory === $cat ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($cat === 'Worksheet' ? '1. Worksheet' : ($cat === 'Question Paper' ? '2. Question Paper' : ($cat === 'RPS' ? '3. RPS' : '4. Others'))) ?>
+                        </option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Replace File (optional)</label>
+                    <input type="file" name="new_file" id="new_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png">
+                    <p class="help-block">PDF, Word, PowerPoint, JPG, PNG (Max 10MB).</p>
+                  </div>
                 </div>
 
                 <div class="row">
@@ -434,43 +435,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
 <script src="js/adminlte.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-$(document).ready(function() {
-  // Initialize Select2
-  $('.select2').select2({
-    width: '100%',
-    theme: 'classic'
-  });
+function updateMaterialTypeFields() {
+  var kindEl = document.getElementById('upload_kind');
+  var kind = kindEl ? kindEl.value : '';
+  var isVideo = kind === 'video';
+  var isOther = kind === 'other';
 
-  // Show file preview for image uploads
-  $('input[name="new_file"]').change(function() {
-    var file = this.files[0];
-    if (file && file.type.match('image.*')) {
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        $('.file-preview').remove();
-        $('.file-info').append('<img src="' + e.target.result + '" class="file-preview">');
-      }
-      reader.readAsDataURL(file);
-    }
-  });
+  var videoGroup = document.getElementById('video_url_group');
+  var otherGroup = document.getElementById('other_fields_group');
+  var urlInput = document.getElementById('material_url');
+  var fileInput = document.getElementById('new_file');
+  var categoryInput = document.getElementById('material_category');
 
-  function updateMaterialTypeFields() {
-    var kind = $('#upload_kind').val();
-    var isVideo = kind === 'video';
-    var isOther = kind === 'other';
-    $('#video_url_group').toggle(isVideo);
-    $('#file_upload_group').toggle(isOther);
-    $('#material_category_group').toggle(isOther);
-    $('#material_url').prop('disabled', !isVideo).prop('required', isVideo);
-    $('#material_category').prop('required', isOther);
-    if (isVideo) {
-      $('#new_file').val('');
-      $('#material_category').val('').trigger('change');
-    }
+  if (videoGroup) videoGroup.style.display = isVideo ? 'block' : 'none';
+  if (otherGroup) otherGroup.style.display = isOther ? 'block' : 'none';
+
+  if (urlInput) {
+    urlInput.disabled = !isVideo;
+    urlInput.required = isVideo;
+    if (!isVideo) urlInput.value = '';
+  }
+  if (categoryInput) {
+    categoryInput.required = isOther;
+    categoryInput.disabled = !isOther;
+    if (!isOther) categoryInput.value = '';
+  }
+  if (fileInput) {
+    fileInput.disabled = !isOther;
+    if (!isOther) fileInput.value = '';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  var uploadKind = document.getElementById('upload_kind');
+  if (uploadKind) {
+    uploadKind.addEventListener('change', updateMaterialTypeFields);
+    updateMaterialTypeFields();
   }
 
-  $('#upload_kind').on('change', updateMaterialTypeFields);
-  updateMaterialTypeFields();
+  if (window.jQuery) {
+    try {
+      $('.select2').select2({ width: '100%', theme: 'classic' });
+    } catch (e) {}
+
+    $('input[name="new_file"]').change(function() {
+      var file = this.files[0];
+      if (file && file.type.match('image.*')) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          $('.file-preview').remove();
+          $('.file-info').append('<img src="' + e.target.result + '" class="file-preview">');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 });
 </script>
 </body>

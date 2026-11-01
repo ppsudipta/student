@@ -77,7 +77,7 @@ if (isset($_POST['submit'])) {
     } elseif ($upload_kind === 'other') {
         $selected_category = trim((string) ($_POST['material_category'] ?? ''));
         if (!in_array($selected_category, $allowed_categories, true)) {
-            $_SESSION['error'] = "Please select a category: Worksheet, Question Paper, RPS, or Others.";
+            $_SESSION['error'] = "Please select sub category: Worksheet, Question Paper, RPS, or Others.";
             header("Location: addevent.php");
             exit();
         }
@@ -146,7 +146,7 @@ if (isset($_POST['submit'])) {
             exit();
         }
     } else {
-        $_SESSION['error'] = "Please select Video (link only) or Other (Worksheet / Question Paper / RPS / Others).";
+        $_SESSION['error'] = "Please select Video or Other.";
         header("Location: addevent.php");
         exit();
     }
@@ -339,35 +339,36 @@ if (isset($_POST['submit'])) {
 
               <div class="form-group">
                 <label>Upload Type*</label>
-                <select class="form-control" name="upload_kind" id="upload_kind" required>
+                <select class="form-control" name="upload_kind" id="upload_kind" required onchange="updateMaterialTypeFields()">
                   <option value="">-- Select Type --</option>
-                  <option value="video">Video (Vimeo link only)</option>
-                  <option value="other">Other (file upload)</option>
+                  <option value="video">Video</option>
+                  <option value="other">Other</option>
                 </select>
-              </div>
-
-              <div class="form-group" id="material_category_group" style="display:none;">
-                <label>Category*</label>
-                <select class="form-control" name="material_category" id="material_category">
-                  <option value="">-- Select Category --</option>
-                  <option value="Worksheet">1. Worksheet</option>
-                  <option value="Question Paper">2. Question Paper</option>
-                  <option value="RPS">3. RPS</option>
-                  <option value="Others">4. Others</option>
-                </select>
-                <p class="help-block">These categories appear as tabs in the Android app Materials section.</p>
               </div>
 
               <div class="form-group" id="video_url_group" style="display:none;">
                 <label>Vimeo Video Link*</label>
                 <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789">
-                <p class="help-block">Video materials use a Vimeo link only. No file upload.</p>
+                <p class="help-block">Paste Vimeo link only for Video.</p>
               </div>
 
-              <div class="form-group" id="file_upload_group" style="display:none;">
-                <label>Upload File (Max 5MB)*</label>
-                <input type="file" name="material_file" id="material_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png">
-                <p class="help-block">For Worksheet, Question Paper, RPS, or Others — PDF, Word, PowerPoint, or image.</p>
+              <div id="other_fields_group" style="display:none;">
+                <div class="form-group">
+                  <label>Sub Category*</label>
+                  <select class="form-control" name="material_category" id="material_category">
+                    <option value="">-- Select Sub Category --</option>
+                    <option value="Worksheet">1. Worksheet</option>
+                    <option value="Question Paper">2. Question Paper</option>
+                    <option value="RPS">3. RPS</option>
+                    <option value="Others">4. Others</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Upload File (Max 5MB)*</label>
+                  <input type="file" name="material_file" id="material_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png">
+                  <p class="help-block">PDF, Word, PowerPoint, or image.</p>
+                </div>
               </div>
 
               <div class="form-group">
@@ -405,61 +406,90 @@ if (isset($_POST['submit'])) {
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-  $(document).ready(function() {
-    // Initialize summernote
-    $('#summernote').summernote({
-      height: 200,
-      toolbar: [
-        ['style', ['bold', 'italic', 'underline', 'clear']],
-        ['font', ['strikethrough', 'superscript', 'subscript']],
-        ['para', ['ul', 'ol', 'paragraph']],
-        ['insert', ['link', 'picture', 'video']],
-        ['view', ['fullscreen', 'codeview', 'help']]
-      ]
-    });
-    
-    // Initialize select2
-    $('.select2').select2();
+  function updateMaterialTypeFields() {
+    var kindEl = document.getElementById('upload_kind');
+    var kind = kindEl ? kindEl.value : '';
+    var isVideo = kind === 'video';
+    var isOther = kind === 'other';
 
-    function updateMaterialTypeFields() {
-      const kind = $('#upload_kind').val();
-      const isVideo = kind === 'video';
-      const isOther = kind === 'other';
-      $('#video_url_group').toggle(isVideo);
-      $('#file_upload_group').toggle(isOther);
-      $('#material_category_group').toggle(isOther);
-      $('#material_url').prop('disabled', !isVideo).prop('required', isVideo);
-      $('#material_file').prop('required', isOther);
-      $('#material_category').prop('required', isOther);
+    var videoGroup = document.getElementById('video_url_group');
+    var otherGroup = document.getElementById('other_fields_group');
+    var urlInput = document.getElementById('material_url');
+    var fileInput = document.getElementById('material_file');
+    var categoryInput = document.getElementById('material_category');
+
+    if (videoGroup) {
+      videoGroup.style.display = isVideo ? 'block' : 'none';
+    }
+    if (otherGroup) {
+      otherGroup.style.display = isOther ? 'block' : 'none';
+    }
+
+    if (urlInput) {
+      urlInput.disabled = !isVideo;
+      urlInput.required = isVideo;
       if (!isVideo) {
-        $('#material_url').val('');
-      } else {
-        $('#material_file').val('');
-        $('#material_category').val('');
+        urlInput.value = '';
       }
+    }
+    if (categoryInput) {
+      categoryInput.required = isOther;
+      categoryInput.disabled = !isOther;
       if (!isOther) {
-        $('#material_category').val('');
+        categoryInput.value = '';
       }
     }
-
-    $('#upload_kind').on('change', updateMaterialTypeFields);
-    updateMaterialTypeFields();
-  });
-
-  function updateRecipientOptions() {
-    const type = document.getElementById('recipient_type').value;
-    document.getElementById('student_select').style.display = type === 'single' ? 'block' : 'none';
-    document.getElementById('class_session_group').style.display = type === 'class' ? 'block' : 'none';
-    
-    // Reset values when changing type
-    if (type !== 'single') {
-      $('#student_id').val('').trigger('change');
-    }
-    if (type !== 'class') {
-      $('select[name="class"]').val('').trigger('change');
-      $('select[name="session"]').val('').trigger('change');
+    if (fileInput) {
+      fileInput.required = isOther;
+      fileInput.disabled = !isOther;
+      if (!isOther) {
+        fileInput.value = '';
+      }
     }
   }
+
+  function updateRecipientOptions() {
+    var type = document.getElementById('recipient_type').value;
+    document.getElementById('student_select').style.display = type === 'single' ? 'block' : 'none';
+    document.getElementById('class_session_group').style.display = type === 'class' ? 'block' : 'none';
+
+    if (window.jQuery) {
+      if (type !== 'single') {
+        $('#student_id').val('').trigger('change');
+      }
+      if (type !== 'class') {
+        $('select[name="class"]').val('').trigger('change');
+        $('select[name="session"]').val('').trigger('change');
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var uploadKind = document.getElementById('upload_kind');
+    if (uploadKind) {
+      uploadKind.addEventListener('change', updateMaterialTypeFields);
+      updateMaterialTypeFields();
+    }
+
+    if (window.jQuery) {
+      try {
+        $('#summernote').summernote({
+          height: 200,
+          toolbar: [
+            ['style', ['bold', 'italic', 'underline', 'clear']],
+            ['font', ['strikethrough', 'superscript', 'subscript']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['insert', ['link', 'picture', 'video']],
+            ['view', ['fullscreen', 'codeview', 'help']]
+          ]
+        });
+      } catch (e) {}
+
+      try {
+        $('.select2').select2();
+      } catch (e) {}
+    }
+  });
 </script>
 </body>
 </html>
