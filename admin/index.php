@@ -29,7 +29,7 @@ if (isset($_POST['submit'])) {
                 $stored = (string) $row['password'];
                 if ($stored !== '' && password_verify($password, $stored)) {
                     $valid = true;
-                } elseif ($stored !== '' && !str_starts_with($stored, '$2y$') && !str_starts_with($stored, '$2a$') && !str_starts_with($stored, '$argon') && hash_equals($stored, $password)) {
+                } elseif ($stored !== '' && strpos($stored, '$2y$') !== 0 && strpos($stored, '$2a$') !== 0 && strpos($stored, '$argon') !== 0 && hash_equals($stored, $password)) {
                     // Legacy plaintext password — accept once, then upgrade to hash
                     $valid = true;
                     $newHash = password_hash($password, PASSWORD_DEFAULT);
@@ -53,25 +53,13 @@ if (isset($_POST['submit'])) {
     }
 }
 
-$sqlc = "SELECT * FROM company";
+$rowm = ['logo' => ''];
+$sqlc = "SELECT * FROM company LIMIT 1";
 $resc = $con->query($sqlc);
-$rowm = $resc->fetch_assoc();
-?>
-
-<script type="text/javascript">
-function checkForm(form) {
-    if (form.username.value == "") {
-        alert("Error: Username cannot be blank!");
-        form.username.focus();
-        return false;
-    }
-    if (form.password.value == "") {
-        alert("Error: Please enter your password.");
-        form.password.focus();
-        return false;
-    }
+if ($resc && ($tmp = $resc->fetch_assoc())) {
+    $rowm = $tmp;
 }
-
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -84,6 +72,22 @@ function checkForm(form) {
   <link rel="stylesheet" href="css/font-awesome.min.css">
   <link rel="stylesheet" href="css/AdminLTE.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <script type="text/javascript">
+  function checkForm(form) {
+      if (form.username.value == "") {
+          alert("Error: Username cannot be blank!");
+          form.username.focus();
+          return false;
+      }
+      if (form.password.value == "") {
+          alert("Error: Please enter your password.");
+          form.password.focus();
+          return false;
+      }
+      return true;
+  }
+  </script>
 
   <style>
     * {
@@ -216,7 +220,7 @@ function checkForm(form) {
 
   <!-- Right side: Image -->
   <div class="login-right">
-    <img src="<?= $rowm['logo']; ?>" alt="Sunrise Academy">
+    <img src="<?= htmlspecialchars((string) ($rowm['logo'] ?? '')) ?>" alt="Admin">
   </div>
 </div>
 

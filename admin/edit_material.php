@@ -41,6 +41,25 @@ while ($row = $result->fetch_assoc()) {
 $classes = students_unique_classes($con);
 $sessions = students_unique_sessions($con);
 
+$assignedStudentId = (int) ($material['student_id'] ?? 0);
+$isSingleStudentMaterial = $assignedStudentId > 0
+    && !in_array((string) ($material['student_name'] ?? ''), ['Multiple Students', 'All Students'], true);
+
+// Wrongly saved single-student materials used access_level=class; treat as individual in UI
+$effectiveAccess = (string) ($material['access_level'] ?? 'class');
+if ($isSingleStudentMaterial && $effectiveAccess === 'class') {
+    $effectiveAccess = 'individual';
+}
+
+$materialClassRaw = trim((string) ($material['class'] ?? ''));
+$materialSessionRaw = trim((string) ($material['session'] ?? ''));
+if ($materialClassRaw !== '' && !in_array($materialClassRaw, $classes, true)) {
+    array_unshift($classes, $materialClassRaw);
+}
+if ($materialSessionRaw !== '' && !in_array($materialSessionRaw, $sessions, true)) {
+    array_unshift($sessions, $materialSessionRaw);
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     // Validate and sanitize inputs
@@ -51,6 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $description = mysqli_real_escape_string($con, $_POST['material_description'] ?? '');
     $upload_kind = strtolower(trim((string) ($_POST['upload_kind'] ?? '')));
     $access = mysqli_real_escape_string($con, $_POST['access_level'] ?? 'class');
+    // Keep single-student materials private to that student
+    if ($isSingleStudentMaterial && !in_array($access, ['individual', 'private'], true)) {
+        $access = 'individual';
+    }
     $permission = mysqli_real_escape_string($con, $_POST['permission'] ?? 'no');
     $is_fav = isset($_POST['is_favorite']) ? 1 : 0;
     $file_path = $material['file_path'];
@@ -271,17 +294,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                          value="<?php echo htmlspecialchars($material['material_title']); ?>">
                 </div>
 
-               
+                <?php if ($isSingleStudentMaterial): ?>
+                <div class="form-group">
+                  <label>Assigned Student</label>
+                  <input type="text" class="form-control" readonly
+                         value="<?= htmlspecialchars(($material['student_name'] ?? '') . ' (ID: ' . $assignedStudentId . ')') ?>">
+                  <p class="help-block">This material is for this student only.</p>
+                </div>
+                <?php endif; ?>
 
                 <div class="row">
                   <div class="col-md-4">
                     <div class="form-group">
-                      <label>Class*</label>
-                      <select name="class" class="form-control select2" required>
+                      <label>Class<?= $isSingleStudentMaterial ? '' : '*' ?></label>
+                      <select name="class" class="form-control select2" <?= $isSingleStudentMaterial ? '' : 'required' ?>>
                         <option value="">-- Select Class --</option>
                         <?php foreach ($classes as $class): ?>
                           <option value="<?= htmlspecialchars($class) ?>" 
-                            <?= $material['class'] === $class ? 'selected' : '' ?>>
+                            <?= $materialClassRaw === $class ? 'selected' : '' ?>>
                             <?= htmlspecialchars($class) ?>
                           </option>
                         <?php endforeach; ?>
@@ -290,12 +320,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                   </div>
                   <div class="col-md-4">
                     <div class="form-group">
-                      <label>Session*</label>
-                      <select name="session" class="form-control select2" required>
+                      <label>Session<?= $isSingleStudentMaterial ? '' : '*' ?></label>
+                      <select name="session" class="form-control select2" <?= $isSingleStudentMaterial ? '' : 'required' ?>>
                         <option value="">-- Select Session --</option>
                         <?php foreach ($sessions as $session): ?>
                           <option value="<?= htmlspecialchars($session) ?>" 
-                            <?= $material['session'] === $session ? 'selected' : '' ?>>
+                            <?= $materialSessionRaw === $session ? 'selected' : '' ?>>
                             <?= htmlspecialchars($session) ?>
                           </option>
                         <?php endforeach; ?>
@@ -375,9 +405,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                     <div class="form-group">
                       <label>Access Level*</label>
                       <select name="access_level" class="form-control select2" required>
-                        <option value="public" <?= $material['access_level'] === 'public' ? 'selected' : '' ?>>Public (All students)</option>
-                        <option value="private" <?= $material['access_level'] === 'private' ? 'selected' : '' ?>>Private (Only selected students)</option>
-                        <option value="class" <?= $material['access_level'] === 'class' ? 'selected' : '' ?>>Class (Students in same class)</option>
+                        <option value="individual" <?= $effectiveAccess === 'individual' ? 'selected' : '' ?>>Individual (Assigned student only)</option>
+                        <option value="private" <?= $effectiveAccess === 'private' ? 'selected' : '' ?>>Private (Only selected students)</option>
+                        <option value="class" <?= $effectiveAccess === 'class' ? 'selected' : '' ?>>Class (Students in same class)</option>
+                        <option value="public" <?= $effectiveAccess === 'public' ? 'selected' : '' ?>>Public (All students)</option>
                       </select>
                     </div>
                   </div>

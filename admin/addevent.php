@@ -35,14 +35,22 @@ if (isset($_POST['submit'])) {
             $student = $student_query->fetch_assoc();
             $student_name = $student['name'];
             $student_email = $student['email'];
+            // Keep class/session for admin reference only — do NOT use access_level=class
+            // or this material will appear for every student in that class.
             $class = $student['class'];
             $session = $student['session'];
+            $access_level = 'individual';
+        } else {
+            $_SESSION['error'] = "Selected student not found.";
+            header("Location: addevent.php");
+            exit();
         }
     } elseif ($recipient_type === 'class') {
         $class = isset($_POST['class']) ? mysqli_real_escape_string($con, $_POST['class']) : '';
         $session = isset($_POST['session']) ? mysqli_real_escape_string($con, $_POST['session']) : '';
         $student_name = 'Multiple Students';
         $student_email = 'class@example.com';
+        $access_level = 'class';
         
         // For class-wise distribution, we need to send to all students in the selected class
         // We'll handle this after the main insert by creating individual records

@@ -7,6 +7,15 @@ if (!isset($_SESSION['username'])) {
 include('config.php');
 include_once __DIR__ . '/students_helper.php';
 
+// Repair single-student materials wrongly saved as class-wide (so whole class could see them)
+$con->query(
+    "UPDATE student_materials
+     SET access_level = 'individual'
+     WHERE access_level = 'class'
+       AND student_id > 0
+       AND student_name NOT IN ('Multiple Students', 'All Students')"
+);
+
 function delete_material_by_id(mysqli $con, int $id): bool
 {
     $stmt = $con->prepare('SELECT file_path, material_type FROM student_materials WHERE id = ?');
@@ -319,6 +328,7 @@ function filter_query(array $overrides = []): string
                   </th>
                   <th>Title</th>
                   <th>Category</th>
+                  <th>Audience</th>
                   <th>Class</th>
                   <th>Session</th>
                   <th>Type</th>
@@ -329,16 +339,31 @@ function filter_query(array $overrides = []): string
               <tbody>
                 <?php if (count($materials) === 0): ?>
                   <tr>
-                    <td colspan="8" class="text-center">No materials found.</td>
+                    <td colspan="9" class="text-center">No materials found.</td>
                   </tr>
                 <?php else: ?>
                   <?php foreach ($materials as $row): ?>
+                    <?php
+                      $rowAccess = (string) ($row['access_level'] ?? '');
+                      $rowStudentId = (int) ($row['student_id'] ?? 0);
+                      $rowStudentName = (string) ($row['student_name'] ?? '');
+                      if ($rowAccess === 'public' || $rowStudentName === 'All Students') {
+                          $audienceLabel = 'All students';
+                      } elseif ($rowAccess === 'class' || $rowStudentName === 'Multiple Students') {
+                          $audienceLabel = 'Class' . ($row['class'] !== '' ? ': ' . $row['class'] : '');
+                      } elseif ($rowStudentId > 0) {
+                          $audienceLabel = 'Student: ' . ($rowStudentName !== '' ? $rowStudentName : ('#' . $rowStudentId));
+                      } else {
+                          $audienceLabel = $rowAccess !== '' ? ucfirst($rowAccess) : '-';
+                      }
+                    ?>
                     <tr>
                       <td class="select-col">
                         <input type="checkbox" class="row-check" name="selected_ids[]" value="<?= (int) $row['id'] ?>">
                       </td>
                       <td><?= htmlspecialchars($row['material_title']) ?></td>
                       <td><?= htmlspecialchars($row['material_category']) ?></td>
+                      <td><?= htmlspecialchars($audienceLabel) ?></td>
                       <td><?= htmlspecialchars($row['class']) ?></td>
                       <td><?= htmlspecialchars($row['session']) ?></td>
                       <td><?= strtoupper(htmlspecialchars($row['material_type'])) ?></td>
