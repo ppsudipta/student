@@ -5,10 +5,11 @@ if (!isset($_SESSION['username'])) {
   exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
-// Fetch available classes and sessions
-$classes = $con->query("SELECT DISTINCT class FROM students WHERE class IS NOT NULL AND class != 0 ORDER BY class");
-$sessions = $con->query("SELECT DISTINCT session FROM students WHERE session IS NOT NULL ORDER BY session");
+// Fetch available classes and sessions (unique singles from comma-separated fields)
+$classes = students_unique_classes($con);
+$sessions = students_unique_sessions($con);
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -48,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <div class="wrapper">
 
   <?php include 'header.php'; ?>
-  <aside class="main-sidebar"><section class="sidebar"><?php include 'sidebar.php'; ?></section></aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">
@@ -89,20 +90,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                   <label>Class</label>
                   <select name="class_id" class="form-control">
                     <option value="">All Classes</option>
-                    <?php while($class = $classes->fetch_assoc()): ?>
-                    <option value="<?php echo $class['class']; ?>">Class <?php echo htmlspecialchars($class['class']); ?></option>
-                    <?php endwhile; ?>
+                    <?php foreach ($classes as $class): ?>
+                    <option value="<?php echo htmlspecialchars($class); ?>">Class <?php echo htmlspecialchars($class); ?></option>
+                    <?php endforeach; ?>
                   </select>
                 </div>
                 <div class="form-group">
                   <label>Session</label>
                   <select name="session" class="form-control">
                     <option value="">All Sessions</option>
-                    <?php 
-                    $sessions->data_seek(0); // Reset pointer
-                    while($session = $sessions->fetch_assoc()): ?>
-                    <option value="<?php echo $session['session']; ?>">Session <?php echo htmlspecialchars($session['session']); ?></option>
-                    <?php endwhile; ?>
+                    <?php foreach ($sessions as $session): ?>
+                    <option value="<?php echo htmlspecialchars($session); ?>">Session <?php echo htmlspecialchars($session); ?></option>
+                    <?php endforeach; ?>
                   </select>
                 </div>
                 <div class="form-group">

@@ -11,6 +11,8 @@ if (!isset($_SESSION['username'])) {
   exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
+$classList = students_unique_classes($con);
 ?>
 
 <!DOCTYPE html>
@@ -41,11 +43,7 @@ include('config.php');
 <div class="wrapper">
 
   <?php include 'header.php'; ?>
-  <aside class="main-sidebar">
-    <section class="sidebar">
-      <?php include 'sidebar.php'; ?>
-    </section>
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">
@@ -93,21 +91,8 @@ include('config.php');
               <label>Select Class</label>
               <select name="class_name" class="form-control">
                 <option value="">-- Select Class --</option>
-                <?php
-                // Get unique classes from students table
-                $classList = [];
-                $res2 = $con->query("SELECT class FROM students");
-                while ($row = $res2->fetch_assoc()) {
-                  $parts = array_map('trim', explode(',', $row['class']));
-                  foreach ($parts as $c) {
-                    if ($c != '') $classList[] = $c;
-                  }
-                }
-                $classList = array_unique($classList);
-                sort($classList);
-                
-                foreach($classList as $cl): ?>
-                  <option value="<?php echo $cl; ?>"><?php echo $cl; ?></option>
+                <?php foreach ($classList as $cl): ?>
+                  <option value="<?php echo htmlspecialchars($cl); ?>"><?php echo htmlspecialchars($cl); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>

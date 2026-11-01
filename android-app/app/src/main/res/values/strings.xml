@@ -65,6 +65,7 @@
     <string name="enquiry">Enquiry</string>
     <string name="materials">Materials</string>
     <string name="fees">Remuneration Status</string>
+    <string name="fees_quick">Remuneration</string>
     <string name="homework">Homework</string>
     <string name="attendance">Attendance</string>
     <string name="progress">Progress</string>
@@ -170,10 +171,13 @@
     <string name="polls">Polls</string>
     <string name="no_polls">No active polls right now.</string>
     <string name="poll_vote_now">Tap to vote</string>
-    <string name="poll_voted">Voted · View results</string>
+    <string name="poll_voted">Voted · Tap to change</string>
     <string name="poll_option_singular">option</string>
     <string name="poll_options_plural">options</string>
     <string name="poll_expires">Expires %1$s</string>
+    <string name="change_vote">Change Vote</string>
+    <string name="poll_vote_updated">Your vote has been updated.</string>
+    <string name="poll_same_option">Please select a different option to change your vote.</string>
     <string name="submit_vote">Submit Vote</string>
     <string name="poll_results">Poll Results</string>
     <string name="poll_result_stats">%1$d votes · %2$d%%</string>

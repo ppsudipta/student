@@ -5,9 +5,10 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
-$classes = $con->query("SELECT DISTINCT class FROM students WHERE class IS NOT NULL AND class != '' ORDER BY class");
-$sessions = $con->query("SELECT DISTINCT session FROM students WHERE session IS NOT NULL AND session != '' ORDER BY session DESC");
+$classList = students_unique_classes($con);
+$sessionList = students_unique_sessions($con);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $question = trim($_POST['question'] ?? '');
@@ -77,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="hold-transition skin-blue sidebar-mini">
 <div class="wrapper">
   <?php include 'header.php'; ?>
-  <aside class="main-sidebar"><section class="sidebar"><?php include 'sidebar.php'; ?></section></aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">
@@ -117,22 +118,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label>Class</label>
                 <select name="class_name" class="form-control">
                   <option value="">All Classes</option>
-                  <?php while ($row = $classes->fetch_assoc()): ?>
-                    <option value="<?php echo htmlspecialchars($row['class']); ?>">
-                      <?php echo htmlspecialchars($row['class']); ?>
+                  <?php foreach ($classList as $cl): ?>
+                    <option value="<?php echo htmlspecialchars($cl); ?>">
+                      <?php echo htmlspecialchars($cl); ?>
                     </option>
-                  <?php endwhile; ?>
+                  <?php endforeach; ?>
                 </select>
               </div>
               <div class="form-group">
                 <label>Session</label>
                 <select name="session" class="form-control">
                   <option value="">All Sessions</option>
-                  <?php while ($row = $sessions->fetch_assoc()): ?>
-                    <option value="<?php echo htmlspecialchars($row['session']); ?>">
-                      <?php echo htmlspecialchars($row['session']); ?>
+                  <?php foreach ($sessionList as $sess): ?>
+                    <option value="<?php echo htmlspecialchars($sess); ?>">
+                      <?php echo htmlspecialchars($sess); ?>
                     </option>
-                  <?php endwhile; ?>
+                  <?php endforeach; ?>
                 </select>
               </div>
               <p class="help-block">Choose class only, session only, or both to target students.</p>

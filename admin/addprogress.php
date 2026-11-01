@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
   exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 // Fetch all students
 $students = [];
@@ -13,17 +14,7 @@ while ($row = $result->fetch_assoc()) {
     $students[] = $row;
 }
 
-// Get unique classes from comma separated field
-$classList = [];
-$res2 = $con->query("SELECT class FROM students");
-while ($row = $res2->fetch_assoc()) {
-    $parts = array_map('trim', explode(',', $row['class']));
-    foreach ($parts as $c) {
-        if ($c != '') $classList[] = $c;
-    }
-}
-$classList = array_unique($classList);
-sort($classList);
+$classList = students_unique_classes($con);
 
 $months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -131,11 +122,7 @@ function getStudentClasses($con, $student_id) {
 <div class="wrapper">
 
   <?php include 'header.php';?>
-  <aside class="main-sidebar">
-    <section class="sidebar">
-      <?php include 'sidebar.php'; ?>
-    </section>  
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">

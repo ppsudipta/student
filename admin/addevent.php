@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
   exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 // Handle form submission
 if (isset($_POST['submit'])) {
@@ -227,7 +228,7 @@ if (isset($_POST['submit'])) {
 <div class="wrapper">
 
 <?php include 'header.php'; ?>
-<aside class="main-sidebar"><section class="sidebar"><?php include 'sidebar.php'; ?></section></aside>
+  <?php include 'sidebar.php'; ?>
 
 <div class="content-wrapper">
   <section class="content-header">
@@ -291,29 +292,9 @@ if (isset($_POST['submit'])) {
                   <select class="form-control select2" name="class" id="class_select" style="width:100%;">
                     <option value="">-- Select Class --</option>
                     <?php
-                    // Get all unique classes from comma-separated values
-                    $q = mysqli_query($con, "SELECT class FROM students WHERE class IS NOT NULL AND class != ''");
-                    $classes = [];
-                    while ($r = mysqli_fetch_assoc($q)) {
-                        if (!empty($r['class'])) {
-                            // Explode comma-separated classes and add to array
-                            $class_list = explode(',', $r['class']);
-                            foreach ($class_list as $cls) {
-                                $cls = trim($cls);
-                                if (!empty($cls) && !in_array($cls, $classes)) {
-                                    $classes[] = $cls;
-                                    echo "<option value='".htmlspecialchars($cls)."'>".htmlspecialchars($cls)."</option>";
-                                }
-                            }
-                        }
+                    foreach (students_unique_classes($con) as $cls) {
+                        echo "<option value='".htmlspecialchars($cls)."'>".htmlspecialchars($cls)."</option>";
                     }
-                    // Sort classes numerically if possible, otherwise alphabetically
-                    usort($classes, function($a, $b) {
-                        if (is_numeric($a) && is_numeric($b)) {
-                            return $a - $b;
-                        }
-                        return strcmp($a, $b);
-                    });
                     ?>
                   </select>
                 </div>
@@ -323,9 +304,8 @@ if (isset($_POST['submit'])) {
                   <select class="form-control select2" name="session" style="width:100%;">
                     <option value="">-- Select Session --</option>
                     <?php
-                    $q = mysqli_query($con, "SELECT DISTINCT session FROM students WHERE session IS NOT NULL AND session != ''");
-                    while ($r = mysqli_fetch_assoc($q)) {
-                      echo "<option value='".htmlspecialchars($r['session'])."'>".htmlspecialchars($r['session'])."</option>";
+                    foreach (students_unique_sessions($con) as $ses) {
+                      echo "<option value='".htmlspecialchars($ses)."'>".htmlspecialchars($ses)."</option>";
                     }
                     ?>
                   </select>

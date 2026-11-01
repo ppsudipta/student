@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 // --- DATE FILTER LOGIC ---
 $where = "";
@@ -48,19 +49,7 @@ $result = mysqli_query($con, $sql);
 $students = mysqli_query($con, "SELECT id, name, registration_code, total_fees FROM students ORDER BY name ASC");
 
 // --- FETCH UNIQUE CLASSES FOR CLASS-WISE SELECTION ---
-$classes_result = mysqli_query($con, "SELECT class FROM students WHERE class IS NOT NULL AND class != ''");
-$classes = [];
-
-while ($row = mysqli_fetch_assoc($classes_result)) {
-    // explode comma-separated classes
-    $classArray = array_map('trim', explode(',', $row['class']));
-    // merge into main list
-    $classes = array_merge($classes, $classArray);
-}
-
-// remove duplicates and sort
-$classes = array_unique($classes);
-sort($classes);
+$classes = students_unique_classes($con);
 
 // --- FETCH REGISTRATION CODES FOR DROPDOWN ---
 $reg_codes_result = mysqli_query($con, "SELECT registration_code, name FROM students WHERE registration_code IS NOT NULL AND registration_code != '' ORDER BY registration_code");
@@ -169,7 +158,7 @@ $_SESSION['active_fee_tab'] = $active_tab;
 <div class="wrapper">
 
 <?php include 'header.php'; ?>
-<aside class="main-sidebar"><section class="sidebar"><?php include 'sidebar.php'; ?></section></aside>
+  <?php include 'sidebar.php'; ?>
 
 <div class="content-wrapper">
   <section class="content-header">

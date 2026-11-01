@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="80dp"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="4dp">
+    android:paddingHorizontal="2dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
 
     <FrameLayout
         android:id="@+id/serviceCircle"
@@ -26,12 +28,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="11dp"
+        android:ellipsize="end"
         android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:singleLine="true"
         android:textColor="@color/primary_text"
         android:textSize="12sp"
-        android:textStyle="bold"
-        android:shadowColor="#40000000"
-        android:shadowDx="0"
-        android:shadowDy="1"
-        android:shadowRadius="1" />
+        android:textStyle="bold" />
 </LinearLayout>

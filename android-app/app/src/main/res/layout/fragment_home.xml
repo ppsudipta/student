@@ -194,8 +194,10 @@
             android:id="@+id/serviceGrid"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:columnCount="4"
-            android:useDefaultMargins="true" />
+            android:useDefaultMargins="false" />
 
         <TextView
             android:id="@+id/feeAlertBanner"

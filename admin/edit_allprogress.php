@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
   exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 // Fetch record by ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -46,14 +47,11 @@ if (!$attendance) {
 }
 
 // Fetch distinct class names for dropdown
-$classes = $con->query("SELECT DISTINCT class_name FROM attendance");
-$all_classes = [];
-while ($row = $classes->fetch_assoc()) {
-    $split = array_map('trim', explode(',', $row['class_name']));
-    $all_classes = array_merge($all_classes, $split);
-}
-$all_classes = array_unique($all_classes);
-sort($all_classes);
+$all_classes = students_split_unique_values(
+    $con,
+    "SELECT class_name FROM attendance WHERE class_name IS NOT NULL AND class_name != ''",
+    'class_name'
+);
 ?>
 
 <!DOCTYPE html>
@@ -79,9 +77,7 @@ sort($all_classes);
 <div class="wrapper">
 
   <?php include 'header.php';?>
-  <aside class="main-sidebar">
-    <section class="sidebar"><?php include 'sidebar.php'; ?></section>
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">

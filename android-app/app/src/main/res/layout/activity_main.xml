@@ -60,10 +60,12 @@
             android:layout_height="@dimen/bottom_nav_height"
             android:layout_gravity="bottom"
             android:background="@drawable/bg_bottom_nav"
+            android:paddingTop="6dp"
             app:elevation="12dp"
             app:itemActiveIndicatorStyle="@null"
             app:itemIconSize="30dp"
             app:itemIconTint="@null"
+            app:itemPaddingTop="6dp"
             app:itemTextColor="@color/bottom_nav_text_color"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/bottom_nav_menu" />

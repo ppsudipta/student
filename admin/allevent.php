@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 function delete_material_by_id(mysqli $con, int $id): bool
 {
@@ -92,14 +93,12 @@ $filterType = trim((string) ($_GET['type'] ?? ''));
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = 25;
 
-// Dropdown options
-$classOptions = [];
-$resClass = $con->query("SELECT DISTINCT class FROM student_materials WHERE class != '' ORDER BY class ASC");
-if ($resClass) {
-    while ($r = $resClass->fetch_assoc()) {
-        $classOptions[] = $r['class'];
-    }
-}
+// Dropdown options (split any legacy comma-separated class/session values)
+$classOptions = students_split_unique_values(
+    $con,
+    "SELECT class FROM student_materials WHERE class IS NOT NULL AND class != ''",
+    'class'
+);
 
 $categoryOptions = [];
 $resCat = $con->query("SELECT DISTINCT material_category FROM student_materials WHERE material_category != '' ORDER BY material_category ASC");
@@ -109,13 +108,12 @@ if ($resCat) {
     }
 }
 
-$sessionOptions = [];
-$resSes = $con->query("SELECT DISTINCT session FROM student_materials WHERE session != '' ORDER BY session DESC");
-if ($resSes) {
-    while ($r = $resSes->fetch_assoc()) {
-        $sessionOptions[] = $r['session'];
-    }
-}
+$sessionOptions = students_split_unique_values(
+    $con,
+    "SELECT session FROM student_materials WHERE session IS NOT NULL AND session != ''",
+    'session',
+    true
+);
 
 $where = ['1=1'];
 $params = [];
@@ -221,12 +219,7 @@ function filter_query(array $overrides = []): string
 <div class="wrapper">
 
   <?php include 'header.php'; ?>
-
-  <aside class="main-sidebar">
-    <section class="sidebar">
-      <?php include 'sidebar.php'; ?>
-    </section>
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">

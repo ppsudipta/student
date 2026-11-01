@@ -62,12 +62,7 @@ $submissions_count = $submissions_result->num_rows;
 <div class="wrapper">
 
   <?php include 'header.php';?>
-  
-  <aside class="main-sidebar">
-    <section class="sidebar">
-      <?php include 'sidebar.php'; ?>
-    </section>  
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <!-- Content Wrapper. Contains page content -->
   <div class="content-wrapper">

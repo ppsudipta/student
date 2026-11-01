@@ -25,9 +25,11 @@ if (!$homework) {
     exit();
 }
 
-// Fetch available classes and sessions
-$classes = $con->query("SELECT DISTINCT class FROM students WHERE class IS NOT NULL AND class != 0 ORDER BY class");
-$sessions = $con->query("SELECT DISTINCT session FROM students WHERE session IS NOT NULL ORDER BY session");
+include_once __DIR__ . '/students_helper.php';
+
+// Fetch available classes and sessions (unique singles from comma-separated fields)
+$classes = students_unique_classes($con);
+$sessions = students_unique_sessions($con);
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -67,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <div class="wrapper">
 
   <?php include 'header.php'; ?>
-  <aside class="main-sidebar"><section class="sidebar"><?php include 'sidebar.php'; ?></section></aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">
@@ -108,24 +110,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                   <label>Class</label>
                   <select name="class" class="form-control">
                     <option value="">All Classes</option>
-                    <?php while($class = $classes->fetch_assoc()): ?>
-                    <option value="<?php echo $class['class']; ?>" <?php echo ($homework['class'] == $class['class']) ? 'selected' : ''; ?>>
-                      Class <?php echo htmlspecialchars($class['class']); ?>
+                    <?php foreach ($classes as $class): ?>
+                    <option value="<?php echo htmlspecialchars($class); ?>" <?php echo ($homework['class'] == $class) ? 'selected' : ''; ?>>
+                      Class <?php echo htmlspecialchars($class); ?>
                     </option>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                   </select>
                 </div>
                 <div class="form-group">
                   <label>Session</label>
                   <select name="session" class="form-control">
                     <option value="">All Sessions</option>
-                    <?php 
-                    $sessions->data_seek(0); // Reset pointer
-                    while($session = $sessions->fetch_assoc()): ?>
-                    <option value="<?php echo $session['session']; ?>" <?php echo ($homework['session'] == $session['session']) ? 'selected' : ''; ?>>
-                      Session <?php echo htmlspecialchars($session['session']); ?>
+                    <?php foreach ($sessions as $session): ?>
+                    <option value="<?php echo htmlspecialchars($session); ?>" <?php echo ($homework['session'] == $session) ? 'selected' : ''; ?>>
+                      Session <?php echo htmlspecialchars($session); ?>
                     </option>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                   </select>
                 </div>
                 <div class="form-group">

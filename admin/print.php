@@ -2,6 +2,7 @@
 date_default_timezone_set('Asia/Kolkata');
 // Database connection
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 // Check connection
 if ($con->connect_error) {
@@ -43,22 +44,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 // Get unique classes for filter dropdown
-$class_query = "SELECT class FROM students order by registration_code";
-$class_result = $con->query($class_query);
-$all_classes = array();
-
-if ($class_result->num_rows > 0) {
-    while($row = $class_result->fetch_assoc()) {
-        $classes = explode(',', $row['class']);
-        foreach ($classes as $class) {
-            $class = trim($class);
-            if (!empty($class) && !in_array($class, $all_classes)) {
-                $all_classes[] = $class;
-            }
-        }
-    }
-}
-sort($all_classes);
+$all_classes = students_unique_classes($con);
 
 // Export to Excel functionality
 if (isset($_POST['export_excel'])) {

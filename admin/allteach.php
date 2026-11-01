@@ -37,11 +37,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 
   <!-- Header and Sidebar -->
   <?php include 'header.php'; ?>
-  <aside class="main-sidebar">
-    <section class="sidebar">
-      <?php include 'sidebar.php'; ?>
-    </section>
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <!-- Main Content -->
   <div class="content-wrapper">

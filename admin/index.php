@@ -1,14 +1,61 @@
-<?php 
+<?php
 session_start();
-if (isset($_SESSION['username'])) {
-    header("location:allregister.php");
-}
-?>
-<?php require_once('config.php');
-$sqlc = "SELECT * FROM company";
-    $resc = $con->query($sqlc);
-    $rowm = $resc->fetch_assoc();
+require_once('config.php');
 
+if (isset($_SESSION['username'])) {
+    header('Location: allregister.php');
+    exit();
+}
+
+$login_error = '';
+
+if (isset($_POST['submit'])) {
+    $username = trim((string) ($_POST['username'] ?? ''));
+    $password = (string) ($_POST['password'] ?? '');
+
+    if ($username === '' || $password === '') {
+        $login_error = 'Username and password are required.';
+    } else {
+        $stmt = $con->prepare('SELECT username, password FROM admin WHERE username = ? LIMIT 1');
+        if ($stmt) {
+            $stmt->bind_param('s', $username);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result ? $result->fetch_assoc() : null;
+            $stmt->close();
+
+            $valid = false;
+            if ($row) {
+                $stored = (string) $row['password'];
+                if ($stored !== '' && password_verify($password, $stored)) {
+                    $valid = true;
+                } elseif ($stored !== '' && !str_starts_with($stored, '$2y$') && !str_starts_with($stored, '$2a$') && !str_starts_with($stored, '$argon') && hash_equals($stored, $password)) {
+                    // Legacy plaintext password — accept once, then upgrade to hash
+                    $valid = true;
+                    $newHash = password_hash($password, PASSWORD_DEFAULT);
+                    $upd = $con->prepare('UPDATE admin SET password = ? WHERE username = ?');
+                    if ($upd) {
+                        $upd->bind_param('ss', $newHash, $row['username']);
+                        $upd->execute();
+                        $upd->close();
+                    }
+                }
+            }
+
+            if ($valid) {
+                session_regenerate_id(true);
+                $_SESSION['username'] = $row['username'];
+                header('Location: allregister.php');
+                exit();
+            }
+        }
+        $login_error = 'Invalid username or password.';
+    }
+}
+
+$sqlc = "SELECT * FROM company";
+$resc = $con->query($sqlc);
+$rowm = $resc->fetch_assoc();
 ?>
 
 <script type="text/javascript">
@@ -24,7 +71,6 @@ function checkForm(form) {
         return false;
     }
 }
-</script>
 
 <!DOCTYPE html>
 <html>
@@ -153,13 +199,16 @@ function checkForm(form) {
     <p>Welcome back! Please sign in.</p>
 
     <form class="login-form" action="" method="post" onsubmit="return checkForm(this);">
+      <?php if ($login_error !== ''): ?>
+        <div class="alert alert-danger" style="padding:8px 12px;margin-bottom:15px;"><?= htmlspecialchars($login_error) ?></div>
+      <?php endif; ?>
       <div class="form-group">
         <i class="fa fa-user input-icon"></i>
-        <input type="text" class="form-control" name="username" id="username" placeholder="Username">
+        <input type="text" class="form-control" name="username" id="username" placeholder="Username" autocomplete="username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
       </div>
       <div class="form-group">
         <i class="fa fa-lock input-icon"></i>
-        <input type="password" class="form-control" name="password" id="password" placeholder="Password">
+        <input type="password" class="form-control" name="password" id="password" placeholder="Password" autocomplete="current-password">
       </div>
       <button type="submit" name="submit" class="btn btn-primary btn-block">Sign In</button>
     </form>
@@ -176,33 +225,3 @@ function checkForm(form) {
 <script src="js/bootstrap.min.js"></script>
 </body>
 </html>
-
-<?php
-if (isset($_POST['submit'])) {
-  $username = $_POST['username'];
-  $password = $_POST['password'];
-
-  if ($con->error) {
-    echo $con->error;
-  } else {
-    $sql = "SELECT * FROM admin WHERE username='$username'";
-    $res = $con->query($sql);
-    $c = $res->num_rows;
-    if ($c >= 1) {
-      $row = $res->fetch_array();
-    //   $hashed_password = $row['password'];
-      $hashed_password = $row['password'];
-
-      if ($password) {
-        $_SESSION['username'] = $username;
-        echo "<script>window.location.href='allregister.php'</script>";
-      } else {
-        echo "<script>alert('Invalid password')</script>";
-      }
-    } else {
-      echo "<script>alert('Invalid username')</script>";
-      echo "<script>window.location.href='index.php'</script>";
-    }
-  }
-}
-?>

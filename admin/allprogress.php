@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
   exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 ?>
 
 <!DOCTYPE html>
@@ -35,9 +36,7 @@ include('config.php');
 <body class="hold-transition skin-blue sidebar-mini">
 <div class="wrapper">
   <?php include 'header.php';?>
-  <aside class="main-sidebar">
-    <section class="sidebar"><?php include 'sidebar.php'; ?></section>
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">
@@ -65,17 +64,14 @@ include('config.php');
                   <select class="form-control select2" id="class_filter" name="class_name" style="width: 180px;">
                     <option value="">All Classes</option>
                     <?php
-                    $classes = $con->query("SELECT DISTINCT class_name FROM attendance");
-                    $all_classes = [];
-                    while($class = $classes->fetch_assoc()) {
-                      $split = array_map('trim', explode(',', $class['class_name']));
-                      $all_classes = array_merge($all_classes, $split);
-                    }
-                    $all_classes = array_unique($all_classes);
-                    sort($all_classes);
+                    $all_classes = students_split_unique_values(
+                      $con,
+                      "SELECT class_name FROM attendance WHERE class_name IS NOT NULL AND class_name != ''",
+                      'class_name'
+                    );
                     foreach($all_classes as $cls):
                     ?>
-                      <option value="<?= $cls ?>" <?= (isset($_GET['class_name']) && $_GET['class_name'] == $cls) ? 'selected' : '' ?>>
+                      <option value="<?= htmlspecialchars($cls) ?>" <?= (isset($_GET['class_name']) && $_GET['class_name'] == $cls) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($cls) ?>
                       </option>
                     <?php endforeach; ?>

@@ -39,6 +39,8 @@ public class PollDetailFragment extends Fragment {
     private MaterialCardView resultsCard;
     private LinearLayout resultsContainer;
     private final Map<Integer, RadioButton> optionButtons = new HashMap<>();
+    private boolean hasVoted;
+    private int currentVoteOptionId;
 
     public static PollDetailFragment newInstance(int id, String question) {
         Bundle args = new Bundle();
@@ -128,23 +130,29 @@ public class PollDetailFragment extends Fragment {
             }
         }
 
-        boolean hasVoted = data.optBoolean("has_voted", false) || data.optJSONObject("my_vote") != null;
-        bindOptions(data.optJSONArray("options"), data.optJSONObject("my_vote"), hasVoted);
+        JSONObject myVote = data.optJSONObject("my_vote");
+        hasVoted = data.optBoolean("has_voted", false) || myVote != null;
+        currentVoteOptionId = myVote == null ? 0 : myVote.optInt("option_id", 0);
+        bindOptions(data.optJSONArray("options"), myVote);
+
+        // Keep options editable so students can change their vote.
+        optionsGroup.setEnabled(true);
+        for (int i = 0; i < optionsGroup.getChildCount(); i++) {
+            optionsGroup.getChildAt(i).setEnabled(true);
+        }
+
+        submitButton.setVisibility(View.VISIBLE);
+        submitButton.setEnabled(true);
+        submitButton.setText(hasVoted ? R.string.change_vote : R.string.submit_vote);
 
         if (hasVoted) {
-            submitButton.setVisibility(View.GONE);
-            optionsGroup.setEnabled(false);
-            for (int i = 0; i < optionsGroup.getChildCount(); i++) {
-                optionsGroup.getChildAt(i).setEnabled(false);
-            }
             showResults(data.optJSONArray("results"));
         } else {
             resultsCard.setVisibility(View.GONE);
-            submitButton.setVisibility(View.VISIBLE);
         }
     }
 
-    private void bindOptions(@Nullable JSONArray options, @Nullable JSONObject myVote, boolean hasVoted) {
+    private void bindOptions(@Nullable JSONArray options, @Nullable JSONObject myVote) {
         optionsGroup.removeAllViews();
         optionButtons.clear();
         if (options == null) {
@@ -163,7 +171,7 @@ public class PollDetailFragment extends Fragment {
             button.setTextColor(requireContext().getColor(R.color.primary_text));
             button.setPadding(0, 16, 0, 16);
             button.setTag(optionId);
-            if (hasVoted && optionId == selectedOptionId) {
+            if (optionId == selectedOptionId) {
                 button.setChecked(true);
             }
             optionsGroup.addView(button);
@@ -182,7 +190,12 @@ public class PollDetailFragment extends Fragment {
             return;
         }
         int optionId = (int) selected.getTag();
+        if (hasVoted && optionId == currentVoteOptionId) {
+            UiUtils.toast(requireContext(), getString(R.string.poll_same_option));
+            return;
+        }
 
+        final boolean updating = hasVoted;
         submitButton.setEnabled(false);
         UiUtils.setLoaderVisible(progressBar, true);
 
@@ -197,7 +210,8 @@ public class PollDetailFragment extends Fragment {
                     }
                     requireActivity().runOnUiThread(() -> {
                         UiUtils.setLoaderVisible(progressBar, false);
-                        UiUtils.toast(requireContext(), getString(R.string.poll_vote_saved));
+                        UiUtils.toast(requireContext(), getString(
+                                updating ? R.string.poll_vote_updated : R.string.poll_vote_saved));
                         JSONObject data = json.optJSONObject("data");
                         if (data != null) {
                             bindPoll(data);

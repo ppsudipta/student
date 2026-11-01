@@ -28,28 +28,18 @@ if (!$material) {
     exit();
 }
 
+include_once __DIR__ . '/students_helper.php';
+
 // Get distinct values from students table
 $courses = [];
-$classes = [];
-$sessions = [];
-
 $query = "SELECT DISTINCT course FROM students WHERE course IS NOT NULL AND course != ''";
 $result = $con->query($query);
 while ($row = $result->fetch_assoc()) {
     $courses[] = $row['course'];
 }
 
-$query = "SELECT DISTINCT class FROM students WHERE class IS NOT NULL AND class != ''";
-$result = $con->query($query);
-while ($row = $result->fetch_assoc()) {
-    $classes[] = $row['class'];
-}
-
-$query = "SELECT DISTINCT session FROM students WHERE session IS NOT NULL AND session != ''";
-$result = $con->query($query);
-while ($row = $result->fetch_assoc()) {
-    $sessions[] = $row['session'];
-}
+$classes = students_unique_classes($con);
+$sessions = students_unique_sessions($con);
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
@@ -245,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
 <body class="hold-transition skin-blue sidebar-mini">
 <div class="wrapper">
   <?php include 'header.php'; ?>
-  <aside class="main-sidebar"><section class="sidebar"><?php include 'sidebar.php'; ?></section></aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">

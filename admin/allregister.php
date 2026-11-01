@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 if (isset($_GET['id'])) {
     $id2 = $_GET['id'];
@@ -50,18 +51,7 @@ $sql .= " ORDER BY registration_code";
 $result = mysqli_query($con, $sql);
 
 // Get unique classes for filter dropdown
-$class_query = "SELECT class FROM students WHERE class IS NOT NULL AND class != ''";
-$class_result = mysqli_query($con, $class_query);
-$classes = [];
-while ($row = mysqli_fetch_assoc($class_result)) {
-    $split = array_map('trim', explode(',', $row['class']));
-    foreach ($split as $c) {
-        if (!in_array($c, $classes) && !empty($c)) {
-            $classes[] = $c;
-        }
-    }
-}
-sort($classes);
+$classes = students_unique_classes($con);
 
 // Get unique registration codes
 $registration_query = "SELECT DISTINCT registration_code FROM students WHERE registration_code IS NOT NULL AND registration_code != '' ORDER BY registration_code";
@@ -114,11 +104,7 @@ sort($registration_codes);
 <div class="wrapper">
 
   <?php include 'header.php'; ?>
-  <aside class="main-sidebar">
-    <section class="sidebar">
-      <?php include 'sidebar.php'; ?>
-    </section>
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">

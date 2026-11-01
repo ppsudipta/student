@@ -168,11 +168,7 @@ if (!empty($class)) {
 <div class="wrapper">
 
   <?php include 'header.php'; ?>
-  <aside class="main-sidebar">
-    <section class="sidebar">
-      <?php include 'sidebar.php'; ?>
-    </section>
-  </aside>
+  <?php include 'sidebar.php'; ?>
 
   <div class="content-wrapper">
     <section class="content-header">

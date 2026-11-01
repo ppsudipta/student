@@ -84,7 +84,7 @@ public class HomeFragment extends Fragment {
                         AboutContentFragment.newInstance(AboutContentFragment.MODE_ABOUT),
                         getString(R.string.dey_education),
                         true));
-        addServiceItem(serviceGrid, R.drawable.ic_menu_fees, getString(R.string.fees), v ->
+        addServiceItem(serviceGrid, R.drawable.ic_menu_fees, getString(R.string.fees_quick), v ->
                 activity.showFragment(new FeesFragment(), getString(R.string.fees), true));
         addServiceItem(serviceGrid, R.drawable.ic_menu_poll, getString(R.string.polls), v ->
                 activity.showFragment(new PollsFragment(), getString(R.string.polls), true));
@@ -172,7 +172,8 @@ public class HomeFragment extends Fragment {
         icon.setLayoutParams(iconParams);
         icon.setImageResource(menuIconRes);
         icon.setColorFilter(null);
-        ((TextView) item.findViewById(R.id.serviceLabel)).setText(label);
+        TextView labelView = item.findViewById(R.id.serviceLabel);
+        labelView.setText(label);
         item.setOnClickListener(click);
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
@@ -205,7 +206,7 @@ public class HomeFragment extends Fragment {
             dialog.dismiss();
             activity.selectBottomNav(R.id.nav_explore);
         });
-        addServiceItem(moreGrid, R.drawable.ic_menu_fees, getString(R.string.fees), v -> {
+        addServiceItem(moreGrid, R.drawable.ic_menu_fees, getString(R.string.fees_quick), v -> {
             dialog.dismiss();
             activity.showFragment(new FeesFragment(), getString(R.string.fees));
         });
