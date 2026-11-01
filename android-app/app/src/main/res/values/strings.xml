@@ -46,6 +46,9 @@
     <string name="home_slider">Slider</string>
     <string name="academy_details">Academy Details</string>
     <string name="dey_education">Dey Education</string>
+    <string name="brand_name_home">DEY EDUCATION</string>
+    <string name="brand_founder_home">Dr. Tanoy Kumar Dey (PhD)</string>
+    <string name="brand_tagline_home">Physics = Logic</string>
     <string name="academy_details_hint">Welcome to our academy. Meet our teachers below.</string>
     <string name="about_us">About Us</string>
     <string name="subscribe_facebook">Subscribe on Facebook</string>

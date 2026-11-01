@@ -33,6 +33,8 @@
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
     <color name="launcher_background">#0B1F5C</color>
+    <color name="brand_gold">#D4AF37</color>
+    <color name="brand_gold_soft">#F0D78C</color>
     <color name="gradient_start">#6C5CE7</color>
     <color name="gradient_end">#00CEC9</color>
     <color name="service_purple_bg">#DCD4FF</color>

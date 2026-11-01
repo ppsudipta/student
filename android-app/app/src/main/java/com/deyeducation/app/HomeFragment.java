@@ -97,6 +97,8 @@ public class HomeFragment extends Fragment {
                         true));
         addServiceItem(serviceGrid, R.drawable.ic_menu_fees, getString(R.string.fees), v ->
                 activity.showFragment(new FeesFragment(), getString(R.string.fees), true));
+        addServiceItem(serviceGrid, R.drawable.ic_menu_poll, getString(R.string.polls), v ->
+                activity.showFragment(new PollsFragment(), getString(R.string.polls), true));
         addServiceItem(serviceGrid, R.drawable.ic_menu_more, getString(R.string.more), v -> showMoreSheet(activity));
 
         view.findViewById(R.id.btnNotifications).setOnClickListener(v ->
@@ -221,10 +223,6 @@ public class HomeFragment extends Fragment {
         addServiceItem(moreGrid, R.drawable.ic_menu_fees, getString(R.string.fees), v -> {
             dialog.dismiss();
             activity.showFragment(new FeesFragment(), getString(R.string.fees));
-        });
-        addServiceItem(moreGrid, R.drawable.ic_menu_poll, getString(R.string.polls), v -> {
-            dialog.dismiss();
-            activity.showFragment(new PollsFragment(), getString(R.string.polls));
         });
         dialog.setContentView(sheet);
         dialog.show();
