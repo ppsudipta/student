@@ -97,13 +97,13 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
           </ul>
         </li>
 
-        <li class="treeview <?= in_array($currentPage, ['allpoll.php', 'addpoll.php', 'view_poll.php'], true) ? 'active' : '' ?>">
+        <li class="treeview <?= in_array($currentPage, ['allpoll.php', 'addpoll.php', 'view_poll.php'], true) ? 'active menu-open' : '' ?>">
           <a href="#">
             <i class="fa fa-bar-chart"></i> <span>Polls</span>
             <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
           </a>
-          <ul class="treeview-menu">
-            <li class="<?= $currentPage === 'allpoll.php' ? 'active' : '' ?>"><a href="allpoll.php"><i class="fa fa-circle-o"></i> All Polls</a></li>
+          <ul class="treeview-menu" <?= in_array($currentPage, ['allpoll.php', 'addpoll.php', 'view_poll.php'], true) ? 'style="display:block;"' : '' ?>>
+            <li class="<?= $currentPage === 'allpoll.php' || $currentPage === 'view_poll.php' ? 'active' : '' ?>"><a href="allpoll.php"><i class="fa fa-circle-o"></i> All Polls</a></li>
             <li class="<?= $currentPage === 'addpoll.php' ? 'active' : '' ?>"><a href="addpoll.php"><i class="fa fa-circle-o"></i> Add Poll</a></li>
           </ul>
         </li>
@@ -131,13 +131,13 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
           </ul>
         </li>
 
-        <li class="treeview <?= in_array($currentPage, ['allgallery.php', 'addgallery.php', 'editgallery.php', 'editgallary.php'], true) ? 'active' : '' ?>">
+        <li class="treeview <?= in_array($currentPage, ['allgallery.php', 'addgallery.php', 'editgallery.php', 'editgallary.php'], true) ? 'active menu-open' : '' ?>">
           <a href="#">
             <i class="fa fa-image"></i> <span>Promotional Image</span>
             <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
           </a>
-          <ul class="treeview-menu">
-            <li class="<?= $currentPage === 'allgallery.php' ? 'active' : '' ?>"><a href="allgallery.php"><i class="fa fa-circle-o"></i> All Images</a></li>
+          <ul class="treeview-menu" <?= in_array($currentPage, ['allgallery.php', 'addgallery.php', 'editgallery.php', 'editgallary.php'], true) ? 'style="display:block;"' : '' ?>>
+            <li class="<?= in_array($currentPage, ['allgallery.php', 'editgallery.php', 'editgallary.php'], true) ? 'active' : '' ?>"><a href="allgallery.php"><i class="fa fa-circle-o"></i> All Images</a></li>
             <li class="<?= $currentPage === 'addgallery.php' ? 'active' : '' ?>"><a href="addgallery.php"><i class="fa fa-circle-o"></i> Add Image</a></li>
           </ul>
         </li>
@@ -164,13 +164,13 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
           </ul>
         </li>
 
-        <li class="treeview <?= in_array($currentPage, ['viewtransactions.php', 'allfees.php', 'view_all_fees.php', 'addfees.php', 'edit_transaction.php'], true) ? 'active' : '' ?>">
+        <li class="treeview <?= in_array($currentPage, ['viewtransactions.php', 'allfees.php', 'view_all_fees.php', 'addfees.php', 'edit_transaction.php'], true) ? 'active menu-open' : '' ?>">
           <a href="#">
             <i class="fa fa-money"></i> <span>Fees Management</span>
             <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
           </a>
-          <ul class="treeview-menu">
-            <li class="<?= $currentPage === 'viewtransactions.php' ? 'active' : '' ?>"><a href="viewtransactions.php"><i class="fa fa-circle-o"></i> View Transactions</a></li>
+          <ul class="treeview-menu" <?= in_array($currentPage, ['viewtransactions.php', 'allfees.php', 'view_all_fees.php', 'addfees.php', 'edit_transaction.php'], true) ? 'style="display:block;"' : '' ?>>
+            <li class="<?= in_array($currentPage, ['viewtransactions.php', 'edit_transaction.php'], true) ? 'active' : '' ?>"><a href="viewtransactions.php"><i class="fa fa-circle-o"></i> View Transactions</a></li>
             <li class="<?= $currentPage === 'allfees.php' ? 'active' : '' ?>"><a href="allfees.php"><i class="fa fa-circle-o"></i> All Fees</a></li>
             <li class="<?= $currentPage === 'view_all_fees.php' ? 'active' : '' ?>"><a href="view_all_fees.php"><i class="fa fa-circle-o"></i> View All Fees</a></li>
             <li class="<?= $currentPage === 'addfees.php' ? 'active' : '' ?>"><a href="addfees.php"><i class="fa fa-circle-o"></i> Add Fees</a></li>

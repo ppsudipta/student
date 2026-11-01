@@ -30,6 +30,7 @@ $polls = $con->query("
   <meta content="width=device-width, initial-scale=1" name="viewport">
   <link rel="stylesheet" href="css/bootstrap.min.css">
   <link rel="stylesheet" href="css/font-awesome.min.css">
+  <link rel="stylesheet" href="css/ionicons.min.css">
   <link rel="stylesheet" href="css/AdminLTE.min.css">
   <link rel="stylesheet" href="css/_all-skins.min.css">
 </head>
@@ -124,5 +125,9 @@ $polls = $con->query("
     </section>
   </div>
 </div>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/adminlte.min.js"></script>
 </body>
 </html>
