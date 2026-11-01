@@ -29,7 +29,7 @@ $renderTree = static function (string $title, string $icon, array $items, array 
     $menuStyle = $isOpen ? ' style="display:block;"' : '';
     echo '<li class="' . $liClass . '">';
     echo '<a href="#"><i class="' . htmlspecialchars($icon) . '"></i> <span>' . htmlspecialchars($title) . '</span>';
-    echo '<span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span></a>';
+    echo '<span class="pull-right-container"><i class="sidebar-caret pull-right"></i></span></a>';
     echo '<ul class="treeview-menu"' . $menuStyle . '>';
     foreach ($items as $item) {
         $label = $item[0];
@@ -41,6 +41,8 @@ $renderTree = static function (string $title, string $icon, array $items, array 
     echo '</ul></li>';
 };
 ?>
+<!-- Same Font Awesome for every admin page left menu -->
+<link rel="stylesheet" href="css/font-awesome.min.css">
 <style>
   /* Single consistent left panel look on every admin page */
   .main-sidebar,
@@ -92,6 +94,41 @@ $renderTree = static function (string $title, string $icon, array $items, array 
     width: 45px;
     height: 45px;
     object-fit: cover;
+  }
+
+  /* Open/close caret — CSS only, same on every page (no FA version differences) */
+  .sidebar-menu .treeview > a > .pull-right-container {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    margin-top: -7px;
+  }
+  .sidebar-menu .treeview > a > .pull-right-container > .sidebar-caret,
+  .sidebar-menu .treeview > a > .pull-right-container > .fa-angle-left {
+    display: inline-block !important;
+    width: 0 !important;
+    height: 0 !important;
+    border-style: solid !important;
+    border-width: 5px 0 5px 6px !important;
+    border-color: transparent transparent transparent #ffffff !important;
+    background: none !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transition: transform 0.2s ease;
+    transform-origin: 30% 50%;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sidebar-menu .treeview.menu-open > a > .pull-right-container > .sidebar-caret,
+  .sidebar-menu .treeview.menu-open > a > .pull-right-container > .fa-angle-left,
+  .sidebar-menu .treeview.active.menu-open > a > .pull-right-container > .sidebar-caret {
+    transform: rotate(90deg);
+  }
+  /* Hide any FA glyph text so only the CSS triangle shows */
+  .sidebar-menu .treeview > a > .pull-right-container > .sidebar-caret:before,
+  .sidebar-menu .treeview > a > .pull-right-container > .fa-angle-left:before {
+    content: none !important;
   }
 </style>
 <aside class="main-sidebar">
