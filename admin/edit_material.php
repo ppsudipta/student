@@ -59,15 +59,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $class = mysqli_real_escape_string($con, $_POST['class'] ?? '');
     $session = mysqli_real_escape_string($con, $_POST['session'] ?? '');
     $description = mysqli_real_escape_string($con, $_POST['material_description'] ?? '');
-    $type = mysqli_real_escape_string($con, $_POST['material_type'] ?? '');
+    $upload_kind = strtolower(trim((string) ($_POST['upload_kind'] ?? '')));
     $access = mysqli_real_escape_string($con, $_POST['access_level'] ?? 'class');
     $permission = mysqli_real_escape_string($con, $_POST['permission'] ?? 'no');
     $is_fav = isset($_POST['is_favorite']) ? 1 : 0;
     $file_path = $material['file_path'];
     $material_url = trim($_POST['material_url'] ?? '');
+    $allowed_categories = ['Worksheet', 'Question Paper', 'RPS', 'Others'];
+    $material_category = '';
+    $type = 'other';
 
     // Handle Vimeo video link or file replacement
-    if ($type === 'video') {
+    if ($upload_kind === 'video') {
+        $type = 'video';
+        $material_category = '';
         if ($material_url === '') {
             $_SESSION['error'] = "Please enter a Vimeo video link.";
             header("Location: edit_material.php?id=$id");
@@ -84,49 +89,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
             exit();
         }
         $file_path = $material_url;
-    } elseif (!empty($_FILES['new_file']['name'])) {
-        $file = $_FILES['new_file'];
-        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'];
-        $max_size = 10 * 1024 * 1024; // 10MB
-
-        if (!in_array($ext, $allowed)) {
-            $_SESSION['error'] = "Invalid file type. Allowed types: PDF, DOC, PPT, JPG, PNG";
+    } elseif ($upload_kind === 'other') {
+        $selected_category = trim((string) ($_POST['material_category'] ?? ''));
+        if (!in_array($selected_category, $allowed_categories, true)) {
+            $_SESSION['error'] = "Please select a category: Worksheet, Question Paper, RPS, or Others.";
             header("Location: edit_material.php?id=$id");
             exit();
         }
+        $material_category = $selected_category;
 
-        if ($file['size'] > $max_size) {
-            $_SESSION['error'] = "File too large. Maximum 10MB allowed.";
-            header("Location: edit_material.php?id=$id");
-            exit();
-        }
+        if (!empty($_FILES['new_file']['name'])) {
+            $file = $_FILES['new_file'];
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $allowed = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'];
+            $max_size = 10 * 1024 * 1024; // 10MB
 
-        // Create upload directory if it doesn't exist
-        $upload_dir = 'uploads/materials/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0755, true);
-        }
-
-        $new_name = uniqid() . '_' . preg_replace('/[^a-z0-9\.]/i', '_', $file['name']);
-        $destination = $upload_dir . $new_name;
-
-        if (move_uploaded_file($file['tmp_name'], $destination)) {
-            // Delete old file if it's not the default one
-            if ($file_path && file_exists($file_path) && strpos($file_path, 'uploads/') !== false) {
-                unlink($file_path);
+            if (!in_array($ext, $allowed)) {
+                $_SESSION['error'] = "Invalid file type. Allowed types: PDF, DOC, PPT, JPG, PNG";
+                header("Location: edit_material.php?id=$id");
+                exit();
             }
-            $file_path = $destination;
+
+            if ($file['size'] > $max_size) {
+                $_SESSION['error'] = "File too large. Maximum 10MB allowed.";
+                header("Location: edit_material.php?id=$id");
+                exit();
+            }
+
+            // Create upload directory if it doesn't exist
+            $upload_dir = 'uploads/materials/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+
+            $new_name = uniqid() . '_' . preg_replace('/[^a-z0-9\.]/i', '_', $file['name']);
+            $destination = $upload_dir . $new_name;
+
+            if (move_uploaded_file($file['tmp_name'], $destination)) {
+                // Delete old file if it's not the default one
+                if ($file_path && file_exists($file_path) && strpos($file_path, 'uploads/') !== false) {
+                    unlink($file_path);
+                }
+                $file_path = $destination;
+                if (in_array($ext, ['pdf'], true)) {
+                    $type = 'pdf';
+                } elseif (in_array($ext, ['doc', 'docx'], true)) {
+                    $type = 'doc';
+                } elseif (in_array($ext, ['ppt', 'pptx'], true)) {
+                    $type = 'ppt';
+                } elseif (in_array($ext, ['jpg', 'jpeg', 'png'], true)) {
+                    $type = 'image';
+                } else {
+                    $type = 'other';
+                }
+            } else {
+                $_SESSION['error'] = "File upload failed. Please try again.";
+                header("Location: edit_material.php?id=$id");
+                exit();
+            }
         } else {
-            $_SESSION['error'] = "File upload failed. Please try again.";
-            header("Location: edit_material.php?id=$id");
-            exit();
+            // Keep existing file type unless it was previously a video
+            $existingType = strtolower((string) ($material['material_type'] ?? 'other'));
+            $type = $existingType === 'video' ? 'other' : ($existingType !== '' ? $existingType : 'other');
+            if (empty($file_path) || filter_var($file_path, FILTER_VALIDATE_URL)) {
+                $_SESSION['error'] = "Please upload a file for this material.";
+                header("Location: edit_material.php?id=$id");
+                exit();
+            }
         }
+    } else {
+        $_SESSION['error'] = "Please select Video (link only) or Other (Worksheet / Question Paper / RPS / Others).";
+        header("Location: edit_material.php?id=$id");
+        exit();
     }
 
     // Update material with prepared statement
     $stmt = $con->prepare("UPDATE student_materials SET 
         material_title = ?,
+        material_category = ?,
         material_description = ?,
         material_type = ?,
         file_path = ?,
@@ -139,8 +179,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
         upload_date = NOW()
         WHERE id = ?");
 
-    $stmt->bind_param("sssssssisss", 
-        $title, 
+    $stmt->bind_param("ssssssssissi", 
+        $title,
+        $material_category,
         $description, 
         $type, 
         $file_path, 
@@ -273,28 +314,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
                   </div>
                   <div class="col-md-4">
                     <div class="form-group">
-                      <label>Material Type*</label>
-                      <select name="material_type" class="form-control select2" required>
-                        <?php
-                          $types = [
-                            'pdf' => 'PDF Document',
-                            'doc' => 'Word Document',
-                            'docx' => 'Word Document',
-                            'ppt' => 'PowerPoint',
-                            'pptx' => 'PowerPoint',
-                            'video' => 'Video',
-                            'image' => 'Image',
-                            'other' => 'Other'
-                          ];
-                          foreach ($types as $key => $label) {
-                            $selected = $material['material_type'] === $key ? 'selected' : '';
-                            echo "<option value='" . htmlspecialchars($key) . "' $selected>" . 
-                                 htmlspecialchars($label) . "</option>";
-                          }
-                        ?>
+                      <label>Upload Type*</label>
+                      <?php $isVideoMaterial = strtolower((string) ($material['material_type'] ?? '')) === 'video'; ?>
+                      <select name="upload_kind" id="upload_kind" class="form-control select2" required>
+                        <option value="video" <?= $isVideoMaterial ? 'selected' : '' ?>>Video (Vimeo link only)</option>
+                        <option value="other" <?= !$isVideoMaterial ? 'selected' : '' ?>>Other (file upload)</option>
                       </select>
                     </div>
                   </div>
+                </div>
+
+                <div class="form-group" id="material_category_group">
+                  <label>Category*</label>
+                  <?php
+                    $currentCategory = (string) ($material['material_category'] ?? '');
+                    $categories = ['Worksheet', 'Question Paper', 'RPS', 'Others'];
+                  ?>
+                  <select name="material_category" id="material_category" class="form-control select2">
+                    <option value="">-- Select Category --</option>
+                    <?php foreach ($categories as $cat): ?>
+                      <option value="<?= htmlspecialchars($cat) ?>" <?= $currentCategory === $cat ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($cat) ?>
+                      </option>
+                    <?php endforeach; ?>
+                  </select>
+                  <p class="help-block">App tabs: Worksheet, Question Paper, RPS, Others.</p>
                 </div>
 
                 <div class="form-group">
@@ -411,17 +455,21 @@ $(document).ready(function() {
   });
 
   function updateMaterialTypeFields() {
-    var type = $('select[name="material_type"]').val();
-    var isVideo = type === 'video';
+    var kind = $('#upload_kind').val();
+    var isVideo = kind === 'video';
+    var isOther = kind === 'other';
     $('#video_url_group').toggle(isVideo);
-    $('#file_upload_group').toggle(!isVideo);
+    $('#file_upload_group').toggle(isOther);
+    $('#material_category_group').toggle(isOther);
     $('#material_url').prop('disabled', !isVideo).prop('required', isVideo);
+    $('#material_category').prop('required', isOther);
     if (isVideo) {
       $('#new_file').val('');
+      $('#material_category').val('').trigger('change');
     }
   }
 
-  $('select[name="material_type"]').on('change', updateMaterialTypeFields);
+  $('#upload_kind').on('change', updateMaterialTypeFields);
   updateMaterialTypeFields();
 });
 </script>

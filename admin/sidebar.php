@@ -207,30 +207,6 @@ $currentPage = basename($_SERVER['PHP_SELF'] ?? '');
           </ul>
         </li>
 
-        <li class="treeview <?= in_array($currentPage, ['add_homework.php', 'view_homework.php', 'edit_homework.php'], true) ? 'active' : '' ?>">
-          <a href="#">
-            <i class="fa fa-pencil-square-o"></i> <span>Homework</span>
-            <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
-          </a>
-          <ul class="treeview-menu">
-            <li class="<?= $currentPage === 'view_homework.php' ? 'active' : '' ?>"><a href="view_homework.php"><i class="fa fa-circle-o"></i> All Homework</a></li>
-            <li class="<?= $currentPage === 'add_homework.php' ? 'active' : '' ?>"><a href="add_homework.php"><i class="fa fa-circle-o"></i> Give Homework</a></li>
-          </ul>
-        </li>
-
-        <li class="treeview <?= in_array($currentPage, ['exam_reminder.php', 'all_reminder_msg.php', 'fees_reminder_msg.php', 'all_fees_reminder.php'], true) ? 'active' : '' ?>">
-          <a href="#">
-            <i class="fa fa-envelope"></i> <span>Reminders</span>
-            <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
-          </a>
-          <ul class="treeview-menu">
-            <li class="<?= $currentPage === 'exam_reminder.php' ? 'active' : '' ?>"><a href="exam_reminder.php"><i class="fa fa-circle-o"></i> Exam Reminder</a></li>
-            <li class="<?= $currentPage === 'all_reminder_msg.php' ? 'active' : '' ?>"><a href="all_reminder_msg.php"><i class="fa fa-circle-o"></i> All Exam Reminders</a></li>
-            <li class="<?= $currentPage === 'fees_reminder_msg.php' ? 'active' : '' ?>"><a href="fees_reminder_msg.php"><i class="fa fa-circle-o"></i> Fees Reminder</a></li>
-            <li class="<?= $currentPage === 'all_fees_reminder.php' ? 'active' : '' ?>"><a href="all_fees_reminder.php"><i class="fa fa-circle-o"></i> All Fees Reminders</a></li>
-          </ul>
-        </li>
-
         <li>
           <a onclick="return confirm('Are you sure you want to logout?');" href="logout.php">
             <i class="fa fa-sign-out"></i> <span>Logout</span>

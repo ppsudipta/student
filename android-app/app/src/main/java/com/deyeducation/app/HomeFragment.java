@@ -90,18 +90,13 @@ public class HomeFragment extends Fragment {
         promoPager = view.findViewById(R.id.promoPager);
         LinearLayout promoDots = view.findViewById(R.id.promoDots);
 
-        addServiceItem(serviceGrid, R.drawable.ic_menu_fees, getString(R.string.academy_details), v ->
-                activity.showFragment(
-                        AboutContentFragment.newInstance(AboutContentFragment.MODE_ACADEMY),
-                        getString(R.string.academy_details),
-                        true));
-        addServiceItem(serviceGrid, R.drawable.ic_menu_about, getString(R.string.about_us), v ->
+        addServiceItem(serviceGrid, R.drawable.ic_dey_logo, getString(R.string.dey_education), v ->
                 activity.showFragment(
                         AboutContentFragment.newInstance(AboutContentFragment.MODE_ABOUT),
-                        getString(R.string.about_us_title),
+                        getString(R.string.dey_education),
                         true));
-        addServiceItem(serviceGrid, R.drawable.ic_menu_gallery, getString(R.string.gallery), v ->
-                activity.selectBottomNav(R.id.nav_gallery));
+        addServiceItem(serviceGrid, R.drawable.ic_menu_fees, getString(R.string.fees), v ->
+                activity.showFragment(new FeesFragment(), getString(R.string.fees), true));
         addServiceItem(serviceGrid, R.drawable.ic_menu_more, getString(R.string.more), v -> showMoreSheet(activity));
 
         view.findViewById(R.id.btnNotifications).setOnClickListener(v ->
@@ -203,10 +198,6 @@ public class HomeFragment extends Fragment {
         BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
         View sheet = LayoutInflater.from(requireContext()).inflate(R.layout.bottom_sheet_more, null);
         GridLayout moreGrid = sheet.findViewById(R.id.moreGrid);
-        addServiceItem(moreGrid, R.drawable.ic_menu_gallery, getString(R.string.gallery), v -> {
-            dialog.dismiss();
-            activity.selectBottomNav(R.id.nav_gallery);
-        });
         addServiceItem(moreGrid, R.drawable.ic_menu_fees, getString(R.string.courses), v -> {
             dialog.dismiss();
             activity.showFragment(new CoursesGridFragment(), getString(R.string.courses), true);

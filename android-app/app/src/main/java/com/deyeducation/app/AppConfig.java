@@ -20,6 +20,9 @@ public final class AppConfig {
     public static final String DEFAULT_YOUTUBE_URL = "https://www.youtube.com/@TanoyKumarDey";
     public static final String DEFAULT_YOUTUBE_HANDLE = "@TanoyKumarDey";
 
+    public static final String FACEBOOK_URL = "https://www.facebook.com/share/1MNUh6VTT2/";
+    public static final String INSTAGRAM_URL = "https://www.instagram.com/dr_tanoy_kumar_dey?xtok=cXFwbG9tZzNlY3lz";
+
     private AppConfig() {
     }
 }

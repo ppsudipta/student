@@ -66,7 +66,7 @@ public class ProfileFragment extends Fragment {
                 v -> activity.showFragment(new ProfileAccountFragment(),
                         getString(R.string.my_account_details), true));
 
-        setupMenuRow(view.findViewById(R.id.menuPaymentMethod), R.drawable.ic_dey_logo,
+        setupMenuRow(view.findViewById(R.id.menuPaymentMethod), R.drawable.ic_menu_money,
                 getString(R.string.fees),
                 v -> activity.showFragment(new FeesFragment(), getString(R.string.fees)));
 
@@ -79,7 +79,7 @@ public class ProfileFragment extends Fragment {
                 getString(R.string.notifications_menu),
                 v -> activity.selectBottomNav(R.id.nav_notices));
 
-        setupMenuRow(view.findViewById(R.id.menuProgressReport), R.drawable.ic_menu_attendance,
+        setupMenuRow(view.findViewById(R.id.menuProgressReport), R.drawable.ic_menu_register_book,
                 getString(R.string.progress_report),
                 v -> activity.showFragment(new AttendanceFragment(),
                         getString(R.string.attendance_report_title), true));

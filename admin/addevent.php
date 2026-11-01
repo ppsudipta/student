@@ -11,12 +11,15 @@ if (isset($_POST['submit'])) {
     // Validate and sanitize inputs
     $title = mysqli_real_escape_string($con, $_POST['title']);
     $description = mysqli_real_escape_string($con, $_POST['description']);
-    $material_type = mysqli_real_escape_string($con, $_POST['material_type']);
+    $upload_kind = strtolower(trim((string) ($_POST['upload_kind'] ?? '')));
     $subject = "no subject";
     $permission = mysqli_real_escape_string($con, $_POST['permission']);
     $is_favorite = isset($_POST['is_favorite']) ? 1 : 0;
     $access_level = 'class'; // Default access level
-    
+    $allowed_categories = ['Worksheet', 'Question Paper', 'RPS', 'Others'];
+    $material_category = '';
+    $material_type = 'other';
+
     // Handle recipient selection
     $recipient_type = $_POST['recipient_type'];
     $student_id = 0;
@@ -52,7 +55,9 @@ if (isset($_POST['submit'])) {
     // Handle file upload or Vimeo video link
     $file_path = '';
     $material_url = trim($_POST['material_url'] ?? '');
-    if ($material_type === 'video') {
+    if ($upload_kind === 'video') {
+        $material_type = 'video';
+        $material_category = '';
         if ($material_url === '') {
             $_SESSION['error'] = "Please enter a Vimeo video link.";
             header("Location: addevent.php");
@@ -69,7 +74,21 @@ if (isset($_POST['submit'])) {
             exit();
         }
         $file_path = $material_url;
-    } elseif (isset($_FILES['material_file']) && $_FILES['material_file']['error'] !== UPLOAD_ERR_NO_FILE) {
+    } elseif ($upload_kind === 'other') {
+        $selected_category = trim((string) ($_POST['material_category'] ?? ''));
+        if (!in_array($selected_category, $allowed_categories, true)) {
+            $_SESSION['error'] = "Please select a category: Worksheet, Question Paper, RPS, or Others.";
+            header("Location: addevent.php");
+            exit();
+        }
+        $material_category = mysqli_real_escape_string($con, $selected_category);
+
+        if (!(isset($_FILES['material_file']) && $_FILES['material_file']['error'] !== UPLOAD_ERR_NO_FILE)) {
+            $_SESSION['error'] = "Please upload a file for this material.";
+            header("Location: addevent.php");
+            exit();
+        }
+
         $file_name = $_FILES['material_file']['name'];
         $file_tmp = $_FILES['material_file']['tmp_name'];
         $file_size = $_FILES['material_file']['size'];
@@ -100,6 +119,18 @@ if (isset($_POST['submit'])) {
             header("Location: addevent.php");
             exit();
         }
+
+        if (in_array($file_ext, ['pdf'], true)) {
+            $material_type = 'pdf';
+        } elseif (in_array($file_ext, ['doc', 'docx'], true)) {
+            $material_type = 'doc';
+        } elseif (in_array($file_ext, ['ppt', 'pptx'], true)) {
+            $material_type = 'ppt';
+        } elseif (in_array($file_ext, ['jpg', 'jpeg', 'png'], true)) {
+            $material_type = 'image';
+        } else {
+            $material_type = 'other';
+        }
         
         $upload_dir = 'uploads/materials/';
         if (!is_dir($upload_dir)) {
@@ -115,18 +146,18 @@ if (isset($_POST['submit'])) {
             exit();
         }
     } else {
-        $_SESSION['error'] = "Please upload a file or enter a Vimeo link for video materials.";
+        $_SESSION['error'] = "Please select Video (link only) or Other (Worksheet / Question Paper / RPS / Others).";
         header("Location: addevent.php");
         exit();
     }
 
     // Insert into database
     $query = "INSERT INTO student_materials (
-        student_id, student_name, student_email, material_title, 
+        student_id, student_name, student_email, material_title, material_category,
         material_description, material_type, file_path, subject, 
         class, session, is_favorite, access_level, permission
     ) VALUES (
-        '$student_id', '$student_name', '$student_email', '$title', 
+        '$student_id', '$student_name', '$student_email', '$title', '$material_category',
         '$description', '$material_type', '$file_path', '$subject', 
         '$class', '$session', '$is_favorite', '$access_level', '$permission'
     )";
@@ -154,11 +185,11 @@ if (isset($_POST['submit'])) {
                     
                     // Insert individual record for each student
                     $individual_query = "INSERT INTO student_materials (
-                        student_id, student_name, student_email, material_title, 
+                        student_id, student_name, student_email, material_title, material_category,
                         material_description, material_type, file_path, subject, 
                         class, session, is_favorite, access_level, permission, parent_material_id
                     ) VALUES (
-                        '$student_id', '$student_name', '$student_email', '$title', 
+                        '$student_id', '$student_name', '$student_email', '$title', '$material_category',
                         '$description', '$material_type', '$file_path', '$subject', 
                         '$student_class', '$student_session', '$is_favorite', 'individual', '$permission', '$material_id'
                     )";
@@ -307,28 +338,36 @@ if (isset($_POST['submit'])) {
               </div>
 
               <div class="form-group">
-                <label>Material Type*</label>
-                <select class="form-control" name="material_type" required>
+                <label>Upload Type*</label>
+                <select class="form-control" name="upload_kind" id="upload_kind" required>
                   <option value="">-- Select Type --</option>
-                  <option value="pdf">PDF</option>
-                  <option value="doc">Word</option>
-                  <option value="ppt">PowerPoint</option>
-                  <option value="video">Video</option>
-                  <option value="image">Image</option>
-                  <option value="other">Other</option>
+                  <option value="video">Video (Vimeo link only)</option>
+                  <option value="other">Other (file upload)</option>
                 </select>
               </div>
 
-              <div class="form-group" id="video_url_group">
-                <label>Vimeo Video Link*</label>
-                <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789">
-                <p class="help-block">Select <strong>Video</strong> type and paste a Vimeo link. File upload is not used for videos.</p>
+              <div class="form-group" id="material_category_group" style="display:none;">
+                <label>Category*</label>
+                <select class="form-control" name="material_category" id="material_category">
+                  <option value="">-- Select Category --</option>
+                  <option value="Worksheet">1. Worksheet</option>
+                  <option value="Question Paper">2. Question Paper</option>
+                  <option value="RPS">3. RPS</option>
+                  <option value="Others">4. Others</option>
+                </select>
+                <p class="help-block">These categories appear as tabs in the Android app Materials section.</p>
               </div>
 
-              <div class="form-group" id="file_upload_group">
-                <label>Upload File (Max 5MB)</label>
+              <div class="form-group" id="video_url_group" style="display:none;">
+                <label>Vimeo Video Link*</label>
+                <input type="url" name="material_url" id="material_url" class="form-control" placeholder="https://vimeo.com/123456789">
+                <p class="help-block">Video materials use a Vimeo link only. No file upload.</p>
+              </div>
+
+              <div class="form-group" id="file_upload_group" style="display:none;">
+                <label>Upload File (Max 5MB)*</label>
                 <input type="file" name="material_file" id="material_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png">
-                <p class="help-block">For PDF, Word, PowerPoint, or image materials only.</p>
+                <p class="help-block">For Worksheet, Question Paper, RPS, or Others — PDF, Word, PowerPoint, or image.</p>
               </div>
 
               <div class="form-group">
@@ -383,19 +422,27 @@ if (isset($_POST['submit'])) {
     $('.select2').select2();
 
     function updateMaterialTypeFields() {
-      const type = $('select[name="material_type"]').val();
-      const isVideo = type === 'video';
+      const kind = $('#upload_kind').val();
+      const isVideo = kind === 'video';
+      const isOther = kind === 'other';
       $('#video_url_group').toggle(isVideo);
-      $('#file_upload_group').toggle(!isVideo);
+      $('#file_upload_group').toggle(isOther);
+      $('#material_category_group').toggle(isOther);
       $('#material_url').prop('disabled', !isVideo).prop('required', isVideo);
+      $('#material_file').prop('required', isOther);
+      $('#material_category').prop('required', isOther);
       if (!isVideo) {
         $('#material_url').val('');
       } else {
         $('#material_file').val('');
+        $('#material_category').val('');
+      }
+      if (!isOther) {
+        $('#material_category').val('');
       }
     }
 
-    $('select[name="material_type"]').on('change', updateMaterialTypeFields);
+    $('#upload_kind').on('change', updateMaterialTypeFields);
     updateMaterialTypeFields();
   });
 

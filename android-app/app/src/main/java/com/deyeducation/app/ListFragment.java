@@ -242,19 +242,22 @@ public class ListFragment extends Fragment {
             case MATERIAL_CAT_VIDEO:
                 return item.hasVideo;
             case MATERIAL_CAT_WORKSHEET:
-                return "worksheet".equals(category);
+                return !item.hasVideo && "worksheet".equals(category);
             case MATERIAL_CAT_QUESTION:
-                return "question paper".equals(category) || category.contains("question");
+                return !item.hasVideo
+                        && ("question paper".equals(category) || category.contains("question"));
             case MATERIAL_CAT_RPS:
-                return "rps".equals(category);
+                return !item.hasVideo && "rps".equals(category);
             case MATERIAL_CAT_OTHERS:
                 if (item.hasVideo) {
                     return false;
                 }
-                return !"worksheet".equals(category)
+                return "others".equals(category)
+                        || "other".equals(category)
+                        || (!"worksheet".equals(category)
                         && !"question paper".equals(category)
                         && !category.contains("question")
-                        && !"rps".equals(category);
+                        && !"rps".equals(category));
             default:
                 return true;
         }
@@ -423,6 +426,9 @@ public class ListFragment extends Fragment {
             ListItem item = new ListItem();
             item.title = first(row, "material_title", "name", "title");
             item.materialCategory = row.optString("material_category", "");
+            if (item.materialCategory.isEmpty() || "null".equalsIgnoreCase(item.materialCategory)) {
+                item.materialCategory = row.optString("material_type", "");
+            }
             item.subtitle = UrlHelper.cleanHtml(first(row, "material_description", "description", "subject"));
             if (item.subtitle.isEmpty() && !item.materialCategory.isEmpty()) {
                 item.subtitle = item.materialCategory;

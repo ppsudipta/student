@@ -148,6 +148,30 @@
                             app:iconGravity="textStart"
                             app:iconPadding="10dp"
                             app:iconTint="@null" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSubscribeFacebook"
+                            style="@style/Widget.DeyEducation.Button.Primary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/subscribe_facebook"
+                            app:icon="@drawable/ic_facebook"
+                            app:iconGravity="textStart"
+                            app:iconPadding="10dp"
+                            app:iconTint="@null" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSubscribeInstagram"
+                            style="@style/Widget.DeyEducation.Button.Primary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/subscribe_instagram"
+                            app:icon="@drawable/ic_instagram"
+                            app:iconGravity="textStart"
+                            app:iconPadding="10dp"
+                            app:iconTint="@null" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>

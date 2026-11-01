@@ -77,6 +77,8 @@ public class AboutContentFragment extends Fragment {
         contactCard = view.findViewById(R.id.contactCard);
         mapsButton = view.findViewById(R.id.btnOpenMaps);
         View youtubeButton = view.findViewById(R.id.btnSubscribeYoutube);
+        View facebookButton = view.findViewById(R.id.btnSubscribeFacebook);
+        View instagramButton = view.findViewById(R.id.btnSubscribeInstagram);
         centersSectionTitle = view.findViewById(R.id.centersSectionTitle);
         centersContainer = view.findViewById(R.id.centersContainer);
         teachersSectionTitle = view.findViewById(R.id.teachersSectionTitle);
@@ -100,6 +102,14 @@ public class AboutContentFragment extends Fragment {
                 }
             });
         }
+        if (facebookButton != null) {
+            facebookButton.setOnClickListener(v ->
+                    LinkOpener.open(requireContext(), AppConfig.FACEBOOK_URL));
+        }
+        if (instagramButton != null) {
+            instagramButton.setOnClickListener(v ->
+                    LinkOpener.open(requireContext(), AppConfig.INSTAGRAM_URL));
+        }
 
         loadAbout();
     }
@@ -111,7 +121,7 @@ public class AboutContentFragment extends Fragment {
             String mode = getMode();
             int titleRes = MODE_ACADEMY.equals(mode)
                     ? R.string.academy_details
-                    : R.string.about_us_title;
+                    : R.string.dey_education;
             ((MainActivity) getActivity()).setScreenTitle(getString(titleRes));
         }
     }
