@@ -34,31 +34,24 @@ public class LoginActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_login);
         progressBar = findViewById(R.id.loginProgress);
-        TextInputEditText baseUrl = findViewById(R.id.inputBaseUrl);
         TextInputEditText mobile = findViewById(R.id.inputMobile);
         TextInputEditText password = findViewById(R.id.inputPassword);
         MaterialButton login = findViewById(R.id.btnLogin);
 
-        baseUrl.setText(AppConfig.DEFAULT_BASE_URL);
-
         findViewById(R.id.linkRegister).setOnClickListener(v -> {
-            String base = baseUrl.getText() == null ? "" : baseUrl.getText().toString().trim();
             Intent intent = new Intent(this, RegisterActivity.class);
-            if (!base.isEmpty()) {
-                intent.putExtra(RegisterActivity.EXTRA_BASE_URL, base);
-            }
+            intent.putExtra(RegisterActivity.EXTRA_BASE_URL, AppConfig.DEFAULT_BASE_URL);
             startActivity(intent);
         });
 
         login.setOnClickListener(v -> {
-            String base = baseUrl.getText() == null ? "" : baseUrl.getText().toString().trim();
             String phone = mobile.getText() == null ? "" : mobile.getText().toString().trim();
             String pass = password.getText() == null ? "" : password.getText().toString();
-            if (base.isEmpty() || phone.isEmpty() || pass.isEmpty()) {
+            if (phone.isEmpty() || pass.isEmpty()) {
                 UiUtils.toast(this, getString(R.string.fill_all_fields));
                 return;
             }
-            session.setBaseUrl(base);
+            session.setBaseUrl(AppConfig.DEFAULT_BASE_URL);
             setLoading(true);
             JSONObject body = new JSONObject();
             try {
