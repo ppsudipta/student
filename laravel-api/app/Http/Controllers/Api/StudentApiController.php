@@ -162,6 +162,7 @@ class StudentApiController extends Controller
     {
         $student = $this->optionalStudentFromRequest($request);
         $company = Company::query()->first();
+        $unvotedPolls = $student ? $this->unvotedPollsForStudent($student) : [];
 
         return response()->json([
             'company' => $company ? $this->withImageUrl($company->toArray()) : null,
@@ -182,7 +183,8 @@ class StudentApiController extends Controller
             ),
             'notices_count' => $student ? Notice::query()->where('student_id', $student->id)->where('seen', 0)->count() : 0,
             'has_pending_fees' => $student ? $this->hasPendingFees($student) : false,
-            'unvoted_polls' => $student ? $this->unvotedPollsForStudent($student) : [],
+            'unvoted_polls' => $unvotedPolls,
+            'unvoted_polls_count' => count($unvotedPolls),
         ]);
     }
 

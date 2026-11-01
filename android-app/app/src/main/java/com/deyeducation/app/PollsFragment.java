@@ -150,6 +150,9 @@ public class PollsFragment extends Fragment {
             holder.question.setText(question);
             holder.meta.setText(buildMeta(poll, item.optJSONArray("options")));
             holder.status.setText(hasVoted ? R.string.poll_voted : R.string.poll_vote_now);
+            if (holder.unreadDot != null) {
+                holder.unreadDot.setVisibility(hasVoted ? View.GONE : View.VISIBLE);
+            }
 
             int color = ContextCompat.getColor(requireContext(),
                     hasVoted ? R.color.success : R.color.primary);
@@ -202,12 +205,14 @@ public class PollsFragment extends Fragment {
             final TextView question;
             final TextView meta;
             final TextView status;
+            final View unreadDot;
 
             Holder(@NonNull View itemView) {
                 super(itemView);
                 question = itemView.findViewById(R.id.tvPollQuestion);
                 meta = itemView.findViewById(R.id.tvPollMeta);
                 status = itemView.findViewById(R.id.tvPollStatus);
+                unreadDot = itemView.findViewById(R.id.pollUnreadDot);
             }
         }
     }

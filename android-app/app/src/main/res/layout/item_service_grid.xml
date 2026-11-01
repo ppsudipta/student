@@ -21,6 +21,14 @@
             android:layout_height="32dp"
             android:layout_gravity="center"
             android:contentDescription="@null" />
+
+        <View
+            android:id="@+id/serviceBadgeDot"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_gravity="top|end"
+            android:background="@drawable/bg_notification_dot"
+            android:visibility="gone" />
     </FrameLayout>
 
     <TextView

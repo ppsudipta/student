@@ -35,6 +35,8 @@ public class HomeFragment extends Fragment {
     private SwipeRefreshLayout swipeRefresh;
     private TextView feeBanner;
     private View notificationDot;
+    private View pollServiceDot;
+    private boolean homeLoadedOnce;
     private ViewPager2 promoPager;
     private ViewPager2.OnPageChangeCallback promoPageCallback;
     private final Handler promoHandler = new Handler(Looper.getMainLooper());
@@ -86,8 +88,9 @@ public class HomeFragment extends Fragment {
                         true));
         addServiceItem(serviceGrid, R.drawable.ic_menu_fees, getString(R.string.fees_quick), v ->
                 activity.showFragment(new FeesFragment(), getString(R.string.fees), true));
-        addServiceItem(serviceGrid, R.drawable.ic_menu_poll, getString(R.string.polls), v ->
+        View pollService = addServiceItem(serviceGrid, R.drawable.ic_menu_poll, getString(R.string.polls), v ->
                 activity.showFragment(new PollsFragment(), getString(R.string.polls), true));
+        pollServiceDot = pollService.findViewById(R.id.serviceBadgeDot);
         addServiceItem(serviceGrid, R.drawable.ic_menu_more, getString(R.string.more), v -> showMoreSheet(activity));
 
         view.findViewById(R.id.btnNotifications).setOnClickListener(v ->
@@ -113,11 +116,47 @@ public class HomeFragment extends Fragment {
             ((MainActivity) getActivity()).setScreenTitle(getString(R.string.home));
             ((MainActivity) getActivity()).refreshUnreadNoticesBadge();
         }
+        // Refresh unvoted-poll red dot after voting / returning to home
+        if (homeLoadedOnce) {
+            refreshPollServiceDot();
+        }
+    }
+
+    private void refreshPollServiceDot() {
+        if (api == null || pollServiceDot == null) {
+            return;
+        }
+        api.get("/home", true, new ApiClient.Callback() {
+            @Override
+            public void onSuccess(JSONObject json) {
+                if (!isAdded()) {
+                    return;
+                }
+                requireActivity().runOnUiThread(() -> {
+                    JSONArray unvotedPolls = json.optJSONArray("unvoted_polls");
+                    updatePollServiceDot(unvotedPolls != null && unvotedPolls.length() > 0);
+                    if (notificationDot != null) {
+                        notificationDot.setVisibility(json.optInt("notices_count") > 0 ? View.VISIBLE : View.GONE);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                // Keep last known badge state on soft refresh failure.
+            }
+        });
     }
 
     public void updateNotificationDot(int count) {
         if (notificationDot != null) {
             notificationDot.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void updatePollServiceDot(boolean hasUnvoted) {
+        if (pollServiceDot != null) {
+            pollServiceDot.setVisibility(hasUnvoted ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -155,7 +194,7 @@ public class HomeFragment extends Fragment {
         promoHandler.removeCallbacks(promoAutoTick);
     }
 
-    private void addServiceItem(GridLayout grid, int menuIconRes, String label,
+    private View addServiceItem(GridLayout grid, int menuIconRes, String label,
                                 View.OnClickListener click) {
         View item = LayoutInflater.from(requireContext()).inflate(R.layout.item_service_grid, grid, false);
         View circle = item.findViewById(R.id.serviceCircle);
@@ -174,12 +213,17 @@ public class HomeFragment extends Fragment {
         icon.setColorFilter(null);
         TextView labelView = item.findViewById(R.id.serviceLabel);
         labelView.setText(label);
+        View badge = item.findViewById(R.id.serviceBadgeDot);
+        if (badge != null) {
+            badge.setVisibility(View.GONE);
+        }
         item.setOnClickListener(click);
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
         params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
         item.setLayoutParams(params);
         grid.addView(item);
+        return item;
     }
 
     private void showMoreSheet(MainActivity activity) {
@@ -238,6 +282,9 @@ public class HomeFragment extends Fragment {
                     }
                     feeBanner.setVisibility(json.optBoolean("has_pending_fees") ? View.VISIBLE : View.GONE);
                     notificationDot.setVisibility(json.optInt("notices_count") > 0 ? View.VISIBLE : View.GONE);
+                    JSONArray unvotedPolls = json.optJSONArray("unvoted_polls");
+                    updatePollServiceDot(unvotedPolls != null && unvotedPolls.length() > 0);
+                    homeLoadedOnce = true;
                     bindCourses(coursesContainer, json.optJSONArray("events"));
                     bindPromotions(promoSection, promoDots, json.optJSONArray("promotions"));
                 });
