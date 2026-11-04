@@ -6,6 +6,9 @@
 *.aab
 local.properties
 
+# Icon tooling
+/tools-icon/node_modules/
+
 # Android Studio
 .idea/
 *.iml

@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Full-bleed logo for adaptive icon (fills circular/squircle mask, no white pad). -->
 <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
     android:gravity="fill"
-    android:src="@drawable/ic_dey_logo" />
+    android:src="@mipmap/ic_launcher_foreground" />
