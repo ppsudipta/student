@@ -20,30 +20,55 @@ function hasUnseenNotices($con, $student_id) {
 
 // Check if current user has unseen notices
 $hasUnseen = hasUnseenNotices($con, $student_id); // Replace $student_id with your actual student ID variable
-// Function to check if fees are pending for current month
-function hasPendingFees($con, $registration_code) {
-    $current_month = date('F'); // Get current month name (e.g., "September")
-    
-    // Check if there's a successful payment for current month
-    $query = "SELECT COUNT(*) as count FROM donations 
-              WHERE student_registration_code = '$registration_code' 
-              AND payment_reason = '$current_month' 
-              AND status = 'success'";
-    
-    $result = $con->query($query);
-    
-    if ($result && $row = $result->fetch_assoc()) {
-        return $row['count'] == 0; // No payment found for current month
+// Same rule as home.php / Android API: both of last 2 months unpaid,
+// only for months on/after student join month.
+function hasPendingFees($con, $registration_code, $join_date = '')
+{
+  $joinTs = strtotime((string) $join_date);
+  if ($joinTs === false || (string) $join_date === '' || (string) $join_date === '0000-00-00') {
+    return false;
+  }
+  $joinMonthStart = strtotime(date('Y-m-01', $joinTs));
+
+  $periods = [
+    strtotime('first day of -2 months'),
+    strtotime('first day of -1 month'),
+  ];
+
+  $applicable = 0;
+  $unpaid = 0;
+
+  foreach ($periods as $periodStart) {
+    if ($periodStart < $joinMonthStart) {
+      continue;
     }
-    
-    return true; // Assume pending if there's an error
+
+    $applicable++;
+    $monthName = date('F', $periodStart);
+    $year = (int) date('Y', $periodStart);
+
+    $query = "SELECT 1 FROM donations
+              WHERE student_registration_code = ?
+                AND payment_reason = ?
+                AND YEAR(donation_date) = ?
+                AND status = 'success'
+              LIMIT 1";
+    $stmt = $con->prepare($query);
+    $stmt->bind_param("ssi", $registration_code, $monthName, $year);
+    $stmt->execute();
+    $paid = $stmt->get_result()->num_rows > 0;
+
+    if (!$paid) {
+      $unpaid++;
+    }
+  }
+
+  return $applicable >= 2 && $unpaid === 2;
 }
 
-// Check if current user has unseen notices
 $hasUnseen = hasUnseenNotices($con, $student_id);
-
-// Check if fees are pending for current month
-$hasPendingFees = hasPendingFees($con, $registration_code);
+$student_join_date = $row2['date'] ?? '';
+$hasPendingFees = hasPendingFees($con, $registration_code, $student_join_date);
 ?>
 
 

@@ -1713,32 +1713,55 @@ class StudentApiController extends Controller
 
     private function hasPendingFees(Student $student): bool
     {
-        // Banner when both of the last 2 months are unpaid (no amounts shown in app).
+        // Banner only when both of the last 2 months are unpaid AND those months
+        // fall on/after the student join month (skip new registrations).
+        $joinMonth = $this->studentJoinMonth($student);
+        if ($joinMonth === null) {
+            return false;
+        }
+
         $periods = [
-            [
-                'month' => now()->subMonths(2)->format('F'),
-                'year' => now()->subMonths(2)->year,
-            ],
-            [
-                'month' => now()->subMonth()->format('F'),
-                'year' => now()->subMonth()->year,
-            ],
+            now()->subMonths(2)->startOfMonth(),
+            now()->subMonth()->startOfMonth(),
         ];
 
-        foreach ($periods as $period) {
+        $applicable = 0;
+        $unpaid = 0;
+
+        foreach ($periods as $periodStart) {
+            if ($periodStart->lt($joinMonth)) {
+                continue;
+            }
+
+            $applicable++;
+
             $paid = Donation::query()
                 ->where('student_registration_code', $student->registration_code)
-                ->where('payment_reason', $period['month'])
-                ->whereYear('donation_date', $period['year'])
+                ->where('payment_reason', $periodStart->format('F'))
+                ->whereYear('donation_date', $periodStart->year)
                 ->where('status', 'success')
                 ->exists();
 
-            if ($paid) {
-                return false;
+            if (! $paid) {
+                $unpaid++;
             }
         }
 
-        return true;
+        return $applicable >= 2 && $unpaid === 2;
+    }
+
+    private function studentJoinMonth(Student $student): ?\Carbon\Carbon
+    {
+        $raw = trim((string) ($student->date ?? ''));
+        if ($raw === '' || $raw === '0000-00-00') {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($raw)->startOfMonth();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function canAccessMaterial(Student $student, StudentMaterial $material): bool

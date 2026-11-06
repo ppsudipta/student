@@ -23,48 +23,57 @@ function hasUnseenNotices($con, $student_id)
 $hasUnseen = hasUnseenNotices($con, $student_id); // Replace $student_id with your actual student ID variable
 // Function to check if fees are pending for current month
 // Function to check if student has 2 consecutive months of pending fees
-// Function to check if student has last 2 months of pending fees
-function hasPendingFees($con, $registration_code)
+// Banner only when both of the last 2 months are unpaid AND those months
+// fall on/after the student join month (skip new registrations).
+function hasPendingFees($con, $registration_code, $join_date = '')
 {
-  // Current and last month
-  $current_month = date('F');
-  $last_month = date('F', strtotime('-1 month'));
+  $joinTs = strtotime((string) $join_date);
+  if ($joinTs === false || (string) $join_date === '' || (string) $join_date === '0000-00-00') {
+    return false;
+  }
+  $joinMonthStart = strtotime(date('Y-m-01', $joinTs));
 
-  // Months we want to check
-  $months_to_check = [$last_month, $current_month];
+  $periods = [
+    strtotime('first day of -2 months'),
+    strtotime('first day of -1 month'),
+  ];
 
-  // Count how many of these months are paid successfully
-  $query = "SELECT DISTINCT payment_reason
-              FROM donations
+  $applicable = 0;
+  $unpaid = 0;
+
+  foreach ($periods as $periodStart) {
+    if ($periodStart < $joinMonthStart) {
+      continue;
+    }
+
+    $applicable++;
+    $monthName = date('F', $periodStart);
+    $year = (int) date('Y', $periodStart);
+
+    $query = "SELECT 1 FROM donations
               WHERE student_registration_code = ?
-                AND payment_reason IN (?, ?)
-                AND status = 'success'";
+                AND payment_reason = ?
+                AND YEAR(donation_date) = ?
+                AND status = 'success'
+              LIMIT 1";
+    $stmt = $con->prepare($query);
+    $stmt->bind_param("ssi", $registration_code, $monthName, $year);
+    $stmt->execute();
+    $paid = $stmt->get_result()->num_rows > 0;
 
-  $stmt = $con->prepare($query);
-  $stmt->bind_param("sss", $registration_code, $months_to_check[0], $months_to_check[1]);
-  $stmt->execute();
-  $result = $stmt->get_result();
-
-  $paid_months = [];
-  if ($result) {
-    while ($row = $result->fetch_assoc()) {
-      $paid_months[] = $row['payment_reason'];
+    if (!$paid) {
+      $unpaid++;
     }
   }
 
-  // If neither month is in $paid_months → 2 months due
-  $unpaid_months = array_diff($months_to_check, $paid_months);
-
-  return count($unpaid_months) === 2;
+  return $applicable >= 2 && $unpaid === 2;
 }
-
-
 
 // Check if current user has unseen notices
 $hasUnseen = hasUnseenNotices($con, $student_id);
 
-// Check if fees are pending for current month
-$hasPendingFees = hasPendingFees($con, $registration_code);
+$student_join_date = $row2['date'] ?? '';
+$hasPendingFees = hasPendingFees($con, $registration_code, $student_join_date);
 ?>
 
 
@@ -160,7 +169,7 @@ $hasPendingFees = hasPendingFees($con, $registration_code);
 <?php if ($hasPendingFees): ?>
 <div class="alert-banner" style="background-color: #ffebee; color: #c62828; padding: 10px; border: 1px solid #ef9a9a; margin-bottom: 15px; overflow: hidden; position: relative;">
     <div class="scrolling-text" style="white-space: nowrap; animation: scrollText 15s linear infinite; font-weight: bold;">
-        ⚠️ You didn’t pay your fees for the last 2 months (<?= date('F', strtotime('-1 month')) ?> and <?= date('F') ?>). Please submit them as soon as possible. Thank you!
+        ⚠️ You didn’t pay your fees for the last 2 months (<?= date('F', strtotime('first day of -2 months')) ?> and <?= date('F', strtotime('first day of -1 month')) ?>). Please submit them as soon as possible. Thank you!
     </div>
     <style>
     @keyframes scrollText {
