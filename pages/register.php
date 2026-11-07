@@ -130,12 +130,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
       border: 1px solid #ddd;
       border-radius: 8px;
       padding: 10px;
-      max-height: 200px;
+      max-height: 260px;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
     }
     .checkbox-item {
       display: flex;
-      margin-bottom: 5px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .checkbox-item input {
+      margin-top: 4px;
+      flex-shrink: 0;
     }
   </style>
 </head>

@@ -331,6 +331,14 @@ public class MainActivity extends AppCompatActivity {
         LinkOpener.openYoutubeChannel(this, url);
     }
 
+    public void openFacebook() {
+        LinkOpener.open(this, AppConfig.FACEBOOK_URL);
+    }
+
+    public void openInstagram() {
+        LinkOpener.open(this, AppConfig.INSTAGRAM_URL);
+    }
+
     public String getYoutubeUrl() {
         if (youtubeUrl == null || youtubeUrl.isEmpty() || "null".equalsIgnoreCase(youtubeUrl)) {
             return AppConfig.DEFAULT_YOUTUBE_URL;

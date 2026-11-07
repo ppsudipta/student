@@ -36,11 +36,13 @@
             android:textSize="14sp" />
     </LinearLayout>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/registerScroll"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:background="@drawable/bg_login_form"
         android:fillViewport="true"
+        android:overScrollMode="never"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -187,24 +189,19 @@
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:background="@drawable/bg_register_class_box">
+                android:background="@drawable/bg_register_class_box"
+                android:minHeight="120dp"
+                android:padding="8dp">
 
-                <ScrollView
+                <LinearLayout
+                    android:id="@+id/classCheckboxContainer"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="8dp">
-
-                    <LinearLayout
-                        android:id="@+id/classCheckboxContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-                </ScrollView>
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
 
                 <com.deyeducation.app.FunLoaderView
-                    xmlns:app="http://schemas.android.com/apk/res-auto"
                     android:id="@+id/classesProgress"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -292,5 +289,5 @@
                 android:textColor="@color/primary"
                 android:textSize="14sp" />
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

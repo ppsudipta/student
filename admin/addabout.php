@@ -111,7 +111,8 @@ if($_SESSION['username'] == true){
 				
 				<div class="form-group">
                   <label for="name"> Image</label>
-                  <input class="form-control" name="image1" type="file" required accept="image/x-png">
+                  <input class="form-control" name="image1" type="file" required accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,.png,.jpg,.jpeg,.gif,.webp">
+                  <p class="help-block">JPG, PNG, GIF, WEBP allowed.</p>
                 </div>
 				
 			<div class="box-footer">
@@ -244,30 +245,42 @@ if($_SESSION['username'] == true){
 </body>
 </html>
 <?php
-if(isset($_POST['submit']))
-{
-	$event_name=$_POST['e_name'];
-	$event_details=$_POST['details'];
-	$area=$_POST['area'];
-	$date=$_POST['date'];
-	$image1=$_FILES['image1']['name'];
-	$path1='event/'.$image1;
-	move_uploaded_file($_FILES['image1']['tmp_name'],$path1);
-	//$date=date('d-m-Y');
-	
-	
-	
-	
-	if($con->error)
-	echo $con->error;
-	else
-	{
-	$sql="insert into blog values('','$event_name','$path1','$event_details','$area','$date') ";
-	
-	$con->query($sql);
-	echo "<script>alert('successfully added')</script>";	
-	echo "<script>window.location.href='allabout.php'</script>";	
-	}
-}
+if (isset($_POST['submit'])) {
+    $event_name = isset($_POST['e_name']) ? trim((string) $_POST['e_name']) : '';
+    $event_details = isset($_POST['details']) ? trim((string) $_POST['details']) : '';
+    $area = isset($_POST['area']) ? trim((string) $_POST['area']) : '';
+    $date = date('d-m-Y');
+    $path1 = '';
 
- ?>
+    if (!isset($_FILES['image1']) || (int) $_FILES['image1']['error'] !== UPLOAD_ERR_OK) {
+        echo "<script>alert('Please choose a valid image file'); history.back();</script>";
+        exit;
+    }
+
+    $original = (string) $_FILES['image1']['name'];
+    $tmp = (string) $_FILES['image1']['tmp_name'];
+    $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    if (!in_array($ext, $allowed, true) || !is_uploaded_file($tmp)) {
+        echo "<script>alert('Only JPG, PNG, GIF, or WEBP images are allowed'); history.back();</script>";
+        exit;
+    }
+
+    $dir = __DIR__ . DIRECTORY_SEPARATOR . 'category';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    $safeName = 'about_' . time() . '.' . $ext;
+    $destFs = $dir . DIRECTORY_SEPARATOR . $safeName;
+    if (!move_uploaded_file($tmp, $destFs)) {
+        echo "<script>alert('Could not save uploaded image'); history.back();</script>";
+        exit;
+    }
+    $path1 = 'category/' . $safeName;
+
+    $stmt = $con->prepare('INSERT INTO blog (name, image, details, category, date) VALUES (?, ?, ?, ?, ?)');
+    $stmt->bind_param('sssss', $event_name, $path1, $event_details, $area, $date);
+    $stmt->execute();
+    echo "<script>alert('successfully added'); window.location.href='allabout.php';</script>";
+}
+?>

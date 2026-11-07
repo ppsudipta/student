@@ -2,6 +2,8 @@ package com.deyeducation.app;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Matrix;
+import android.graphics.drawable.Drawable;
 import android.text.Html;
 import android.text.TextUtils;
 import android.view.View;
@@ -21,8 +23,12 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.load.resource.bitmap.FitCenter;
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 
 public final class UiUtils {
     private UiUtils() {
@@ -63,8 +69,8 @@ public final class UiUtils {
     }
 
     /**
-     * Promo carousel: never crop. Image aligns to the top; any leftover space
-     * stays as blank band at the bottom (fitStart).
+     * Promo carousel: never crop. Fit inside the frame, pin to the top,
+     * center horizontally when leftover space is on the sides; blank band stays at bottom.
      */
     public static void loadPromoImage(Context context, String url, ImageView view) {
         if (!isContextValid(context) || view == null) {
@@ -74,14 +80,72 @@ public final class UiUtils {
             url = null;
         }
         int placeholder = R.drawable.bg_image_placeholder;
-        view.setScaleType(ImageView.ScaleType.FIT_START);
+        view.setScaleType(ImageView.ScaleType.MATRIX);
+        ensurePromoMatrixOnLayout(view);
         Glide.with(view)
                 .load(url)
                 .placeholder(placeholder)
                 .error(placeholder)
                 .fallback(placeholder)
-                .fitCenter()
+                .listener(new RequestListener<Drawable>() {
+                    @Override
+                    public boolean onLoadFailed(@Nullable GlideException e, Object model,
+                                                Target<Drawable> target, boolean isFirstResource) {
+                        view.post(() -> applyPromoTopCenterMatrix(view));
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onResourceReady(Drawable resource, Object model,
+                                                   Target<Drawable> target, DataSource dataSource,
+                                                   boolean isFirstResource) {
+                        view.post(() -> applyPromoTopCenterMatrix(view));
+                        return false;
+                    }
+                })
                 .into(view);
+        view.post(() -> applyPromoTopCenterMatrix(view));
+    }
+
+    private static void ensurePromoMatrixOnLayout(ImageView view) {
+        Object tag = view.getTag(R.id.sliderImage);
+        if (Boolean.TRUE.equals(tag)) {
+            return;
+        }
+        view.setTag(R.id.sliderImage, Boolean.TRUE);
+        view.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+                applyPromoTopCenterMatrix(view);
+            }
+        });
+    }
+
+    /** Scale to fit, align top, center horizontally. */
+    public static void applyPromoTopCenterMatrix(ImageView view) {
+        if (view == null) {
+            return;
+        }
+        Drawable drawable = view.getDrawable();
+        int viewW = view.getWidth() - view.getPaddingLeft() - view.getPaddingRight();
+        int viewH = view.getHeight() - view.getPaddingTop() - view.getPaddingBottom();
+        if (drawable == null || viewW <= 0 || viewH <= 0) {
+            return;
+        }
+        int drawableW = drawable.getIntrinsicWidth();
+        int drawableH = drawable.getIntrinsicHeight();
+        if (drawableW <= 0 || drawableH <= 0) {
+            return;
+        }
+
+        float scale = Math.min((float) viewW / drawableW, (float) viewH / drawableH);
+        float dx = (viewW - drawableW * scale) * 0.5f;
+        float dy = 0f;
+
+        Matrix matrix = new Matrix();
+        matrix.setScale(scale, scale);
+        matrix.postTranslate(dx, dy);
+        view.setScaleType(ImageView.ScaleType.MATRIX);
+        view.setImageMatrix(matrix);
     }
 
     public static void loadCircleImage(Context context, String url, ImageView view) {
