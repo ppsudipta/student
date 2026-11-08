@@ -14,7 +14,7 @@ $class_name = $con->real_escape_string($_POST['class_name']);
 $sql = "SELECT id, name, registration_code 
         FROM students 
         WHERE FIND_IN_SET('$class_name', REPLACE(class, ', ', ',')) 
-        ORDER BY registration_code ASC";
+        ORDER BY name ASC, registration_code ASC";
 
 $res = $con->query($sql);
 
