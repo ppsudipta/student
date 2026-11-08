@@ -310,26 +310,33 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
           </div>
 
           <?php
-          // Second table: class students who were NOT Present under the same filters
-          $showNotPresent = ($filterClass !== '');
+          // Second table: classmates who were NOT Present for the filtered session(s).
+          // Works with Class filter OR title filters (Year/Month/Day/Board) — class is
+          // taken from attendance.class_name, or from present students' profile class if blank.
+          $hasTitleFilter = ($filterYear !== '' || $filterMonth !== '' || $filterDay !== '' || $filterBoard !== '');
+          $showNotPresent = ($filterClass !== '' || $hasTitleFilter);
           $notPresentRows = [];
+          $notPresentClasses = [];
           $notPresentHint = '';
 
           if ($showNotPresent) {
-            $hasTitleFilter = ($filterYear !== '' || $filterMonth !== '' || $filterDay !== '' || $filterBoard !== '');
-            if (!$hasTitleFilter) {
-              $notPresentHint = 'Tip: also select Title Year / Month / Day (and Board) to narrow “not present” to a particular class session.';
+            if ($filterClass !== '' && !$hasTitleFilter) {
+              $notPresentHint = 'Tip: also select Title Year / Month / Day (and Board) to narrow to a particular session.';
             }
 
-            // Present student IDs matching the same attendance filters
-            $presentQuery = "SELECT DISTINCT a.student_id
+            // Matching Present rows (same filters as main list)
+            $presentQuery = "SELECT a.student_id, a.class_name, s.class AS student_class
                              FROM attendance a
                              JOIN students s ON a.student_id = s.id
-                             WHERE a.status = 'Present'
-                               AND a.class_name LIKE ?";
-            $presentParams = ['%' . $filterClass . '%'];
-            $presentTypes = 's';
+                             WHERE a.status = 'Present'";
+            $presentParams = [];
+            $presentTypes = '';
 
+            if ($filterClass !== '') {
+              $presentQuery .= " AND a.class_name LIKE ?";
+              $presentParams[] = '%' . $filterClass . '%';
+              $presentTypes .= 's';
+            }
             if ($filterStudent !== '' && ctype_digit($filterStudent)) {
               $presentQuery .= " AND a.student_id = ?";
               $presentParams[] = (int) $filterStudent;
@@ -362,42 +369,122 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
             }
 
             $presentIds = [];
+            $classSet = [];
+
+            if ($filterClass !== '') {
+              $classSet[$filterClass] = true;
+            }
+
             $pStmt = $con->prepare($presentQuery);
-            $pStmt->bind_param($presentTypes, ...$presentParams);
+            if ($presentTypes !== '') {
+              $pStmt->bind_param($presentTypes, ...$presentParams);
+            }
             $pStmt->execute();
             $pRes = $pStmt->get_result();
             while ($pRow = $pRes->fetch_assoc()) {
-              $presentIds[] = (int) $pRow['student_id'];
-            }
+              $presentIds[(int) $pRow['student_id']] = true;
 
-            // Ongoing students in this class (optionally narrowed by student/reg filters)
-            $stuQuery = "SELECT id, name, registration_code, class, mobile_number, email, status
-                         FROM students
-                         WHERE status = 'ongoing'
-                           AND FIND_IN_SET(?, class)";
-            $stuParams = [$filterClass];
-            $stuTypes = 's';
-
-            if ($filterStudent !== '' && ctype_digit($filterStudent)) {
-              $stuQuery .= " AND id = ?";
-              $stuParams[] = (int) $filterStudent;
-              $stuTypes .= 'i';
-            }
-            if ($filterReg !== '') {
-              $stuQuery .= " AND registration_code = ?";
-              $stuParams[] = $filterReg;
-              $stuTypes .= 's';
-            }
-            $stuQuery .= " ORDER BY name ASC";
-
-            $sStmt = $con->prepare($stuQuery);
-            $sStmt->bind_param($stuTypes, ...$stuParams);
-            $sStmt->execute();
-            $sRes = $sStmt->get_result();
-            while ($stu = $sRes->fetch_assoc()) {
-              if (!in_array((int) $stu['id'], $presentIds, true)) {
-                $notPresentRows[] = $stu;
+              $attClass = trim((string) ($pRow['class_name'] ?? ''));
+              if ($attClass !== '' && strcasecmp($attClass, 'All Classes') !== 0) {
+                $classSet[$attClass] = true;
+              } else {
+                foreach (array_map('trim', explode(',', (string) ($pRow['student_class'] ?? ''))) as $part) {
+                  if ($part !== '') {
+                    $classSet[$part] = true;
+                  }
+                }
               }
+            }
+
+            // If Class filter was set but attendance.class_name is blank, still use filter class
+            // and also pull classes from any matching attendance (Present or not) for that title
+            if (empty($classSet) && $hasTitleFilter) {
+              $anyQuery = "SELECT a.class_name, s.class AS student_class
+                           FROM attendance a
+                           JOIN students s ON a.student_id = s.id
+                           WHERE 1=1";
+              $anyParams = [];
+              $anyTypes = '';
+              if ($filterYear !== '') {
+                $anyQuery .= " AND a.attendance_title LIKE ?";
+                $anyParams[] = $filterYear . ' - %';
+                $anyTypes .= 's';
+              }
+              if ($filterMonth !== '') {
+                $anyQuery .= " AND a.attendance_title LIKE ?";
+                $anyParams[] = '% - ' . $filterMonth . ' - %';
+                $anyTypes .= 's';
+              }
+              if ($filterDay !== '') {
+                $anyQuery .= " AND a.attendance_title LIKE ?";
+                $anyParams[] = '% - ' . $filterDay . ' - %';
+                $anyTypes .= 's';
+              }
+              if ($filterBoard !== '') {
+                $anyQuery .= " AND a.attendance_title LIKE ?";
+                $anyParams[] = '% - ' . $filterBoard;
+                $anyTypes .= 's';
+              }
+              $aStmt = $con->prepare($anyQuery);
+              if ($anyTypes !== '') {
+                $aStmt->bind_param($anyTypes, ...$anyParams);
+              }
+              $aStmt->execute();
+              $aRes = $aStmt->get_result();
+              while ($aRow = $aRes->fetch_assoc()) {
+                $attClass = trim((string) ($aRow['class_name'] ?? ''));
+                if ($attClass !== '' && strcasecmp($attClass, 'All Classes') !== 0) {
+                  $classSet[$attClass] = true;
+                } else {
+                  foreach (array_map('trim', explode(',', (string) ($aRow['student_class'] ?? ''))) as $part) {
+                    if ($part !== '') {
+                      $classSet[$part] = true;
+                    }
+                  }
+                }
+              }
+            }
+
+            $notPresentClasses = array_keys($classSet);
+
+            if (!empty($notPresentClasses)) {
+              $classConds = [];
+              $stuParams = [];
+              $stuTypes = '';
+              foreach ($notPresentClasses as $cls) {
+                $classConds[] = 'FIND_IN_SET(?, s.class)';
+                $stuParams[] = $cls;
+                $stuTypes .= 's';
+              }
+
+              $stuQuery = "SELECT s.id, s.name, s.registration_code, s.class, s.mobile_number, s.email, s.status
+                           FROM students s
+                           WHERE s.status = 'ongoing'
+                             AND (" . implode(' OR ', $classConds) . ")";
+
+              if ($filterStudent !== '' && ctype_digit($filterStudent)) {
+                $stuQuery .= " AND s.id = ?";
+                $stuParams[] = (int) $filterStudent;
+                $stuTypes .= 'i';
+              }
+              if ($filterReg !== '') {
+                $stuQuery .= " AND s.registration_code = ?";
+                $stuParams[] = $filterReg;
+                $stuTypes .= 's';
+              }
+              $stuQuery .= " ORDER BY s.name ASC";
+
+              $sStmt = $con->prepare($stuQuery);
+              $sStmt->bind_param($stuTypes, ...$stuParams);
+              $sStmt->execute();
+              $sRes = $sStmt->get_result();
+              while ($stu = $sRes->fetch_assoc()) {
+                if (!isset($presentIds[(int) $stu['id']])) {
+                  $notPresentRows[] = $stu;
+                }
+              }
+            } else {
+              $notPresentHint = 'Could not detect class for this filter. Select a Class, or ensure attendance records have a class.';
             }
           }
           ?>
@@ -406,13 +493,15 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
           <div class="box box-danger">
             <div class="box-header with-border">
               <h3 class="box-title">
-                Students Not Present
+                Students Not Present (Same Class)
                 <small>
-                  — Class: <?= htmlspecialchars($filterClass) ?>
+                  <?php if (!empty($notPresentClasses)): ?>
+                    — Class: <?= htmlspecialchars(implode(', ', $notPresentClasses)) ?>
+                  <?php endif; ?>
                   <?php
                   $titleBits = array_filter([$filterYear, $filterMonth, $filterDay, $filterBoard]);
                   if ($titleBits) {
-                    echo ' | Title filter: ' . htmlspecialchars(implode(' - ', $titleBits));
+                    echo ' | Session: ' . htmlspecialchars(implode(' - ', $titleBits));
                   }
                   ?>
                 </small>
@@ -423,8 +512,8 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
                 <p class="text-muted"><?= htmlspecialchars($notPresentHint) ?></p>
               <?php endif; ?>
               <p class="help-block">
-                Ongoing students in this class with no <strong>Present</strong> attendance matching the filters above
-                (includes unchecked / missing and Absent).
+                Ongoing classmates with no <strong>Present</strong> mark for the filtered session
+                (same class as students who were marked Present).
               </p>
               <table id="notPresentTable" class="table table-bordered table-hover">
                 <thead>
@@ -439,9 +528,13 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
                   </tr>
                 </thead>
                 <tbody>
-                  <?php if (empty($notPresentRows)): ?>
+                  <?php if (empty($notPresentClasses)): ?>
                     <tr>
-                      <td colspan="7" class="text-center text-success">All filtered ongoing students were Present.</td>
+                      <td colspan="7" class="text-center text-warning">No class found for this filter — pick Class or a title session with attendance.</td>
+                    </tr>
+                  <?php elseif (empty($notPresentRows)): ?>
+                    <tr>
+                      <td colspan="7" class="text-center text-success">All ongoing students in this class were Present.</td>
                     </tr>
                   <?php else: ?>
                     <?php $np = 1; foreach ($notPresentRows as $stu): ?>
