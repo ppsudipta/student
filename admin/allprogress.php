@@ -299,8 +299,10 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
                       </span>
                     </td>
                     <td>
-                      <a href="edit_allprogress.php?id=<?= $attendance['id'] ?>" class="btn btn-warning btn-xs"><i class="fa fa-edit"></i> Edit</a>
-                      <a href="delete_allprogress.php?id=<?= $attendance['id'] ?>" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to delete this attendance record?');"><i class="fa fa-trash"></i> Delete</a>
+                      <a href="edit_allprogress.php?id=<?= (int) $attendance['id'] ?>" class="btn btn-warning btn-xs"><i class="fa fa-edit"></i> Edit</a>
+                      <a href="delete_allprogress.php?id=<?= (int) $attendance['id'] ?>"
+                         class="btn btn-danger btn-xs js-delete-attendance"
+                         data-id="<?= (int) $attendance['id'] ?>"><i class="fa fa-trash"></i> Delete</a>
                     </td>
                   </tr>
                   <?php endwhile; ?>
@@ -577,7 +579,7 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
       minimumResultsForSearch: 8
     });
 
-    $('#attendanceTable').DataTable({
+    var attendanceTable = $('#attendanceTable').DataTable({
       paging: true,
       lengthChange: true,
       searching: true,
@@ -586,6 +588,15 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
       autoWidth: false,
       responsive: true,
       pageLength: 25
+    });
+
+    // DataTables can break inline onclick — use delegated click for delete
+    $('#attendanceTable').on('click', 'a.js-delete-attendance', function (e) {
+      e.preventDefault();
+      var href = $(this).attr('href');
+      if (confirm('Are you sure you want to delete this attendance record?')) {
+        window.location.href = href;
+      }
     });
 
     if ($('#notPresentTable').length) {
