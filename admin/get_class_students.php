@@ -12,11 +12,12 @@ if (!isset($_POST['class_name']) || empty($_POST['class_name'])) {
 $class_name = trim((string) $_POST['class_name']);
 $match = students_class_match_sql('class');
 
+$rollOrder = students_roll_order_sql('registration_code');
 $stmt = $con->prepare(
     "SELECT id, name, registration_code
      FROM students
      WHERE $match
-     ORDER BY registration_code ASC, name ASC"
+     ORDER BY $rollOrder, name ASC"
 );
 $stmt->bind_param('s', $class_name);
 $stmt->execute();

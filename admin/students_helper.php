@@ -133,6 +133,22 @@ if (!function_exists('students_has_class')) {
     }
 }
 
+if (!function_exists('students_roll_order_sql')) {
+    /**
+     * Natural roll-number ORDER BY fragment.
+     * Puts D2 after D1 (not after D11). Pure numbers sort by value.
+     *
+     * Example: "... ORDER BY " . students_roll_order_sql('registration_code') . ", name ASC"
+     */
+    function students_roll_order_sql(string $column = 'registration_code'): string
+    {
+        // Prefix letters (lowercased), then trailing/embedded digits as number, then raw code
+        $prefix = "LOWER(REGEXP_REPLACE($column, '[0-9]+', ''))";
+        $digits = "CAST(NULLIF(REGEXP_REPLACE($column, '[^0-9]', ''), '') AS UNSIGNED)";
+        return "$prefix ASC, $digits ASC, $column ASC";
+    }
+}
+
 if (!function_exists('students_split_unique_values')) {
     /**
      * Split comma-separated column values from a query into unique sorted singles.

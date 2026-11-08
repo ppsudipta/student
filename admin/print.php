@@ -31,7 +31,7 @@ if (!empty($status_filter)) {
 }
 
 // Sort by registration code in ascending order
-$sql .= " ORDER BY registration_code ASC";
+$sql .= ' ORDER BY ' . students_roll_order_sql('registration_code') . ', name ASC';
 
 // Prepare and execute query
 $stmt = $con->prepare($sql);

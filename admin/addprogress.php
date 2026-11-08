@@ -9,7 +9,8 @@ include_once __DIR__ . '/students_helper.php';
 
 // Fetch all students
 $students = [];
-$result = $con->query("SELECT id, name, registration_code, class FROM students ORDER BY registration_code ASC, name ASC");
+$rollOrder = students_roll_order_sql('registration_code');
+$result = $con->query("SELECT id, name, registration_code, class FROM students ORDER BY $rollOrder, name ASC");
 while ($row = $result->fetch_assoc()) {
     $students[] = $row;
 }

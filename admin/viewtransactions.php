@@ -113,7 +113,7 @@ $students = mysqli_query($con, "SELECT id, name, registration_code, total_fees F
 $classes = students_unique_classes($con);
 
 // --- FETCH REGISTRATION CODES FOR DROPDOWN ---
-$reg_codes_result = mysqli_query($con, "SELECT registration_code, name FROM students WHERE registration_code IS NOT NULL AND registration_code != '' ORDER BY registration_code");
+$reg_codes_result = mysqli_query($con, "SELECT registration_code, name FROM students WHERE registration_code IS NOT NULL AND registration_code != '' ORDER BY " . students_roll_order_sql('registration_code') . ", name ASC");
 $reg_codes = [];
 while ($row = mysqli_fetch_assoc($reg_codes_result)) {
     $reg_codes[$row['registration_code']] = $row['registration_code'] . ' - ' . $row['name'];

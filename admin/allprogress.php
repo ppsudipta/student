@@ -200,7 +200,7 @@ function attendance_append_title_filters(
                     <select class="form-control select2" id="reg_code_filter" name="reg_code" style="width: 150px;">
                       <option value="">All Roll Numbers</option>
                       <?php
-                      $reg_codes = $con->query("SELECT DISTINCT registration_code FROM students WHERE registration_code != '' ORDER BY registration_code");
+                      $reg_codes = $con->query("SELECT DISTINCT registration_code FROM students WHERE registration_code != '' ORDER BY " . students_roll_order_sql('registration_code'));
                       while ($rc = $reg_codes->fetch_assoc()):
                       ?>
                         <option value="<?= htmlspecialchars($rc['registration_code']) ?>" <?= $filterReg === $rc['registration_code'] ? 'selected' : '' ?>>
@@ -431,7 +431,7 @@ function attendance_append_title_filters(
               $stuParams[] = $filterReg;
               $stuTypes .= 's';
             }
-            $stuQuery .= " ORDER BY s.name ASC";
+            $stuQuery .= ' ORDER BY ' . students_roll_order_sql('s.registration_code') . ', s.name ASC';
 
             $cStmt = $con->prepare($stuQuery);
             $cStmt->bind_param($stuTypes, ...$stuParams);

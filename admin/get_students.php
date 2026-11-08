@@ -11,7 +11,7 @@ if (!empty($_GET['class'])) {
         "SELECT registration_code, name, email, total_fees
          FROM students
          WHERE $match
-         ORDER BY name ASC, registration_code ASC"
+         ORDER BY " . students_roll_order_sql('registration_code') . ", name ASC"
     );
     $stmt->bind_param('s', $class);
     $stmt->execute();

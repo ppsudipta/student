@@ -48,14 +48,14 @@ if (!empty($search_term)) {
                   address LIKE '%$search_term%')";
 }
 
-$sql .= " ORDER BY registration_code";
+$sql .= ' ORDER BY ' . students_roll_order_sql('registration_code') . ', name ASC';
 $result = mysqli_query($con, $sql);
 
 // Get unique classes for filter dropdown
 $classes = students_unique_classes($con);
 
 // Get unique registration codes
-$registration_query = "SELECT DISTINCT registration_code FROM students WHERE registration_code IS NOT NULL AND registration_code != '' ORDER BY registration_code";
+$registration_query = "SELECT DISTINCT registration_code FROM students WHERE registration_code IS NOT NULL AND registration_code != '' ORDER BY " . students_roll_order_sql('registration_code');
 $registration_result = mysqli_query($con, $registration_query);
 $registration_codes = [];
 while ($row = mysqli_fetch_assoc($registration_result)) {
