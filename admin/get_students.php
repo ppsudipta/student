@@ -1,15 +1,24 @@
 <?php
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
+
+header('Content-Type: application/json');
 
 if (!empty($_GET['class'])) {
-    $class = mysqli_real_escape_string($con, $_GET['class']);
-    $result = mysqli_query($con, "SELECT registration_code, name, email, total_fees 
-                                  FROM students 
-                                  WHERE class LIKE '%$class%' 
-                                  ORDER BY registration_code ASC");
+    $class = trim((string) $_GET['class']);
+    $match = students_class_match_sql('class');
+    $stmt = $con->prepare(
+        "SELECT registration_code, name, email, total_fees
+         FROM students
+         WHERE $match
+         ORDER BY name ASC, registration_code ASC"
+    );
+    $stmt->bind_param('s', $class);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     $students = [];
-    while ($row = mysqli_fetch_assoc($result)) {
+    while ($row = $result->fetch_assoc()) {
         $students[] = $row;
     }
 

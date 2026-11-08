@@ -775,11 +775,43 @@ class StudentApiController extends Controller
     public function homework(Request $request): JsonResponse
     {
         $student = $this->studentFromRequest($request);
-        $homework = $this->table('homework_assignments')
-            ->where('class', $student->class)
-            ->where('session', $student->session)
-            ->orderByDesc('deadline')
-            ->paginate($request->integer('per_page', 20));
+        $studentClasses = $this->splitClasses($student->class);
+        $studentSessions = $this->splitClasses($student->session);
+
+        $query = $this->table('homework_assignments')->orderByDesc('deadline');
+        if ($studentClasses !== []) {
+            $classNorm = 'REPLACE(REPLACE(REPLACE(REPLACE(`class`, ", ", ","), " ,", ","), ",,", ","), " , ", ",")';
+            $query->where(function ($q) use ($studentClasses, $classNorm) {
+                foreach ($studentClasses as $cls) {
+                    $q->orWhere('class', $cls)
+                        ->orWhereRaw("FIND_IN_SET(?, {$classNorm}) > 0", [$cls]);
+                }
+            });
+        }
+        if ($studentSessions !== []) {
+            $sessionNorm = 'REPLACE(REPLACE(REPLACE(REPLACE(`session`, ", ", ","), " ,", ","), ",,", ","), " , ", ",")';
+            $query->where(function ($q) use ($studentSessions, $sessionNorm) {
+                foreach ($studentSessions as $sess) {
+                    $q->orWhere('session', $sess)
+                        ->orWhereRaw("FIND_IN_SET(?, {$sessionNorm}) > 0", [$sess])
+                        ->orWhereNull('session')
+                        ->orWhere('session', '');
+                }
+            });
+        }
+
+        $perPage = $request->integer('per_page', 20);
+        $all = $query->get()->filter(function ($hw) use ($student) {
+            return $this->classesOverlap($student->class, $hw->class)
+                && (
+                    trim((string) ($hw->session ?? '')) === ''
+                    || $this->classesOverlap($student->session, $hw->session)
+                );
+        })->values();
+
+        $total = $all->count();
+        $page = max(1, $request->integer('page', 1));
+        $paginated = $all->forPage($page, $perPage)->values();
 
         $submissions = $this->table('homework_submissions')
             ->where('student_id', $student->id)
@@ -789,7 +821,12 @@ class StudentApiController extends Controller
             ->map(fn ($items) => $items->first());
 
         return response()->json([
-            'data' => $homework,
+            'data' => [
+                'current_page' => $page,
+                'data' => $paginated,
+                'per_page' => $perPage,
+                'total' => $total,
+            ],
             'submissions' => $submissions,
         ]);
     }
@@ -802,13 +839,16 @@ class StudentApiController extends Controller
             'comments' => ['nullable', 'string'],
         ]);
 
-        $homework = $this->table('homework_assignments')
-            ->where('id', $id)
-            ->where('class', $student->class)
-            ->where('session', $student->session)
-            ->first();
+        $homework = $this->table('homework_assignments')->where('id', $id)->first();
 
-        if (! $homework) {
+        $allowed = $homework
+            && $this->classesOverlap($student->class, $homework->class)
+            && (
+                trim((string) ($homework->session ?? '')) === ''
+                || $this->classesOverlap($student->session, $homework->session)
+            );
+
+        if (! $allowed) {
             return response()->json([
                 'message' => 'Homework not found for this student.',
             ], 404);
@@ -1799,7 +1839,7 @@ class StudentApiController extends Controller
                 return;
             }
 
-            $outer->orWhere(function ($classQuery) use ($session, $studentClasses) {
+            $outer->orWhere(function ($classQuery) use ($session, $studentClasses, $student) {
                 $classQuery->where('access_level', 'class')
                     ->where('session', $session);
 
@@ -1807,11 +1847,15 @@ class StudentApiController extends Controller
                     return;
                 }
 
-                $classQuery->where(function ($match) use ($studentClasses) {
+                $classNorm = 'REPLACE(REPLACE(REPLACE(REPLACE(`class`, ", ", ","), " ,", ","), ",,", ","), " , ", ",")';
+                $studentCsvNorm = 'REPLACE(REPLACE(REPLACE(REPLACE(?, ", ", ","), " ,", ","), ",,", ","), " , ", ",")';
+                $studentClassCsv = (string) ($student->class ?? implode(',', $studentClasses));
+
+                $classQuery->where(function ($match) use ($studentClasses, $classNorm, $studentCsvNorm, $studentClassCsv) {
+                    $match->whereRaw("FIND_IN_SET(`class`, {$studentCsvNorm}) > 0", [$studentClassCsv]);
                     foreach ($studentClasses as $cls) {
                         $match->orWhere('class', $cls)
-                            ->orWhereRaw('FIND_IN_SET(?, REPLACE(`class`, ", ", ",")) > 0', [$cls])
-                            ->orWhereRaw('FIND_IN_SET(`class`, REPLACE(?, ", ", ",")) > 0', [$cls]);
+                            ->orWhereRaw("FIND_IN_SET(?, {$classNorm}) > 0", [$cls]);
                     }
                 });
             });

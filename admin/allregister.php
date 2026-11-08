@@ -28,9 +28,10 @@ if ($status_filter != 'all') {
     $sql .= " AND status = '$status_filter'";
 }
 
-// Class filter (works with comma separated values)
+// Class filter: student has at least this class (supports multi-class "A, B")
 if (!empty($class_filter)) {
-    $sql .= " AND FIND_IN_SET('$class_filter', class)";
+    $class_esc = $con->real_escape_string($class_filter);
+    $sql .= ' AND ' . students_class_match_literal('class', $class_esc);
 }
 
 // Registration code filter

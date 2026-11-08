@@ -80,6 +80,59 @@ if (!function_exists('students_unique_sessions')) {
     }
 }
 
+if (!function_exists('students_csv_normalize_sql')) {
+    /**
+     * Normalize comma-separated class/session values for FIND_IN_SET matching.
+     * Converts "A, B" / "A ,B" / "A,,B" into "A,B".
+     */
+    function students_csv_normalize_sql(string $column): string
+    {
+        return "REPLACE(REPLACE(REPLACE(REPLACE($column, ', ', ','), ' ,', ','), ',,', ','), ' , ', ',')";
+    }
+}
+
+if (!function_exists('students_class_match_sql')) {
+    /**
+     * SQL: student has at least this class in a comma-separated column.
+     * Use with a bound ? parameter for the class name.
+     *
+     * Example: "... WHERE " . students_class_match_sql('s.class')
+     */
+    function students_class_match_sql(string $column = 'class'): string
+    {
+        return 'FIND_IN_SET(?, ' . students_csv_normalize_sql($column) . ')';
+    }
+}
+
+if (!function_exists('students_class_match_literal')) {
+    /**
+     * Same as students_class_match_sql but with an already-escaped class string.
+     */
+    function students_class_match_literal(string $column, string $escapedClass): string
+    {
+        return "FIND_IN_SET('$escapedClass', " . students_csv_normalize_sql($column) . ')';
+    }
+}
+
+if (!function_exists('students_has_class')) {
+    /**
+     * PHP-side: does comma-separated student class list include $needle?
+     */
+    function students_has_class(?string $studentClasses, string $needle): bool
+    {
+        $needle = trim($needle);
+        if ($needle === '' || $studentClasses === null || trim($studentClasses) === '') {
+            return false;
+        }
+        foreach (array_map('trim', explode(',', $studentClasses)) as $part) {
+            if ($part !== '' && strcasecmp($part, $needle) === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 if (!function_exists('students_split_unique_values')) {
     /**
      * Split comma-separated column values from a query into unique sorted singles.

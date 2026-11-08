@@ -1,5 +1,6 @@
 <?php
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 header('Content-Type: application/json');
 
@@ -8,15 +9,18 @@ if (!isset($_POST['class_name']) || empty($_POST['class_name'])) {
     exit;
 }
 
-$class_name = $con->real_escape_string($_POST['class_name']);
+$class_name = trim((string) $_POST['class_name']);
+$match = students_class_match_sql('class');
 
-// Fetch students belonging to this class (supports comma-separated classes)
-$sql = "SELECT id, name, registration_code 
-        FROM students 
-        WHERE FIND_IN_SET('$class_name', REPLACE(class, ', ', ',')) 
-        ORDER BY name ASC, registration_code ASC";
-
-$res = $con->query($sql);
+$stmt = $con->prepare(
+    "SELECT id, name, registration_code
+     FROM students
+     WHERE $match
+     ORDER BY registration_code ASC, name ASC"
+);
+$stmt->bind_param('s', $class_name);
+$stmt->execute();
+$res = $stmt->get_result();
 
 $students = [];
 if ($res) {

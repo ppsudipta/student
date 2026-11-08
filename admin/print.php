@@ -19,9 +19,9 @@ $params = array();
 $types = "";
 
 if (!empty($class_filter)) {
-    $sql .= " AND class LIKE ?";
-    $params[] = "%" . $class_filter . "%";
-    $types .= "s";
+    $sql .= ' AND ' . students_class_match_sql('class');
+    $params[] = $class_filter;
+    $types .= 's';
 }
 
 if (!empty($status_filter)) {

@@ -232,7 +232,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $class = $_POST['class_name'];
     
     // Get students who have this class in their comma-separated class field
-  $res = $con->query("SELECT id FROM students WHERE FIND_IN_SET('$class', class) > 0");
+  $classEsc = $con->real_escape_string($class);
+  $res = $con->query('SELECT id FROM students WHERE ' . students_class_match_literal('class', $classEsc));
 
     while ($row = $res->fetch_assoc()) {
       $student_ids[] = $row['id'];

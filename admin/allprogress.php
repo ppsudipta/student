@@ -299,9 +299,9 @@ function attendance_append_title_filters(
                   $query = "SELECT a.*, s.name as student_name, s.registration_code 
                             FROM attendance a 
                             JOIN students s ON a.student_id = s.id 
-                            WHERE (a.class_name LIKE ? OR FIND_IN_SET(?, s.class))";
+                            WHERE (a.class_name = ? OR " . students_class_match_sql('s.class') . ")";
 
-                  $params = ['%' . $filterClass . '%', $filterClass];
+                  $params = [$filterClass, $filterClass];
                   $types = 'ss';
 
                   if ($filterStudent !== '' && ctype_digit($filterStudent)) {
@@ -380,8 +380,8 @@ function attendance_append_title_filters(
                              FROM attendance a
                              JOIN students s ON a.student_id = s.id
                              WHERE a.status = 'Present'
-                               AND (a.class_name LIKE ? OR FIND_IN_SET(?, s.class))";
-            $presentParams = ['%' . $filterClass . '%', $filterClass];
+                               AND (a.class_name = ? OR " . students_class_match_sql('s.class') . ")";
+            $presentParams = [$filterClass, $filterClass];
             $presentTypes = 'ss';
             if ($filterStudent !== '' && ctype_digit($filterStudent)) {
               $presentQuery .= " AND a.student_id = ?";
@@ -415,7 +415,7 @@ function attendance_append_title_filters(
             $stuQuery = "SELECT s.id, s.name, s.registration_code, s.class, s.mobile_number, s.email, s.status
                          FROM students s
                          WHERE (s.status = 'ongoing' OR s.status = '' OR s.status IS NULL)
-                           AND (FIND_IN_SET(?, s.class) OR EXISTS (
+                           AND (" . students_class_match_sql('s.class') . " OR EXISTS (
                              SELECT 1 FROM attendance ax
                              WHERE ax.student_id = s.id AND ax.class_name = ?
                            ))";

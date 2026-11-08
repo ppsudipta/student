@@ -177,7 +177,7 @@ if (isset($_POST['submit'])) {
         // If sending to a class, create individual records for each student in that class
         if ($recipient_type === 'class' && !empty($class)) {
             // Find all students in the selected class (handling comma-separated classes)
-            $class_condition = "FIND_IN_SET('$class', class) > 0";
+            $class_condition = students_class_match_literal('class', $class);
             if (!empty($session)) {
                 $class_condition .= " AND session = '$session'";
             }

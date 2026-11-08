@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 include('config.php');
+include_once __DIR__ . '/students_helper.php';
 
 // Handle delete request
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
@@ -74,12 +75,7 @@ if ($result->num_rows > 0):
     $count_sql = "
       SELECT COUNT(*) as total 
       FROM students 
-      WHERE (
-        class = '$class_name'
-        OR FIND_IN_SET('$class_name', REPLACE(class, ', ', ','))
-        OR FIND_IN_SET('$class_name', REPLACE(class, ',', ','))
-      )
-    ";
+      WHERE " . students_class_match_literal('class', $class_name);
     $count_res = $con->query($count_sql);
     $student_count = $count_res->fetch_assoc()['total'] ?? 0;
 

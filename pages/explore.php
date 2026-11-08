@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('config.php');
+include_once __DIR__ . '/../admin/students_helper.php';
 include('header.php');
 
 if (!isset($_SESSION['username'])) {
@@ -38,20 +39,20 @@ error_log("Student: $username, Class: $student_class, Session: $student_session"
 // Get student's materials with prepared statement
 // Materials specifically assigned to this student OR public materials OR 
 // class materials where any of the student's classes matches the material's class
+// Match materials if student has at least the material's class (multi-class safe)
+$classNorm = students_csv_normalize_sql('`class`');
+$studentCsvNorm = "REPLACE(REPLACE(REPLACE(?, ', ', ','), ' ,', ','), ',,', ',')";
 $query = "SELECT * FROM student_materials 
           WHERE (student_id = ?) 
           OR (access_level = 'public') 
           OR (access_level = 'class' AND session = ? AND (
-            -- Check if any of the student's classes matches the material class
-            FIND_IN_SET(class, REPLACE(?, ', ', ',')) > 0 OR
-            -- Check if material class contains any of the student's classes (for comma-separated material classes)
-            FIND_IN_SET(?, REPLACE(class, ', ', ',')) > 0
+            FIND_IN_SET(`class`, $studentCsvNorm) > 0 OR
+            FIND_IN_SET(?, $classNorm) > 0
           ))";
 
 $stmt = $con->prepare($query);
-// Bind parameters: student_id, session, student_class, first class from student
 $first_class = trim(explode(',', $student_class)[0]);
-$stmt->bind_param("isss", $id, $student_session, $student_class, $first_class);
+$stmt->bind_param('isss', $id, $student_session, $student_class, $first_class);
 $stmt->execute();
 $result = $stmt->get_result();
 $materials = $result->fetch_all(MYSQLI_ASSOC);
@@ -78,10 +79,8 @@ if (empty($materials)) {
             return true;
         }
         
-        $student_classes = array_map('trim', explode(',', $student_class));
-        $material_classes = array_map('trim', explode(',', $material['class']));
-        
-        // Check if any student class matches any material class
+        $student_classes = array_map('strtolower', array_filter(array_map('trim', explode(',', $student_class))));
+        $material_classes = array_map('strtolower', array_filter(array_map('trim', explode(',', (string) $material['class']))));
         return count(array_intersect($student_classes, $material_classes)) > 0;
     });
     

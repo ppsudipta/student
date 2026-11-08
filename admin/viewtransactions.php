@@ -43,7 +43,7 @@ if ($show_mode === 'unpaid') {
 
         if ($class_filter_value !== '') {
             $classEsc = mysqli_real_escape_string($con, $class_filter_value);
-            $conds[] = "FIND_IN_SET('$classEsc', s.class)";
+            $conds[] = students_class_match_literal('s.class', $classEsc);
         }
         if ($reg_filter_value !== '') {
             $regEsc = mysqli_real_escape_string($con, $reg_filter_value);
@@ -77,7 +77,7 @@ if ($show_mode === 'unpaid') {
     }
     if ($class_filter_value !== '') {
         $classEsc = mysqli_real_escape_string($con, $class_filter_value);
-        $conds[] = "s.class LIKE '%$classEsc%'";
+        $conds[] = students_class_match_literal('s.class', $classEsc);
     }
     if ($reg_filter_value !== '') {
         $regEsc = mysqli_real_escape_string($con, $reg_filter_value);
@@ -123,7 +123,8 @@ while ($row = mysqli_fetch_assoc($reg_codes_result)) {
 $class_students = [];
 if (isset($_GET['selected_class']) && !empty($_GET['selected_class'])) {
     $selected_class = mysqli_real_escape_string($con, $_GET['selected_class']);
-    $class_students_query = mysqli_query($con, "SELECT registration_code, name, email, total_fees FROM students WHERE class LIKE '%$selected_class%' ORDER BY name");
+    $classMatch = students_class_match_literal('class', $selected_class);
+    $class_students_query = mysqli_query($con, "SELECT registration_code, name, email, total_fees FROM students WHERE $classMatch ORDER BY name");
     while ($student = mysqli_fetch_assoc($class_students_query)) {
         $class_students[] = $student;
     }
