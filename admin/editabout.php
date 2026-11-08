@@ -77,11 +77,14 @@ if (isset($_POST['submit'])) {
 $rowStmt = $con->prepare('SELECT * FROM blog WHERE id = ? LIMIT 1');
 $rowStmt->bind_param('i', $id);
 $rowStmt->execute();
-$row = $rowStmt->get_result()->fetch_array();
+$row = $rowStmt->get_result()->fetch_assoc();
 if (!$row) {
     header('location:allabout.php');
     exit;
 }
+
+$aboutDetails = (string) ($row['details'] ?? '');
+$aboutImage = (string) ($row['image'] ?? '');
 ?>
 <!DOCTYPE html>
 <html>
@@ -142,18 +145,18 @@ if (!$row) {
                 <div class="alert alert-danger"><?php echo htmlspecialchars($uploadError); ?></div>
               <?php endif; ?>
 
-              <form role="form" enctype="multipart/form-data" method="post" accept-charset="utf-8">
+              <form role="form" enctype="multipart/form-data" method="post" accept-charset="utf-8" id="editAboutForm">
                 <div class="form-group">
                   <label for="editor1">About Details</label>
-                  <textarea name="details" class="form-control" cols="50" rows="10" id="editor1"><?php echo $row['details'] ?? ''; ?></textarea>
+                  <textarea name="details" class="form-control" cols="50" rows="10" id="editor1"></textarea>
                 </div>
 
                 <div class="form-group">
                   <label for="image1">Image</label>
-                  <?php if (!empty($row['image'])): ?>
+                  <?php if ($aboutImage !== ''): ?>
                     <div style="margin-bottom:10px;">
-                      <img src="<?php echo htmlspecialchars($row['image']); ?>" alt="Current about image" style="max-width:220px;max-height:160px;border:1px solid #ddd;padding:4px;">
-                      <div class="help-block">Current: <?php echo htmlspecialchars($row['image']); ?></div>
+                      <img src="<?php echo htmlspecialchars($aboutImage); ?>" alt="Current about image" style="max-width:220px;max-height:160px;border:1px solid #ddd;padding:4px;">
+                      <div class="help-block">Current: <?php echo htmlspecialchars($aboutImage); ?></div>
                     </div>
                   <?php endif; ?>
                   <input class="form-control" id="image1" name="image1" type="file" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,.png,.jpg,.jpeg,.gif,.webp">
@@ -217,8 +220,24 @@ if (!$row) {
 <script src="test/js/clipboard.min.js"></script>
 <script src="test/js/summernote.js"></script>
 <script>
+  // Load saved HTML via JS so Summernote always shows previous content
+  var aboutDetails = <?php echo json_encode($aboutDetails, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE); ?>;
+
   $(document).ready(function () {
-    $('#editor1').summernote({ height: 200 });
+    var $editor = $('#editor1');
+    $editor.summernote({
+      height: 250,
+      callbacks: {
+        onInit: function () {
+          $editor.summernote('code', aboutDetails || '');
+        }
+      }
+    });
+
+    // Ensure textarea gets Summernote HTML before submit
+    $('#editAboutForm').on('submit', function () {
+      $editor.val($editor.summernote('code'));
+    });
   });
 </script>
 </body>

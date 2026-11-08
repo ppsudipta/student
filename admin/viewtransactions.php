@@ -6,44 +6,105 @@ if (!isset($_SESSION['username'])) {
 }
 include('config.php');
 include_once __DIR__ . '/students_helper.php';
+include_once __DIR__ . '/fees_helper.php';
 
-// --- DATE FILTER LOGIC ---
-$where = "";
-if (!empty($_GET['from_date']) && !empty($_GET['to_date'])) {
-    $from_date = mysqli_real_escape_string($con, $_GET['from_date']);
-    $to_date = mysqli_real_escape_string($con, $_GET['to_date']);
-    $where = "WHERE donation_date BETWEEN '$from_date' AND '$to_date'";
+$fee_months = fees_month_names();
+$year_options = fees_year_options();
+
+$from_date = trim((string) ($_GET['from_date'] ?? ''));
+$to_date = trim((string) ($_GET['to_date'] ?? ''));
+$class_filter_value = trim((string) ($_GET['class_filter'] ?? ''));
+$reg_filter_value = trim((string) ($_GET['reg_filter'] ?? ''));
+$month_filter = trim((string) ($_GET['month_filter'] ?? ''));
+$year_filter = trim((string) ($_GET['year_filter'] ?? ''));
+$show_mode = trim((string) ($_GET['show_mode'] ?? 'paid'));
+if (!in_array($show_mode, ['paid', 'unpaid'], true)) {
+    $show_mode = 'paid';
+}
+if ($month_filter !== '' && !in_array($month_filter, $fee_months, true)) {
+    $month_filter = '';
+}
+if ($year_filter !== '' && !preg_match('/^\d{4}$/', $year_filter)) {
+    $year_filter = '';
 }
 
-// --- CLASS FILTER LOGIC ---
-$class_filter = "";
-if (!empty($_GET['class_filter'])) {
-    $class_filter_value = mysqli_real_escape_string($con, $_GET['class_filter']);
-    if ($where === "") {
-        $class_filter = "WHERE s.class LIKE '%$class_filter_value%'";
+$unpaid_error = '';
+$unpaid_rows = [];
+$result = false;
+$last_paid_display = '';
+
+if ($show_mode === 'unpaid') {
+    if ($month_filter === '') {
+        $unpaid_error = 'Please select a Fee Month to list not-paid active students.';
+    } elseif ($year_filter === '') {
+        $unpaid_error = 'Please select a Year with Fee Month for not-paid active students.';
     } else {
-        $class_filter = "AND s.class LIKE '%$class_filter_value%'";
+        $conds = ["s.status = 'ongoing'", "s.registration_code IS NOT NULL", "s.registration_code != ''"];
+
+        if ($class_filter_value !== '') {
+            $classEsc = mysqli_real_escape_string($con, $class_filter_value);
+            $conds[] = "FIND_IN_SET('$classEsc', s.class)";
+        }
+        if ($reg_filter_value !== '') {
+            $regEsc = mysqli_real_escape_string($con, $reg_filter_value);
+            $conds[] = "s.registration_code = '$regEsc'";
+        }
+
+        $periodMatch = fees_period_match_sql($con, $month_filter, $year_filter, 'd');
+        $sql = "SELECT s.registration_code, s.name, s.class, s.mobile_number, s.email, s.total_fees, s.status
+                FROM students s
+                WHERE " . implode(' AND ', $conds) . "
+                  AND NOT EXISTS (
+                    SELECT 1 FROM donations d
+                    WHERE d.student_registration_code = s.registration_code
+                      AND d.status = 'success'
+                      AND $periodMatch
+                  )
+                ORDER BY s.name ASC";
+        $result = mysqli_query($con, $sql);
+        if ($result) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $unpaid_rows[] = $row;
+            }
+        }
     }
+} else {
+    $conds = [];
+    if ($from_date !== '' && $to_date !== '') {
+        $fromEsc = mysqli_real_escape_string($con, $from_date);
+        $toEsc = mysqli_real_escape_string($con, $to_date);
+        $conds[] = "d.donation_date BETWEEN '$fromEsc' AND '$toEsc'";
+    }
+    if ($class_filter_value !== '') {
+        $classEsc = mysqli_real_escape_string($con, $class_filter_value);
+        $conds[] = "s.class LIKE '%$classEsc%'";
+    }
+    if ($reg_filter_value !== '') {
+        $regEsc = mysqli_real_escape_string($con, $reg_filter_value);
+        $conds[] = "d.student_registration_code = '$regEsc'";
+    }
+    if ($month_filter !== '' && $year_filter !== '') {
+        $conds[] = fees_period_match_sql($con, $month_filter, $year_filter, 'd');
+    } elseif ($month_filter !== '') {
+        $conds[] = fees_period_match_sql($con, $month_filter, '', 'd');
+    } elseif ($year_filter !== '') {
+        $conds[] = fees_year_match_sql($con, $year_filter, 'd');
+    }
+
+    $whereSql = $conds ? ('WHERE ' . implode(' AND ', $conds)) : '';
+    $sql = "SELECT d.*, s.class
+            FROM donations d
+            LEFT JOIN students s ON d.student_registration_code = s.registration_code
+            $whereSql
+            ORDER BY d.id DESC";
+    $result = mysqli_query($con, $sql);
 }
 
-// --- REGISTRATION CODE FILTER LOGIC ---
-$reg_filter = "";
-if (!empty($_GET['reg_filter'])) {
-    $reg_filter_value = mysqli_real_escape_string($con, $_GET['reg_filter']);
-    if ($where === "" && $class_filter === "") {
-        $reg_filter = "WHERE d.student_registration_code = '$reg_filter_value'";
-    } else {
-        $reg_filter = "AND d.student_registration_code = '$reg_filter_value'";
-    }
+// Prefill last paid month when a registration code is already selected
+if ($reg_filter_value !== '') {
+    $lastInfo = fees_last_paid_for_student($con, $reg_filter_value);
+    $last_paid_display = $lastInfo['last_paid'];
 }
-
-// Build the query with joins to get student class information
-$sql = "SELECT d.*, s.class 
-        FROM donations d 
-        LEFT JOIN students s ON d.student_registration_code = s.registration_code 
-        $where $class_filter $reg_filter 
-        ORDER BY d.id DESC";
-$result = mysqli_query($con, $sql);
 
 // --- FETCH STUDENTS FOR DROPDOWN ---
 $students = mysqli_query($con, "SELECT id, name, registration_code, total_fees FROM students ORDER BY name ASC");
@@ -63,7 +124,7 @@ $class_students = [];
 if (isset($_GET['selected_class']) && !empty($_GET['selected_class'])) {
     $selected_class = mysqli_real_escape_string($con, $_GET['selected_class']);
     $class_students_query = mysqli_query($con, "SELECT registration_code, name, email, total_fees FROM students WHERE class LIKE '%$selected_class%' ORDER BY name");
-    while($student = mysqli_fetch_assoc($class_students_query)) {
+    while ($student = mysqli_fetch_assoc($class_students_query)) {
         $class_students[] = $student;
     }
 }
@@ -73,7 +134,7 @@ $search_results = [];
 if (isset($_GET['search_student']) && !empty($_GET['search_term'])) {
     $search_term = mysqli_real_escape_string($con, $_GET['search_term']);
     $search_query = mysqli_query($con, "SELECT registration_code, name, email, total_fees FROM students WHERE name LIKE '%$search_term%' OR registration_code LIKE '%$search_term%' ORDER BY name");
-    while($student = mysqli_fetch_assoc($search_query)) {
+    while ($student = mysqli_fetch_assoc($search_query)) {
         $search_results[] = $student;
     }
 }
@@ -148,9 +209,25 @@ $_SESSION['active_fee_tab'] = $active_tab;
     .filter-row {
       margin-bottom: 15px;
     }
+    .filter-row .form-group {
+      margin-right: 10px;
+      margin-bottom: 10px;
+      vertical-align: top;
+    }
     .select2-container--default .select2-selection--single {
       height: 34px;
       padding: 3px;
+    }
+    #lastPaidWrap {
+      display: none;
+    }
+    #lastPaidWrap.visible {
+      display: inline-block;
+    }
+    #lastPaidMonth {
+      background: #f5f5f5;
+      font-weight: 600;
+      min-width: 160px;
     }
   </style>
 </head>
@@ -177,74 +254,154 @@ $_SESSION['active_fee_tab'] = $active_tab;
         <div class="tab-pane <?= $active_tab == 'transactions' ? 'active' : '' ?>" id="tab_transactions">
           <form method="GET" class="form-inline filter-row">
             <input type="hidden" name="tab" value="transactions">
-            
+
             <div class="form-group">
+              <label>Show: </label>
+              <select name="show_mode" id="showMode" class="form-control">
+                <option value="paid" <?= $show_mode === 'paid' ? 'selected' : '' ?>>Paid transactions</option>
+                <option value="unpaid" <?= $show_mode === 'unpaid' ? 'selected' : '' ?>>Not paid (active students)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Fee Month: </label>
+              <select name="month_filter" class="form-control">
+                <option value="">All Months</option>
+                <?php foreach ($fee_months as $month): ?>
+                  <option value="<?= htmlspecialchars($month) ?>" <?= $month_filter === $month ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($month) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Year: </label>
+              <select name="year_filter" class="form-control">
+                <option value="">All Years</option>
+                <?php foreach ($year_options as $y): ?>
+                  <option value="<?= $y ?>" <?= $year_filter === (string) $y ? 'selected' : '' ?>><?= $y ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="form-group paid-only-filter">
               <label>From: </label>
-              <input type="date" name="from_date" class="form-control" value="<?= @$_GET['from_date'] ?>">
+              <input type="date" name="from_date" class="form-control" value="<?= htmlspecialchars($from_date) ?>">
             </div>
-            
-            <div class="form-group">
+
+            <div class="form-group paid-only-filter">
               <label>To: </label>
-              <input type="date" name="to_date" class="form-control" value="<?= @$_GET['to_date'] ?>">
+              <input type="date" name="to_date" class="form-control" value="<?= htmlspecialchars($to_date) ?>">
             </div>
-            
+
             <div class="form-group">
               <label>Class: </label>
               <select name="class_filter" class="form-control">
                 <option value="">All Classes</option>
-                <?php foreach($classes as $class): ?>
-                  <option value="<?= htmlspecialchars($class) ?>" <?= (isset($_GET['class_filter']) && $_GET['class_filter'] == $class) ? 'selected' : '' ?>>
+                <?php foreach ($classes as $class): ?>
+                  <option value="<?= htmlspecialchars($class) ?>" <?= $class_filter_value === $class ? 'selected' : '' ?>>
                     <?= htmlspecialchars($class) ?>
                   </option>
                 <?php endforeach; ?>
               </select>
             </div>
-            
+
             <div class="form-group">
               <label>Registration Code: </label>
-              <select name="reg_filter" class="form-control select2-registration" style="width: 250px;">
+              <select name="reg_filter" id="regFilter" class="form-control select2-registration" style="width: 250px;">
                 <option value="">All Students</option>
-                <?php foreach($reg_codes as $code => $display): ?>
-                  <option value="<?= htmlspecialchars($code) ?>" <?= (isset($_GET['reg_filter']) && $_GET['reg_filter'] == $code) ? 'selected' : '' ?>>
+                <?php foreach ($reg_codes as $code => $display): ?>
+                  <option value="<?= htmlspecialchars($code) ?>" <?= $reg_filter_value === $code ? 'selected' : '' ?>>
                     <?= htmlspecialchars($display) ?>
                   </option>
                 <?php endforeach; ?>
               </select>
             </div>
-            
+
+            <div class="form-group <?= $reg_filter_value !== '' ? 'visible' : '' ?>" id="lastPaidWrap">
+              <label>Last Paid Month: </label>
+              <input type="text" id="lastPaidMonth" class="form-control" readonly
+                     value="<?= htmlspecialchars($last_paid_display) ?>"
+                     placeholder="Select registration code">
+            </div>
+
             <div class="form-group">
               <button type="submit" class="btn btn-primary">Apply Filters</button>
               <a href="viewtransactions.php?tab=transactions" class="btn btn-default">Reset</a>
             </div>
           </form>
-          
-          <table id="example2" class="table table-bordered table-hover">
-            <thead>
-              <tr>
-                <th>#</th><th>Student</th><th>Class</th><th>Phone</th><th>Email</th>
-                <th>Amount</th><th>For Which MOnth</th><th>Status</th><th>Date</th><th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php $sn=1; while($row=mysqli_fetch_assoc($result)){ ?>
-              <tr>
-                <td><?= $sn++; ?></td>
-                <td><?= htmlspecialchars($row['donor_name']); ?> (<?= $row['student_registration_code']; ?>)</td>
-                <td><?= !empty($row['class']) ? htmlspecialchars($row['class']) : 'N/A'; ?></td>
-                <td><?= $row['donor_phone']; ?></td>
-                <td><?= $row['donor_email']; ?></td>
-                <td>₹<?= number_format($row['amount'],2); ?></td>
-                <td><?= $row['payment_reason']; ?></td>
-                <td><span class="label label-<?= $row['status']=='success'?'success':'danger'; ?>"><?= ucfirst($row['status']); ?></span></td>
-                <td><?= date('d M Y',strtotime($row['donation_date'])); ?></td>
-                <td>
-                  <a href="edit_transaction.php?id=<?= $row['id']; ?>" class="btn btn-warning btn-xs">Edit</a>
-                  <a href="delete_transaction.php?id=<?= $row['id']; ?>" onclick="return confirm('Delete?')" class="btn btn-danger btn-xs">Delete</a>
-                </td>
-              </tr>
-              <?php } ?>
-            </tbody>
-          </table>
+
+          <?php if ($unpaid_error !== ''): ?>
+            <div class="alert alert-warning"><?= htmlspecialchars($unpaid_error) ?></div>
+          <?php endif; ?>
+
+          <?php if ($show_mode === 'unpaid'): ?>
+            <p class="text-muted">
+              Showing <strong>ongoing</strong> students with no successful fee for
+              <strong><?= htmlspecialchars($month_filter !== '' && $year_filter !== '' ? fees_format_period($month_filter, $year_filter) : '—') ?></strong>.
+            </p>
+            <table id="example2" class="table table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Student</th>
+                  <th>Class</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Total Fees</th>
+                  <th>Status</th>
+                  <th>Fee Month</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php $sn = 1; foreach ($unpaid_rows as $row): ?>
+                <tr>
+                  <td><?= $sn++; ?></td>
+                  <td><?= htmlspecialchars($row['name']); ?> (<?= htmlspecialchars($row['registration_code']); ?>)</td>
+                  <td><?= !empty($row['class']) ? htmlspecialchars($row['class']) : 'N/A'; ?></td>
+                  <td><?= htmlspecialchars((string) $row['mobile_number']); ?></td>
+                  <td><?= htmlspecialchars((string) $row['email']); ?></td>
+                  <td>₹<?= number_format((float) $row['total_fees'], 2); ?></td>
+                  <td><span class="label label-success">Ongoing</span></td>
+                  <td>
+                    <span class="label label-danger">
+                      Not paid — <?= htmlspecialchars($month_filter) ?><?= $year_filter !== '' ? ' ' . htmlspecialchars($year_filter) : '' ?>
+                    </span>
+                  </td>
+                </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          <?php else: ?>
+            <table id="example2" class="table table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>#</th><th>Student</th><th>Class</th><th>Phone</th><th>Email</th>
+                  <th>Amount</th><th>For Which MOnth</th><th>Status</th><th>Date</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php $sn = 1; if ($result) { while ($row = mysqli_fetch_assoc($result)) { ?>
+                <tr>
+                  <td><?= $sn++; ?></td>
+                  <td><?= htmlspecialchars($row['donor_name']); ?> (<?= $row['student_registration_code']; ?>)</td>
+                  <td><?= !empty($row['class']) ? htmlspecialchars($row['class']) : 'N/A'; ?></td>
+                  <td><?= $row['donor_phone']; ?></td>
+                  <td><?= $row['donor_email']; ?></td>
+                  <td>₹<?= number_format($row['amount'], 2); ?></td>
+                  <td><?= htmlspecialchars((string) $row['payment_reason']); ?></td>
+                  <td><span class="label label-<?= $row['status'] == 'success' ? 'success' : 'danger'; ?>"><?= ucfirst($row['status']); ?></span></td>
+                  <td><?= date('d M Y', strtotime($row['donation_date'])); ?></td>
+                  <td>
+                    <a href="edit_transaction.php?id=<?= $row['id']; ?>" class="btn btn-warning btn-xs">Edit</a>
+                    <a href="delete_transaction.php?id=<?= $row['id']; ?>" onclick="return confirm('Delete?')" class="btn btn-danger btn-xs">Delete</a>
+                  </td>
+                </tr>
+                <?php } } ?>
+              </tbody>
+            </table>
+          <?php endif; ?>
         </div>
 
         <!-- Add Fees Tab -->
@@ -281,6 +438,7 @@ $_SESSION['active_fee_tab'] = $active_tab;
       <p><strong>Name:</strong> <span id="stuName"></span></p>
       <p><strong>Email:</strong> <span id="stuEmail"></span></p>
       <p><strong>Total Fees:</strong> ₹<span id="stuFee"></span></p>
+      <p><strong>Last Paid Month:</strong> <span id="stuLastPaid">—</span></p>
     </div>
 
     <!-- Payment Date -->
@@ -291,16 +449,20 @@ $_SESSION['active_fee_tab'] = $active_tab;
       </div>
     </div>
 
-    <!-- Payment For Month -->
+    <!-- Payment For Month + Year -->
     <div class="form-group">
       <label class="col-sm-2 control-label">Payment For Month</label>
-      <div class="col-sm-6">
-        <select name="payment_reason" class="form-control" required>
-          <?php foreach ([
-            'January','February','March','April','May','June',
-            'July','August','September','October','November','December'
-          ] as $month): ?>
+      <div class="col-sm-3">
+        <select name="fee_month" class="form-control" required>
+          <?php foreach ($fee_months as $month): ?>
             <option value="<?= $month ?>"><?= $month ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <select name="fee_year" class="form-control" required>
+          <?php foreach ($year_options as $y): ?>
+            <option value="<?= $y ?>" <?= $y === (int) date('Y') ? 'selected' : '' ?>><?= $y ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -439,15 +601,50 @@ $_SESSION['active_fee_tab'] = $active_tab;
 	</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script>
+function updateLastPaidMonth(regCode) {
+  var $wrap = $('#lastPaidWrap');
+  var $input = $('#lastPaidMonth');
+  if (!regCode) {
+    $wrap.removeClass('visible');
+    $input.val('');
+    return;
+  }
+  $wrap.addClass('visible');
+  $input.val('Loading...');
+  $.getJSON('get_last_paid_month.php', { registration_code: regCode })
+    .done(function (data) {
+      $input.val((data && data.last_paid) ? data.last_paid : 'No payment found');
+    })
+    .fail(function () {
+      $input.val('Unable to load');
+    });
+}
+
+function togglePaidOnlyFilters() {
+  var isUnpaid = $('#showMode').val() === 'unpaid';
+  $('.paid-only-filter').toggle(!isUnpaid);
+}
+
 $(function(){
   $('#example2').DataTable();
-  
+
   // Initialize Select2 for registration code dropdown
   $('.select2-registration').select2({
     placeholder: "Search registration code...",
     allowClear: true
   });
-  
+
+  togglePaidOnlyFilters();
+  $('#showMode').on('change', togglePaidOnlyFilters);
+
+  // Last paid month (fee month + year) after registration code selection
+  $('#regFilter').on('change', function () {
+    updateLastPaidMonth($(this).val());
+  });
+  if ($('#regFilter').val()) {
+    $('#lastPaidWrap').addClass('visible');
+  }
+
   // Activate the correct main tab based on URL parameter
   const urlParams = new URLSearchParams(window.location.search);
   const tab = urlParams.get('tab');
@@ -517,20 +714,30 @@ $(document).ready(function(){
     }
   });
 
-  // When student changes, show info + fees
+  // When student changes, show info + fees + last paid month
   $('#studentSelect').on('change', function(){
     var name = $('option:selected', this).data('name');
     var email = $('option:selected', this).data('email');
     var fee = $('option:selected', this).data('fee');
+    var regCode = $(this).val();
 
     if(name){
       $('#stuName').text(name);
       $('#stuEmail').text(email);
       $('#stuFee').text(parseFloat(fee).toFixed(2));
       $('#feeAmount').val(fee);
+      $('#stuLastPaid').text('Loading...');
       $('#studentInfo').show();
+      $.getJSON('get_last_paid_month.php', { registration_code: regCode })
+        .done(function (data) {
+          $('#stuLastPaid').text((data && data.last_paid) ? data.last_paid : 'No payment found');
+        })
+        .fail(function () {
+          $('#stuLastPaid').text('Unable to load');
+        });
     } else {
       $('#studentInfo').hide();
+      $('#stuLastPaid').text('—');
     }
   });
 });

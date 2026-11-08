@@ -93,19 +93,10 @@ public class HomeFragment extends Fragment {
         pollServiceDot = pollService.findViewById(R.id.serviceBadgeDot);
         addServiceItem(serviceGrid, R.drawable.ic_menu_more, getString(R.string.more), v -> showMoreSheet(activity));
 
-        View btnNotifications = view.findViewById(R.id.btnNotifications);
-        View btnWhatsapp = view.findViewById(R.id.btnWhatsapp);
-        View btnYoutube = view.findViewById(R.id.btnYoutube);
-        View btnFacebook = view.findViewById(R.id.btnFacebook);
-        View btnInstagram = view.findViewById(R.id.btnInstagram);
-        btnNotifications.setOnClickListener(v -> activity.selectBottomNav(R.id.nav_notices));
-        btnWhatsapp.setOnClickListener(v -> activity.openWhatsapp());
-        btnYoutube.setOnClickListener(v -> activity.openYoutube());
-        btnFacebook.setOnClickListener(v -> activity.openFacebook());
-        btnInstagram.setOnClickListener(v -> activity.openInstagram());
-        View socialBar = view.findViewById(R.id.socialActionBar);
-        socialBar.post(() -> applySocialIconPadding(
-                btnNotifications, btnWhatsapp, btnYoutube, btnFacebook, btnInstagram));
+        view.findViewById(R.id.btnNotifications).setOnClickListener(v ->
+                activity.selectBottomNav(R.id.nav_notices));
+        view.findViewById(R.id.btnWhatsapp).setOnClickListener(v -> activity.openWhatsapp());
+        view.findViewById(R.id.btnYoutube).setOnClickListener(v -> activity.openYoutube());
 
         UiUtils.setupColorfulSwipeRefresh(swipeRefresh);
         swipeRefresh.setOnRefreshListener(() -> loadHome(view, coursesContainer, promoSection, promoDots));
@@ -203,28 +194,6 @@ public class HomeFragment extends Fragment {
         promoHandler.removeCallbacks(promoAutoTick);
     }
 
-    /** Icon glyph padding scales with each button’s on-screen size. */
-    private void applySocialIconPadding(View... buttons) {
-        for (View button : buttons) {
-            if (button == null) {
-                continue;
-            }
-            int size = Math.min(button.getWidth(), button.getHeight());
-            if (size <= 0) {
-                continue;
-            }
-            int pad = Math.max((int) (size * 0.22f), (int) (8 * getResources().getDisplayMetrics().density));
-            button.setPadding(pad, pad, pad, pad);
-            if (button.getId() == R.id.btnNotifications && notificationDot != null) {
-                int dotSize = Math.max((int) (size * 0.2f), (int) (8 * getResources().getDisplayMetrics().density));
-                ViewGroup.LayoutParams lp = notificationDot.getLayoutParams();
-                lp.width = dotSize;
-                lp.height = dotSize;
-                notificationDot.setLayoutParams(lp);
-            }
-        }
-    }
-
     private View addServiceItem(GridLayout grid, int menuIconRes, String label,
                                 View.OnClickListener click) {
         View item = LayoutInflater.from(requireContext()).inflate(R.layout.item_service_grid, grid, false);
@@ -301,8 +270,16 @@ public class HomeFragment extends Fragment {
                     UiUtils.setLoaderVisible(progressBar, false);
                     swipeRefresh.setRefreshing(false);
                     JSONObject student = json.optJSONObject("student");
+                    JSONObject company = json.optJSONObject("company");
+                    TextView greeting = root.findViewById(R.id.tvGreeting);
+                    TextView address = root.findViewById(R.id.tvAddress);
                     if (student != null) {
+                        greeting.setText("Hey, " + student.optString("name", "Student") + " 👋");
+                        address.setText(student.optString("address", ""));
                         session.setStudentName(student.optString("name"));
+                    } else if (company != null) {
+                        greeting.setText(company.optString("name", "Dey Education"));
+                        address.setText(company.optString("address", ""));
                     }
                     feeBanner.setVisibility(json.optBoolean("has_pending_fees") ? View.VISIBLE : View.GONE);
                     notificationDot.setVisibility(json.optInt("notices_count") > 0 ? View.VISIBLE : View.GONE);

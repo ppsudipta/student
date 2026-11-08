@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 include('config.php');
+include_once __DIR__ . '/fees_helper.php';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header('Location: viewtransactions.php');
@@ -24,23 +25,35 @@ if (!$row) {
     exit();
 }
 
+$fee_months = fees_month_names();
+$year_options = fees_year_options();
+$parsed = fees_parse_period((string) $row['payment_reason'], (string) $row['donation_date']);
+$edit_month = $parsed['month'] ?? '';
+$edit_year = $parsed['year'] ?? (int) date('Y', strtotime((string) $row['donation_date']));
+
 if (isset($_POST['update'])) {
     $name = trim((string) ($_POST['donor_name'] ?? ''));
     $email = trim((string) ($_POST['donor_email'] ?? ''));
     $phone = trim((string) ($_POST['donor_phone'] ?? ''));
     $amount = (float) ($_POST['amount'] ?? 0);
-    $reason = trim((string) ($_POST['payment_reason'] ?? ''));
     $status = trim((string) ($_POST['status'] ?? 'pending'));
+    $fee_month = trim((string) ($_POST['fee_month'] ?? ''));
+    $fee_year = trim((string) ($_POST['fee_year'] ?? ''));
 
-    $upd = $con->prepare(
-        'UPDATE donations SET donor_name=?, donor_email=?, donor_phone=?, amount=?, payment_reason=?, status=? WHERE id=?'
-    );
-    $upd->bind_param('sssdssi', $name, $email, $phone, $amount, $reason, $status, $id);
-    if ($upd->execute()) {
-        echo "<script>alert('Transaction updated successfully!'); window.location='viewtransactions.php';</script>";
-        exit();
+    if (!in_array($fee_month, $fee_months, true) || !preg_match('/^\d{4}$/', $fee_year)) {
+        echo "<script>alert('Please select a valid fee month and year');</script>";
+    } else {
+        $reason = fees_format_period($fee_month, $fee_year);
+        $upd = $con->prepare(
+            'UPDATE donations SET donor_name=?, donor_email=?, donor_phone=?, amount=?, payment_reason=?, status=? WHERE id=?'
+        );
+        $upd->bind_param('sssdssi', $name, $email, $phone, $amount, $reason, $status, $id);
+        if ($upd->execute()) {
+            echo "<script>alert('Transaction updated successfully!'); window.location='viewtransactions.php';</script>";
+            exit();
+        }
+        echo "<script>alert('Update failed');</script>";
     }
-    echo "<script>alert('Update failed');</script>";
 }
 ?>
 <!DOCTYPE html>
@@ -92,8 +105,27 @@ if (isset($_POST['update'])) {
               <input type="number" step="0.01" name="amount" class="form-control" value="<?= htmlspecialchars((string) $row['amount']) ?>" required>
             </div>
             <div class="form-group">
-              <label>Reason</label>
-              <input type="text" name="payment_reason" class="form-control" value="<?= htmlspecialchars((string) $row['payment_reason']) ?>" required>
+              <label>Payment For Month</label>
+              <div class="row">
+                <div class="col-sm-6">
+                  <select name="fee_month" class="form-control" required>
+                    <?php foreach ($fee_months as $month): ?>
+                      <option value="<?= $month ?>" <?= $edit_month === $month ? 'selected' : '' ?>><?= $month ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="col-sm-6">
+                  <select name="fee_year" class="form-control" required>
+                    <?php
+                    if ($edit_year && !in_array((int) $edit_year, $year_options, true)) {
+                        array_unshift($year_options, (int) $edit_year);
+                    }
+                    foreach ($year_options as $y): ?>
+                      <option value="<?= $y ?>" <?= (int) $edit_year === (int) $y ? 'selected' : '' ?>><?= $y ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+              </div>
             </div>
             <div class="form-group">
               <label>Status</label>

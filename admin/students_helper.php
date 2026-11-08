@@ -6,11 +6,25 @@
 
 if (!function_exists('students_unique_classes')) {
     /**
+     * All class names for admin dropdowns: active class_session rows first,
+     * plus any orphan values still stored on students.
+     *
      * @return list<string>
      */
     function students_unique_classes(mysqli $con): array
     {
         $list = [];
+
+        $master = $con->query("SELECT DISTINCT class FROM class_session WHERE class IS NOT NULL AND class != '' AND (status = 'active' OR status IS NULL OR status = '') ORDER BY class");
+        if ($master) {
+            while ($row = $master->fetch_assoc()) {
+                $class = trim((string) $row['class']);
+                if ($class !== '') {
+                    $list[] = $class;
+                }
+            }
+        }
+
         $res = $con->query("SELECT class FROM students WHERE class IS NOT NULL AND class != '' AND class != '0'");
         if ($res) {
             while ($row = $res->fetch_assoc()) {
@@ -21,6 +35,7 @@ if (!function_exists('students_unique_classes')) {
                 }
             }
         }
+
         $list = array_values(array_unique($list));
         sort($list, SORT_NATURAL | SORT_FLAG_CASE);
         return $list;
@@ -29,11 +44,25 @@ if (!function_exists('students_unique_classes')) {
 
 if (!function_exists('students_unique_sessions')) {
     /**
+     * All sessions for admin dropdowns: active class_session rows first,
+     * plus any orphan values still stored on students.
+     *
      * @return list<string>
      */
     function students_unique_sessions(mysqli $con): array
     {
         $list = [];
+
+        $master = $con->query("SELECT DISTINCT session FROM class_session WHERE session IS NOT NULL AND session != '' AND (status = 'active' OR status IS NULL OR status = '') ORDER BY session DESC");
+        if ($master) {
+            while ($row = $master->fetch_assoc()) {
+                $session = trim((string) $row['session']);
+                if ($session !== '') {
+                    $list[] = $session;
+                }
+            }
+        }
+
         $res = $con->query("SELECT session FROM students WHERE session IS NOT NULL AND session != ''");
         if ($res) {
             while ($row = $res->fetch_assoc()) {
@@ -44,6 +73,7 @@ if (!function_exists('students_unique_sessions')) {
                 }
             }
         }
+
         $list = array_values(array_unique($list));
         rsort($list, SORT_NATURAL | SORT_FLAG_CASE);
         return $list;

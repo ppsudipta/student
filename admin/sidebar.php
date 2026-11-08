@@ -194,9 +194,9 @@ $renderTree = static function (string $title, string $icon, array $items, array 
 
       $renderTree('Fees Management', 'fa fa-money', [
           ['View Transactions', 'viewtransactions.php', ['viewtransactions.php', 'edit_transaction.php']],
-          ['All Fees', 'allfees.php'],
-          ['View All Fees', 'view_all_fees.php'],
-          ['Add Fees', 'addfees.php'],
+          // ['All Fees', 'allfees.php'],
+          // ['View All Fees', 'view_all_fees.php'],
+          // ['Add Fees', 'addfees.php'],
       ], ['viewtransactions.php', 'allfees.php', 'view_all_fees.php', 'addfees.php', 'edit_transaction.php']);
 
       $renderTree('Attendance Report', 'fa fa-calendar-check-o', [

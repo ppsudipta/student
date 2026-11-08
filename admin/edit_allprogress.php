@@ -46,12 +46,8 @@ if (!$attendance) {
     die("Record not found.");
 }
 
-// Fetch distinct class names for dropdown
-$all_classes = students_split_unique_values(
-    $con,
-    "SELECT class_name FROM attendance WHERE class_name IS NOT NULL AND class_name != ''",
-    'class_name'
-);
+// Fetch all class names for dropdown (from class_session + students)
+$all_classes = students_unique_classes($con);
 ?>
 
 <!DOCTYPE html>
