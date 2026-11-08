@@ -18,10 +18,72 @@ $titleYears = range($currentYear - 5, $currentYear + 2);
 $filterClass = trim((string) ($_GET['class_name'] ?? ''));
 $filterStudent = trim((string) ($_GET['student_id'] ?? ''));
 $filterReg = trim((string) ($_GET['reg_code'] ?? ''));
-$filterYear = trim((string) ($_GET['title_year'] ?? ''));
-$filterMonth = trim((string) ($_GET['title_month'] ?? ''));
-$filterDay = trim((string) ($_GET['title_day'] ?? ''));
-$filterBoard = trim((string) ($_GET['title_board'] ?? ''));
+// Keep form display values even when cohort validation fails
+$formYear = trim((string) ($_GET['title_year'] ?? ''));
+$formMonth = trim((string) ($_GET['title_month'] ?? ''));
+$formDay = trim((string) ($_GET['title_day'] ?? ''));
+$formBoard = trim((string) ($_GET['title_board'] ?? ''));
+
+// Cohort fields are all-or-nothing: if any one is filled, Year+Month+Day+Board are required
+$cohortFilledCount = ($formYear !== '' ? 1 : 0)
+  + ($formMonth !== '' ? 1 : 0)
+  + ($formDay !== '' ? 1 : 0)
+  + ($formBoard !== '' ? 1 : 0);
+$filterError = '';
+$hasFullCohort = ($cohortFilledCount === 4);
+
+// Applied filters (empty when partial cohort — blocks incomplete filtering)
+$filterYear = $hasFullCohort ? $formYear : '';
+$filterMonth = $hasFullCohort ? $formMonth : '';
+$filterDay = $hasFullCohort ? $formDay : '';
+$filterBoard = $hasFullCohort ? $formBoard : '';
+
+if ($cohortFilledCount > 0 && $cohortFilledCount < 4) {
+  $filterError = 'Please fill all cohort fields together: Title Year, Month, Day, and Board Type (or leave all empty).';
+}
+
+/**
+ * Append exact title-part filters for format: "Year - Month - Day - Board Type"
+ * Uses SUBSTRING_INDEX so Day=2 does not match Day=12 / Day=1 incorrectly.
+ *
+ * @param list<mixed> $params
+ */
+function attendance_append_title_filters(
+    string &$sql,
+    array &$params,
+    string &$types,
+    string $year,
+    string $month,
+    string $day,
+    string $board,
+    bool $includeDay = true,
+    string $alias = 'a'
+): void {
+    $col = $alias . '.attendance_title';
+    // Normalize separators for parsing: Year | Month | Day | Board...
+    $partsExpr = "REPLACE($col, ' - ', '|')";
+
+    if ($year !== '') {
+        $sql .= " AND SUBSTRING_INDEX($partsExpr, '|', 1) = ?";
+        $params[] = $year;
+        $types .= 's';
+    }
+    if ($month !== '') {
+        $sql .= " AND SUBSTRING_INDEX(SUBSTRING_INDEX($partsExpr, '|', 2), '|', -1) = ?";
+        $params[] = $month;
+        $types .= 's';
+    }
+    if ($includeDay && $day !== '') {
+        $sql .= " AND SUBSTRING_INDEX(SUBSTRING_INDEX($partsExpr, '|', 3), '|', -1) = ?";
+        $params[] = $day;
+        $types .= 's';
+    }
+    if ($board !== '') {
+        $sql .= " AND TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(CONCAT($partsExpr, '|'), '|', 4), '|', -1)) = ?";
+        $params[] = $board;
+        $types .= 's';
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -97,7 +159,10 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
             </div>
 
             <div class="box-body">
-              <form method="get">
+              <?php if ($filterError !== ''): ?>
+                <div class="alert alert-warning" style="margin-bottom:12px;"><?= htmlspecialchars($filterError) ?></div>
+              <?php endif; ?>
+              <form method="get" id="attendanceFilterForm">
                 <div class="filter-row">
                   <div class="form-group">
                     <label for="class_filter">Class</label>
@@ -150,40 +215,40 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
 
                   <div class="form-group">
                     <label for="title_year">Title Year</label>
-                    <select class="form-control select2" id="title_year" name="title_year" style="width: 120px;">
+                    <select class="form-control select2 cohort-field" id="title_year" name="title_year" style="width: 120px;">
                       <option value="">All Years</option>
                       <?php foreach ($titleYears as $year): ?>
-                        <option value="<?= $year ?>" <?= $filterYear === (string) $year ? 'selected' : '' ?>><?= $year ?></option>
+                        <option value="<?= $year ?>" <?= $formYear === (string) $year ? 'selected' : '' ?>><?= $year ?></option>
                       <?php endforeach; ?>
                     </select>
                   </div>
 
                   <div class="form-group">
                     <label for="title_month">Title Month</label>
-                    <select class="form-control select2" id="title_month" name="title_month" style="width: 140px;">
+                    <select class="form-control select2 cohort-field" id="title_month" name="title_month" style="width: 140px;">
                       <option value="">All Months</option>
                       <?php foreach ($titleMonths as $month): ?>
-                        <option value="<?= $month ?>" <?= $filterMonth === $month ? 'selected' : '' ?>><?= $month ?></option>
+                        <option value="<?= $month ?>" <?= $formMonth === $month ? 'selected' : '' ?>><?= $month ?></option>
                       <?php endforeach; ?>
                     </select>
                   </div>
 
                   <div class="form-group">
                     <label for="title_day">Title Day</label>
-                    <select class="form-control select2" id="title_day" name="title_day" style="width: 110px;">
+                    <select class="form-control select2 cohort-field" id="title_day" name="title_day" style="width: 110px;">
                       <option value="">All Days</option>
                       <?php for ($d = 1; $d <= 60; $d++): ?>
-                        <option value="<?= $d ?>" <?= $filterDay === (string) $d ? 'selected' : '' ?>><?= $d ?></option>
+                        <option value="<?= $d ?>" <?= $formDay === (string) $d ? 'selected' : '' ?>><?= $d ?></option>
                       <?php endfor; ?>
                     </select>
                   </div>
 
                   <div class="form-group">
                     <label for="title_board">Board Type</label>
-                    <select class="form-control select2" id="title_board" name="title_board" style="width: 150px;">
+                    <select class="form-control select2 cohort-field" id="title_board" name="title_board" style="width: 150px;">
                       <option value="">All Types</option>
                       <?php foreach ($boardTypes as $board): ?>
-                        <option value="<?= htmlspecialchars($board) ?>" <?= $filterBoard === $board ? 'selected' : '' ?>>
+                        <option value="<?= htmlspecialchars($board) ?>" <?= $formBoard === $board ? 'selected' : '' ?>>
                           <?= htmlspecialchars($board) ?>
                         </option>
                       <?php endforeach; ?>
@@ -195,7 +260,11 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
                     <a href="allprogress.php" class="btn btn-default">Reset</a>
                   </div>
                 </div>
-                <p class="help-block" style="margin:10px 0 0;">Title format matches insert: Year - Month - Day - Board Type (e.g. 2025 - December - 1 - Competitive)</p>
+                <p class="help-block" style="margin:10px 0 0;">
+                  Cohort = <strong>Year – Month – Day – Board</strong>
+                  (e.g. 2025 - December - 1 - Competitive).
+                  If you fill any one of these four, you must fill all four.
+                </p>
               </form>
             </div>
           </div>
@@ -252,26 +321,11 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
                   }
 
                   // Title parts match insert format: "2025 - December - 1 - Competitive"
-                  if ($filterYear !== '') {
-                    $query .= " AND a.attendance_title LIKE ?";
-                    $params[] = $filterYear . ' - %';
-                    $types .= 's';
-                  }
-                  if ($filterMonth !== '') {
-                    $query .= " AND a.attendance_title LIKE ?";
-                    $params[] = '% - ' . $filterMonth . ' - %';
-                    $types .= 's';
-                  }
-                  if ($filterDay !== '') {
-                    $query .= " AND a.attendance_title LIKE ?";
-                    $params[] = '% - ' . $filterDay . ' - %';
-                    $types .= 's';
-                  }
-                  if ($filterBoard !== '') {
-                    $query .= " AND a.attendance_title LIKE ?";
-                    $params[] = '% - ' . $filterBoard;
-                    $types .= 's';
-                  }
+                  attendance_append_title_filters(
+                    $query, $params, $types,
+                    $filterYear, $filterMonth, $filterDay, $filterBoard,
+                    true, 'a'
+                  );
 
                   $query .= " ORDER BY a.attendance_date DESC, a.class_name, s.name";
                   $stmt = $con->prepare($query);
@@ -312,32 +366,53 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
           </div>
 
           <?php
-          // Second table: classmates who were NOT Present for the filtered session(s).
-          // Works with Class filter OR title filters (Year/Month/Day/Board) — class is
-          // taken from attendance.class_name, or from present students' profile class if blank.
-          $hasTitleFilter = ($filterYear !== '' || $filterMonth !== '' || $filterDay !== '' || $filterBoard !== '');
-          $showNotPresent = ($filterClass !== '' || $hasTitleFilter);
+          // Cohort = Year - Month - Day - Board (exact attendance_title).
+          // Not Present = ongoing students in that cohort's class who were not Present.
+          $cohortTitle = '';
+          if ($hasFullCohort) {
+            $cohortTitle = $filterYear . ' - ' . $filterMonth . ' - ' . $filterDay . ' - ' . $filterBoard;
+          }
+
           $notPresentRows = [];
           $notPresentClasses = [];
           $notPresentHint = '';
+          $showNotPresent = false;
 
-          if ($showNotPresent) {
-            if ($filterClass !== '' && !$hasTitleFilter) {
-              $notPresentHint = 'Tip: also select Title Year / Month / Day (and Board) to narrow to a particular session.';
+          if ($hasFullCohort) {
+            $showNotPresent = true;
+            $notPresentHint = '';
+
+            $addClassFromRow = static function (array &$classSet, string $attClass, string $studentClass): void {
+              $attClass = trim($attClass);
+              if ($attClass !== '' && strcasecmp($attClass, 'All Classes') !== 0) {
+                $classSet[$attClass] = true;
+                return;
+              }
+              foreach (array_map('trim', explode(',', $studentClass)) as $part) {
+                if ($part !== '') {
+                  $classSet[$part] = true;
+                }
+              }
+            };
+
+            $classSet = [];
+            if ($filterClass !== '') {
+              $classSet[$filterClass] = true;
             }
 
-            // Matching Present rows (same filters as main list)
+            // Present for this exact cohort title
             $presentQuery = "SELECT a.student_id, a.class_name, s.class AS student_class
                              FROM attendance a
                              JOIN students s ON a.student_id = s.id
-                             WHERE a.status = 'Present'";
-            $presentParams = [];
-            $presentTypes = '';
-
+                             WHERE a.status = 'Present'
+                               AND a.attendance_title = ?";
+            $presentParams = [$cohortTitle];
+            $presentTypes = 's';
             if ($filterClass !== '') {
-              $presentQuery .= " AND a.class_name LIKE ?";
+              $presentQuery .= " AND (a.class_name LIKE ? OR FIND_IN_SET(?, s.class))";
               $presentParams[] = '%' . $filterClass . '%';
-              $presentTypes .= 's';
+              $presentParams[] = $filterClass;
+              $presentTypes .= 'ss';
             }
             if ($filterStudent !== '' && ctype_digit($filterStudent)) {
               $presentQuery .= " AND a.student_id = ?";
@@ -349,121 +424,53 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
               $presentParams[] = $filterReg;
               $presentTypes .= 's';
             }
-            if ($filterYear !== '') {
-              $presentQuery .= " AND a.attendance_title LIKE ?";
-              $presentParams[] = $filterYear . ' - %';
-              $presentTypes .= 's';
-            }
-            if ($filterMonth !== '') {
-              $presentQuery .= " AND a.attendance_title LIKE ?";
-              $presentParams[] = '% - ' . $filterMonth . ' - %';
-              $presentTypes .= 's';
-            }
-            if ($filterDay !== '') {
-              $presentQuery .= " AND a.attendance_title LIKE ?";
-              $presentParams[] = '% - ' . $filterDay . ' - %';
-              $presentTypes .= 's';
-            }
-            if ($filterBoard !== '') {
-              $presentQuery .= " AND a.attendance_title LIKE ?";
-              $presentParams[] = '% - ' . $filterBoard;
-              $presentTypes .= 's';
-            }
 
             $presentIds = [];
-            $classSet = [];
-
-            if ($filterClass !== '') {
-              $classSet[$filterClass] = true;
-            }
-
             $pStmt = $con->prepare($presentQuery);
-            if ($presentTypes !== '') {
-              $pStmt->bind_param($presentTypes, ...$presentParams);
-            }
+            $pStmt->bind_param($presentTypes, ...$presentParams);
             $pStmt->execute();
             $pRes = $pStmt->get_result();
             while ($pRow = $pRes->fetch_assoc()) {
               $presentIds[(int) $pRow['student_id']] = true;
-
-              $attClass = trim((string) ($pRow['class_name'] ?? ''));
-              if ($attClass !== '' && strcasecmp($attClass, 'All Classes') !== 0) {
-                $classSet[$attClass] = true;
-              } else {
-                foreach (array_map('trim', explode(',', (string) ($pRow['student_class'] ?? ''))) as $part) {
-                  if ($part !== '') {
-                    $classSet[$part] = true;
-                  }
-                }
-              }
+              $addClassFromRow($classSet, (string) $pRow['class_name'], (string) $pRow['student_class']);
             }
 
-            // If Class filter was set but attendance.class_name is blank, still use filter class
-            // and also pull classes from any matching attendance (Present or not) for that title
-            if (empty($classSet) && $hasTitleFilter) {
-              $anyQuery = "SELECT a.class_name, s.class AS student_class
-                           FROM attendance a
-                           JOIN students s ON a.student_id = s.id
-                           WHERE 1=1";
-              $anyParams = [];
-              $anyTypes = '';
-              if ($filterYear !== '') {
-                $anyQuery .= " AND a.attendance_title LIKE ?";
-                $anyParams[] = $filterYear . ' - %';
-                $anyTypes .= 's';
-              }
-              if ($filterMonth !== '') {
-                $anyQuery .= " AND a.attendance_title LIKE ?";
-                $anyParams[] = '% - ' . $filterMonth . ' - %';
-                $anyTypes .= 's';
-              }
-              if ($filterDay !== '') {
-                $anyQuery .= " AND a.attendance_title LIKE ?";
-                $anyParams[] = '% - ' . $filterDay . ' - %';
-                $anyTypes .= 's';
-              }
-              if ($filterBoard !== '') {
-                $anyQuery .= " AND a.attendance_title LIKE ?";
-                $anyParams[] = '% - ' . $filterBoard;
-                $anyTypes .= 's';
-              }
-              $aStmt = $con->prepare($anyQuery);
-              if ($anyTypes !== '') {
-                $aStmt->bind_param($anyTypes, ...$anyParams);
-              }
-              $aStmt->execute();
-              $aRes = $aStmt->get_result();
-              while ($aRow = $aRes->fetch_assoc()) {
-                $attClass = trim((string) ($aRow['class_name'] ?? ''));
-                if ($attClass !== '' && strcasecmp($attClass, 'All Classes') !== 0) {
-                  $classSet[$attClass] = true;
-                } else {
-                  foreach (array_map('trim', explode(',', (string) ($aRow['student_class'] ?? ''))) as $part) {
-                    if ($part !== '') {
-                      $classSet[$part] = true;
-                    }
-                  }
-                }
-              }
+            // Also read class from any attendance rows for this exact cohort (even if empty present set edge cases)
+            $clsStmt = $con->prepare(
+              "SELECT a.class_name, s.class AS student_class
+               FROM attendance a
+               JOIN students s ON a.student_id = s.id
+               WHERE a.attendance_title = ?"
+            );
+            $clsStmt->bind_param('s', $cohortTitle);
+            $clsStmt->execute();
+            $clsRes = $clsStmt->get_result();
+            while ($cRow = $clsRes->fetch_assoc()) {
+              $addClassFromRow($classSet, (string) $cRow['class_name'], (string) $cRow['student_class']);
             }
 
             $notPresentClasses = array_keys($classSet);
+            $expectedIds = [];
 
             if (!empty($notPresentClasses)) {
               $classConds = [];
               $stuParams = [];
               $stuTypes = '';
               foreach ($notPresentClasses as $cls) {
-                $classConds[] = 'FIND_IN_SET(?, s.class)';
+                // Match profile class OR any prior attendance.class_name for that student
+                $classConds[] = '(FIND_IN_SET(?, s.class) OR EXISTS (
+                  SELECT 1 FROM attendance ax
+                  WHERE ax.student_id = s.id AND ax.class_name = ?
+                ))';
                 $stuParams[] = $cls;
-                $stuTypes .= 's';
+                $stuParams[] = $cls;
+                $stuTypes .= 'ss';
               }
 
               $stuQuery = "SELECT s.id, s.name, s.registration_code, s.class, s.mobile_number, s.email, s.status
                            FROM students s
-                           WHERE s.status = 'ongoing'
+                           WHERE (s.status = 'ongoing' OR s.status = '' OR s.status IS NULL)
                              AND (" . implode(' OR ', $classConds) . ")";
-
               if ($filterStudent !== '' && ctype_digit($filterStudent)) {
                 $stuQuery .= " AND s.id = ?";
                 $stuParams[] = (int) $filterStudent;
@@ -476,17 +483,27 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
               }
               $stuQuery .= " ORDER BY s.name ASC";
 
-              $sStmt = $con->prepare($stuQuery);
-              $sStmt->bind_param($stuTypes, ...$stuParams);
-              $sStmt->execute();
-              $sRes = $sStmt->get_result();
-              while ($stu = $sRes->fetch_assoc()) {
-                if (!isset($presentIds[(int) $stu['id']])) {
-                  $notPresentRows[] = $stu;
-                }
+              $cStmt = $con->prepare($stuQuery);
+              $cStmt->bind_param($stuTypes, ...$stuParams);
+              $cStmt->execute();
+              $cRes = $cStmt->get_result();
+              while ($stu = $cRes->fetch_assoc()) {
+                $expectedIds[(int) $stu['id']] = $stu;
               }
-            } else {
-              $notPresentHint = 'Could not detect class for this filter. Select a Class, or ensure attendance records have a class.';
+            }
+
+            foreach ($expectedIds as $sid => $stu) {
+              if (isset($presentIds[$sid])) {
+                continue;
+              }
+              if (strtolower(trim((string) ($stu['status'] ?? ''))) === 'suspended') {
+                continue;
+              }
+              $notPresentRows[] = $stu;
+            }
+
+            if (empty($notPresentClasses)) {
+              $notPresentHint = 'No class found for cohort "' . $cohortTitle . '". Ensure attendance has a class, or select Class filter.';
             }
           }
           ?>
@@ -497,15 +514,12 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
               <h3 class="box-title">
                 Students Not Present (Same Class)
                 <small>
-                  <?php if (!empty($notPresentClasses)): ?>
-                    — Class: <?= htmlspecialchars(implode(', ', $notPresentClasses)) ?>
+                  <?php if ($cohortTitle !== ''): ?>
+                    — Cohort: <?= htmlspecialchars($cohortTitle) ?>
                   <?php endif; ?>
-                  <?php
-                  $titleBits = array_filter([$filterYear, $filterMonth, $filterDay, $filterBoard]);
-                  if ($titleBits) {
-                    echo ' | Session: ' . htmlspecialchars(implode(' - ', $titleBits));
-                  }
-                  ?>
+                  <?php if (!empty($notPresentClasses)): ?>
+                    | Class: <?= htmlspecialchars(implode(', ', $notPresentClasses)) ?>
+                  <?php endif; ?>
                 </small>
               </h3>
             </div>
@@ -513,9 +527,10 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
               <?php if ($notPresentHint !== ''): ?>
                 <p class="text-muted"><?= htmlspecialchars($notPresentHint) ?></p>
               <?php endif; ?>
+              <?php if ($hasFullCohort): ?>
               <p class="help-block">
-                Ongoing classmates with no <strong>Present</strong> mark for the filtered session
-                (same class as students who were marked Present).
+                Cohort is <strong>Year – Month – Day – Board</strong>.
+                Ongoing classmates (same class) with no <strong>Present</strong> mark for this cohort.
               </p>
               <table id="notPresentTable" class="table table-bordered table-hover">
                 <thead>
@@ -530,21 +545,21 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
                   </tr>
                 </thead>
                 <tbody>
-                  <?php if (empty($notPresentClasses)): ?>
+                  <?php if (empty($notPresentClasses) && empty($notPresentRows)): ?>
                     <tr>
-                      <td colspan="7" class="text-center text-warning">No class found for this filter — pick Class or a title session with attendance.</td>
+                      <td colspan="7" class="text-center text-warning">No class found for this cohort.</td>
                     </tr>
                   <?php elseif (empty($notPresentRows)): ?>
                     <tr>
-                      <td colspan="7" class="text-center text-success">All ongoing students in this class were Present.</td>
+                      <td colspan="7" class="text-center text-success">All classmates were Present for this cohort.</td>
                     </tr>
                   <?php else: ?>
                     <?php $np = 1; foreach ($notPresentRows as $stu): ?>
                     <tr class="attendance-absent">
                       <td><?= $np++ ?></td>
                       <td><?= htmlspecialchars($stu['name']) ?></td>
-                      <td><?= htmlspecialchars($stu['registration_code']) ?></td>
-                      <td><?= htmlspecialchars($stu['class']) ?></td>
+                      <td><?= htmlspecialchars((string) $stu['registration_code']) ?></td>
+                      <td><?= htmlspecialchars((string) $stu['class']) ?></td>
                       <td><?= htmlspecialchars((string) $stu['mobile_number']) ?></td>
                       <td><?= htmlspecialchars((string) $stu['email']) ?></td>
                       <td><span class="label label-danger">Not Present</span></td>
@@ -553,6 +568,7 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
                   <?php endif; ?>
                 </tbody>
               </table>
+              <?php endif; ?>
             </div>
           </div>
           <?php endif; ?>
@@ -577,6 +593,20 @@ $filterBoard = trim((string) ($_GET['title_board'] ?? ''));
       allowClear: false,
       width: '100%',
       minimumResultsForSearch: 8
+    });
+
+    // If any cohort field is filled, all four (Year/Month/Day/Board) are required
+    $('#attendanceFilterForm').on('submit', function (e) {
+      var year = $.trim($('#title_year').val() || '');
+      var month = $.trim($('#title_month').val() || '');
+      var day = $.trim($('#title_day').val() || '');
+      var board = $.trim($('#title_board').val() || '');
+      var filled = (year ? 1 : 0) + (month ? 1 : 0) + (day ? 1 : 0) + (board ? 1 : 0);
+      if (filled > 0 && filled < 4) {
+        e.preventDefault();
+        alert('Please fill all cohort fields together: Title Year, Month, Day, and Board Type (or leave all empty).');
+        return false;
+      }
     });
 
     var attendanceTable = $('#attendanceTable').DataTable({
