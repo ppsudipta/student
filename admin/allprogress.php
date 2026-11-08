@@ -378,9 +378,27 @@ function attendance_append_title_filters(
           $notPresentHint = '';
           $showNotPresent = false;
 
+          $cohortDate = '';
+          $returnQuery = $_SERVER['QUERY_STRING'] ?? '';
+          $returnUrl = 'allprogress.php' . ($returnQuery !== '' ? ('?' . $returnQuery) : '');
+
           if ($hasFullCohort) {
             $showNotPresent = true;
             $notPresentHint = '';
+
+            // Date used when marking Not Present → Present
+            $cdStmt = $con->prepare(
+              "SELECT attendance_date, class_name FROM attendance
+               WHERE attendance_title = ? AND status = 'Present'
+               ORDER BY id DESC LIMIT 1"
+            );
+            $cdStmt->bind_param('s', $cohortTitle);
+            $cdStmt->execute();
+            $cdRes = $cdStmt->get_result();
+            if ($cdRow = $cdRes->fetch_assoc()) {
+              $cohortDate = (string) $cdRow['attendance_date'];
+            }
+            $cdStmt->close();
 
             $addClassFromRow = static function (array &$classSet, string $attClass, string $studentClass): void {
               $attClass = trim($attClass);
@@ -530,7 +548,7 @@ function attendance_append_title_filters(
               <?php if ($hasFullCohort): ?>
               <p class="help-block">
                 Cohort is <strong>Year – Month – Day – Board</strong>.
-                Ongoing classmates (same class) with no <strong>Present</strong> mark for this cohort.
+                Ongoing classmates with no Present mark. Use <strong>Mark Present</strong> to create a Present record (Absent is not stored).
               </p>
               <table id="notPresentTable" class="table table-bordered table-hover">
                 <thead>
@@ -542,19 +560,36 @@ function attendance_append_title_filters(
                     <th>Phone</th>
                     <th>Email</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <?php if (empty($notPresentClasses) && empty($notPresentRows)): ?>
                     <tr>
-                      <td colspan="7" class="text-center text-warning">No class found for this cohort.</td>
+                      <td colspan="8" class="text-center text-warning">No class found for this cohort.</td>
                     </tr>
                   <?php elseif (empty($notPresentRows)): ?>
                     <tr>
-                      <td colspan="7" class="text-center text-success">All classmates were Present for this cohort.</td>
+                      <td colspan="8" class="text-center text-success">All classmates were Present for this cohort.</td>
                     </tr>
                   <?php else: ?>
-                    <?php $np = 1; foreach ($notPresentRows as $stu): ?>
+                    <?php
+                    $np = 1;
+                    $markClass = !empty($notPresentClasses) ? $notPresentClasses[0] : ($filterClass !== '' ? $filterClass : '');
+                    foreach ($notPresentRows as $stu):
+                      $stuClassParts = array_values(array_filter(array_map('trim', explode(',', (string) $stu['class']))));
+                      $markStuClass = $markClass;
+                      if ($markStuClass === '' && !empty($stuClassParts)) {
+                        $markStuClass = $stuClassParts[0];
+                      }
+                      $markUrl = 'mark_attendance_present.php?' . http_build_query([
+                        'student_id' => (int) $stu['id'],
+                        'class_name' => $markStuClass,
+                        'title' => $cohortTitle,
+                        'date' => $cohortDate,
+                        'return' => $returnUrl,
+                      ]);
+                    ?>
                     <tr class="attendance-absent">
                       <td><?= $np++ ?></td>
                       <td><?= htmlspecialchars($stu['name']) ?></td>
@@ -563,6 +598,13 @@ function attendance_append_title_filters(
                       <td><?= htmlspecialchars((string) $stu['mobile_number']) ?></td>
                       <td><?= htmlspecialchars((string) $stu['email']) ?></td>
                       <td><span class="label label-danger">Not Present</span></td>
+                      <td>
+                        <a href="<?= htmlspecialchars($markUrl) ?>"
+                           class="btn btn-success btn-xs js-mark-present"
+                           onclick="return confirm('Mark <?= htmlspecialchars(addslashes($stu['name']), ENT_QUOTES) ?> as Present for this cohort?');">
+                          <i class="fa fa-check"></i> Mark Present
+                        </a>
+                      </td>
                     </tr>
                     <?php endforeach; ?>
                   <?php endif; ?>
