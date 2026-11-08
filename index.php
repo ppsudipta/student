@@ -1,4 +1,6 @@
 <?php
+header("Location: /admin/");
+exit;
 $publicUrl = 'pages/';
 $adminUrl = 'admin/';
 $apiUrl = 'laravel-api/public/api/health';
