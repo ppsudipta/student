@@ -3,6 +3,7 @@ package com.deyeducation.app;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.VideoView;
@@ -32,6 +33,7 @@ public class NoticeDetailActivity extends AppCompatActivity {
     private int noticeId;
     private boolean seen;
     private VideoView videoView;
+    private boolean resumeVideoOnReturn;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -99,14 +101,19 @@ public class NoticeDetailActivity extends AppCompatActivity {
                         funLoader.setKind(FunLoaderView.Kind.VIDEO);
                     }
                     videoView.setVisibility(View.VISIBLE);
+                    videoView.setKeepScreenOn(true);
+                    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     UiUtils.setLoaderVisible(progressBar, true);
                     videoView.setVideoURI(Uri.parse(mediaUrl));
                     videoView.setOnPreparedListener(mp -> {
                         UiUtils.setLoaderVisible(progressBar, false);
                         mp.setLooping(false);
+                        mp.setScreenOnWhilePlaying(true);
                     });
+                    videoView.setOnCompletionListener(mp -> releaseVideoWake());
                     videoView.setOnErrorListener((mp, what, extra) -> {
                         UiUtils.setLoaderVisible(progressBar, false);
+                        releaseVideoWake();
                         UiUtils.toast(this, getString(R.string.video_load_failed));
                         return true;
                     });
@@ -161,12 +168,33 @@ public class NoticeDetailActivity extends AppCompatActivity {
         });
     }
 
+    private void releaseVideoWake() {
+        resumeVideoOnReturn = false;
+        if (videoView != null) {
+            videoView.setKeepScreenOn(false);
+        }
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
+
     @Override
     protected void onPause() {
         if (videoView != null && videoView.isPlaying()) {
+            resumeVideoOnReturn = true;
             videoView.pause();
         }
         super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (resumeVideoOnReturn && videoView != null
+                && videoView.getVisibility() == View.VISIBLE) {
+            videoView.setKeepScreenOn(true);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            videoView.start();
+            resumeVideoOnReturn = false;
+        }
     }
 
     @Override

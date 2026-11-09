@@ -54,6 +54,8 @@ public class VideoActivity extends AppCompatActivity {
         getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_SECURE,
                 WindowManager.LayoutParams.FLAG_SECURE);
+        // Class videos stay visible even when the phone's screen timeout is very short.
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_video);
 
         int materialId = getIntent().getIntExtra(EXTRA_MATERIAL_ID, 0);
@@ -161,6 +163,7 @@ public class VideoActivity extends AppCompatActivity {
             }
             customView = view;
             customViewCallback = callback;
+            view.setKeepScreenOn(true);
             fullscreenContainer.addView(view, new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                     FrameLayout.LayoutParams.MATCH_PARENT));
@@ -235,6 +238,23 @@ public class VideoActivity extends AppCompatActivity {
                 .replace("\"", "&quot;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
+    }
+
+    @Override
+    protected void onPause() {
+        // Power button and leaving the app pause playback the same way on every phone.
+        if (webView != null) {
+            webView.onPause();
+        }
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) {
+            webView.onResume();
+        }
     }
 
     @Override

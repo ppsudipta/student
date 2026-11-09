@@ -55,6 +55,8 @@ public class PdfActivity extends AppCompatActivity {
                     WindowManager.LayoutParams.FLAG_SECURE,
                     WindowManager.LayoutParams.FLAG_SECURE);
         }
+        // Keep study material readable while the student reads, regardless of screen timeout.
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.activity_pdf);
 
