@@ -323,7 +323,10 @@ public class HomeFragment extends Fragment {
             return;
         }
         promoSection.setVisibility(View.VISIBLE);
-        promoPager.setOffscreenPageLimit(Math.min(items.size() - 1, 3));
+        // ViewPager2 throws if the limit is 0. One banner is the common case.
+        if (items.size() > 1) {
+            promoPager.setOffscreenPageLimit(Math.min(items.size() - 1, 3));
+        }
         promoPager.setAdapter(new PromoAdapter(items, baseUrl));
         bindPromoDots(promoPager, dotsContainer, items.size());
         promoPager.post(this::startPromoAutoScroll);

@@ -508,7 +508,7 @@ public class ListFragment extends Fragment {
                 item.mediaUrl = UrlHelper.resolveImageUrl(baseUrl, item.noticeContent);
             }
             item.title = noticePreviewTitle(item);
-            item.subtitle = formatNoticeDate(row.optString("created_at", ""));
+            item.subtitle = UiUtils.formatIndianDateTime(row.optString("created_at", ""));
             item.raw = row;
             items.add(item);
         }
@@ -526,13 +526,6 @@ public class ListFragment extends Fragment {
             return text.substring(0, 117) + "...";
         }
         return text.isEmpty() ? getString(R.string.notice) : text;
-    }
-
-    private String formatNoticeDate(String value) {
-        if (value == null || value.isEmpty() || "null".equals(value)) {
-            return "";
-        }
-        return value.replace('T', ' ').replaceAll(":00$", "");
     }
 
     private int countUnread(List<ListItem> items) {

@@ -11,7 +11,6 @@ import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -25,7 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CreateEnquiryActivity extends AppCompatActivity {
+public class CreateEnquiryActivity extends PortraitActivity {
     private final List<String> categoryIds = new ArrayList<>();
     private ApiClient api;
     private View progressBar;

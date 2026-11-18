@@ -93,7 +93,7 @@
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.button.MaterialButton
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnLogin"
                 style="@style/Widget.DeyEducation.Button.Primary"
                 android:layout_width="match_parent"

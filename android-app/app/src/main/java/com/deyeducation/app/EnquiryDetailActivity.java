@@ -11,7 +11,6 @@ import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -27,7 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class EnquiryDetailActivity extends AppCompatActivity {
+public class EnquiryDetailActivity extends PortraitActivity {
     public static final String EXTRA_ID = "enquiry_id";
     public static final String EXTRA_SUBJECT = "enquiry_subject";
 

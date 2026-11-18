@@ -8,13 +8,12 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
 import org.json.JSONObject;
 
-public class DetailActivity extends AppCompatActivity {
+public class DetailActivity extends PortraitActivity {
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_PATH = "path";
 

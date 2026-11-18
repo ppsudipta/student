@@ -318,6 +318,15 @@ class StudentApiController extends Controller
                             'The academy reserves the right to take disciplinary action when rules are violated.',
                         ],
                     ],
+                    [
+                        'title' => 'Keep Lessons Playing',
+                        'items' => [
+                            'Class videos and study material may stop if your phone turns the screen off or enters battery saver mode.',
+                            'Open phone Settings, go to Apps, select Dey Education, then Battery, and choose Unrestricted.',
+                            'On Xiaomi, Redmi, Oppo, Realme, and Vivo phones, also turn on Autostart or allow background activity for Dey Education. Menu names differ by model.',
+                            'Pressing the power button still turns the screen off. Video lessons pause, so tap play to continue when you return.',
+                        ],
+                    ],
                 ],
             ],
         ]);
@@ -510,13 +519,7 @@ class StudentApiController extends Controller
             ->where('student_registration_code', $student->registration_code)
             ->select(['donation_date', 'payment_reason', 'status', 'created_at']);
 
-        if ($request->filled('year')) {
-            $payments->whereYear('donation_date', $request->integer('year'));
-        }
-
-        if ($request->filled('month')) {
-            $payments->where('payment_reason', $request->input('month'));
-        }
+        $this->applyFeePeriodFilter($payments, $request);
 
         $paginated = $payments
             ->latest('created_at')
@@ -526,9 +529,13 @@ class StudentApiController extends Controller
             $date = $payment->donation_date;
             $year = $date ? $date->format('Y') : '';
             $month = trim((string) ($payment->payment_reason ?? ''));
-            $payment->fee_period = $month !== '' && $year !== ''
-                ? $month.' '.$year
-                : ($month !== '' ? $month : $year);
+            if (preg_match('/\d{4}/', $month)) {
+                $payment->fee_period = $month;
+            } else {
+                $payment->fee_period = $month !== '' && $year !== ''
+                    ? $month.' '.$year
+                    : ($month !== '' ? $month : $year);
+            }
 
             return $payment;
         });
@@ -544,6 +551,49 @@ class StudentApiController extends Controller
             'record_count' => $paginated->total(),
             'payments' => $paginated,
         ]);
+    }
+
+    /**
+     * payment_reason is "March 2026" (current) or "March" (legacy).
+     * Match the fee period itself, not only the donation date.
+     */
+    private function applyFeePeriodFilter($payments, Request $request): void
+    {
+        $month = trim((string) $request->input('month', ''));
+        $year = trim((string) $request->input('year', ''));
+        $yearOk = preg_match('/^\d{4}$/', $year) === 1;
+
+        if ($month !== '' && $yearOk) {
+            $exact = $month.' '.$year;
+            $payments->where(function ($query) use ($month, $year, $exact) {
+                $query->where('payment_reason', $exact)
+                    ->orWhere(function ($legacy) use ($month, $year) {
+                        $legacy->where('payment_reason', $month)
+                            ->whereYear('donation_date', (int) $year);
+                    });
+            });
+
+            return;
+        }
+
+        if ($month !== '') {
+            $payments->where(function ($query) use ($month) {
+                $query->where('payment_reason', $month)
+                    ->orWhere('payment_reason', 'like', $month.' %');
+            });
+
+            return;
+        }
+
+        if ($yearOk) {
+            $payments->where(function ($query) use ($year) {
+                $query->where('payment_reason', 'like', '% '.$year)
+                    ->orWhere(function ($legacy) use ($year) {
+                        $legacy->where('payment_reason', 'not like', '% ____')
+                            ->whereYear('donation_date', (int) $year);
+                    });
+            });
+        }
     }
 
     private function feeMonthsByYear(string $registrationCode): array

@@ -103,7 +103,7 @@ public class FeesFragment extends Fragment {
         NumberPicker monthPicker = dialogView.findViewById(R.id.monthPicker);
         NumberPicker yearPicker = dialogView.findViewById(R.id.yearPicker);
 
-        String[] monthLabels = new SimpleDateFormat("MMMM", Locale.getDefault())
+        String[] monthLabels = new SimpleDateFormat("MMMM", Locale.ENGLISH)
                 .getDateFormatSymbols().getMonths();
         List<String> months = new ArrayList<>();
         for (String label : monthLabels) {
@@ -140,10 +140,13 @@ public class FeesFragment extends Fragment {
                 .setTitle(R.string.set_month)
                 .setView(dialogView)
                 .setPositiveButton(R.string.apply_filter, (dialog, which) -> {
+                    monthPicker.clearFocus();
+                    yearPicker.clearFocus();
                     int monthIndex = monthPicker.getValue();
                     int year = yearPicker.getValue();
                     selectedPeriod = String.format(Locale.US, "%04d-%02d", year, monthIndex + 1);
                     updatePeriodLabel();
+                    loadFees();
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -259,7 +262,7 @@ public class FeesFragment extends Fragment {
             String[] parts = period.split("-");
             Calendar calendar = Calendar.getInstance();
             calendar.set(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]) - 1, 1);
-            SimpleDateFormat output = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
+            SimpleDateFormat output = new SimpleDateFormat("MMMM yyyy", Locale.ENGLISH);
             return output.format(calendar.getTime());
         } catch (Exception e) {
             return period;

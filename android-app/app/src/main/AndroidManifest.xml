@@ -37,7 +37,6 @@
         <activity
             android:name=".LoginActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -48,14 +47,12 @@
         <activity
             android:name=".RegisterActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
-            android:screenOrientation="portrait">
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="OPEN_NOTICES" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -69,8 +66,7 @@
 
         <activity
             android:name=".PdfActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <activity
             android:name=".ImageViewerActivity"
@@ -79,8 +75,7 @@
 
         <activity
             android:name=".NoticeDetailActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <activity
             android:name=".DetailActivity"
@@ -90,45 +85,38 @@
         <activity
             android:name=".ProfileAccountActivity"
             android:exported="false"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait" />
+            android:parentActivityName=".MainActivity" />
 
         <activity
             android:name=".ChangePasswordActivity"
             android:exported="false"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait" />
+            android:parentActivityName=".MainActivity" />
 
         <activity
             android:name=".LegalPoliciesActivity"
             android:exported="false"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait" />
+            android:parentActivityName=".MainActivity" />
 
         <activity
             android:name=".AboutActivity"
             android:exported="false"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait" />
+            android:parentActivityName=".MainActivity" />
 
         <activity
             android:name=".CourseDetailActivity"
             android:exported="false"
-            android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait" />
+            android:parentActivityName=".MainActivity" />
 
         <activity
             android:name=".EnquiryDetailActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".CreateEnquiryActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity"
-            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
 
         <service

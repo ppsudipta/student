@@ -4,9 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import com.google.android.material.button.MaterialButton;
+import androidx.appcompat.widget.AppCompatButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -14,7 +12,7 @@ import org.json.JSONObject;
 
 import java.util.Locale;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends PortraitActivity {
     private SessionManager session;
     private ApiClient api;
     private View progressBar;
@@ -36,7 +34,7 @@ public class LoginActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.loginProgress);
         TextInputEditText mobile = findViewById(R.id.inputMobile);
         TextInputEditText password = findViewById(R.id.inputPassword);
-        MaterialButton login = findViewById(R.id.btnLogin);
+        AppCompatButton login = findViewById(R.id.btnLogin);
 
         findViewById(R.id.linkRegister).setOnClickListener(v -> {
             Intent intent = new Intent(this, RegisterActivity.class);
@@ -115,7 +113,9 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void openMain() {
-        startActivity(new Intent(this, MainActivity.class));
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
         finish();
     }
 }

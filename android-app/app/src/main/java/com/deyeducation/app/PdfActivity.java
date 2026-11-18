@@ -8,7 +8,6 @@ import android.view.WindowManager;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.barteksc.pdfviewer.PDFView;
 import com.github.barteksc.pdfviewer.util.FitPolicy;
@@ -26,7 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class PdfActivity extends AppCompatActivity {
+public class PdfActivity extends PortraitActivity {
     public static final String EXTRA_URL = "url";
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_CAN_DOWNLOAD = "can_download";

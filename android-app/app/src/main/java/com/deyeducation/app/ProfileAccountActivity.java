@@ -11,12 +11,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import org.json.JSONObject;
 
-public class ProfileAccountActivity extends AppCompatActivity {
+public class ProfileAccountActivity extends PortraitActivity {
   public static void open(Context context) {
     context.startActivity(new Intent(context, ProfileAccountActivity.class));
   }

@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.view.View;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -12,7 +11,7 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import org.json.JSONObject;
 
-public class ChangePasswordActivity extends AppCompatActivity {
+public class ChangePasswordActivity extends PortraitActivity {
   @Override
   protected void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);

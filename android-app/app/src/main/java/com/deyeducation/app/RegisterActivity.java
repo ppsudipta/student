@@ -15,7 +15,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.MaterialDatePicker;
@@ -35,7 +34,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
-public class RegisterActivity extends AppCompatActivity {
+public class RegisterActivity extends PortraitActivity {
     public static final String EXTRA_BASE_URL = "base_url";
 
     private SessionManager session;

@@ -12,6 +12,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
@@ -57,6 +63,7 @@ public final class UiUtils {
         view.setScaleType(ImageView.ScaleType.FIT_CENTER);
         var request = Glide.with(view)
                 .load(url)
+                .disallowHardwareConfig()
                 .placeholder(placeholder)
                 .error(placeholder)
                 .fallback(placeholder);
@@ -84,6 +91,7 @@ public final class UiUtils {
         ensurePromoMatrixOnLayout(view);
         Glide.with(view)
                 .load(url)
+                .disallowHardwareConfig()
                 .placeholder(placeholder)
                 .error(placeholder)
                 .fallback(placeholder)
@@ -159,7 +167,7 @@ public final class UiUtils {
         if (isBlankUrl(url)) {
             url = null;
         }
-        var request = Glide.with(view).load(url);
+        var request = Glide.with(view).load(url).disallowHardwareConfig();
         if (placeholderRes != 0) {
             request = request.placeholder(placeholderRes)
                     .error(placeholderRes)
@@ -178,6 +186,7 @@ public final class UiUtils {
         int placeholder = R.drawable.bg_image_placeholder;
         Glide.with(view)
                 .load(url)
+                .disallowHardwareConfig()
                 .placeholder(placeholder)
                 .error(placeholder)
                 .fallback(placeholder)
@@ -212,6 +221,37 @@ public final class UiUtils {
 
     private static boolean isBlankUrl(String url) {
         return TextUtils.isEmpty(url) || "null".equalsIgnoreCase(url);
+    }
+
+    /** Notice timestamps shown in India time (IST), not UTC. */
+    public static String formatIndianDateTime(String value) {
+        if (value == null) {
+            return "";
+        }
+        String raw = value.trim();
+        if (raw.isEmpty() || "null".equalsIgnoreCase(raw)) {
+            return "";
+        }
+        boolean hasZone = raw.endsWith("Z") || raw.endsWith("z")
+                || raw.matches(".*[+-]\\d{2}:?\\d{2}$");
+        String text = raw.replace('T', ' ');
+        text = text.replaceAll("(\\.\\d+)", "");
+        text = text.replaceAll("(Z|[+-]\\d{2}:?\\d{2})$", "").trim();
+
+        SimpleDateFormat input = new SimpleDateFormat(
+                text.length() > 10 ? "yyyy-MM-dd HH:mm:ss" : "yyyy-MM-dd", Locale.US);
+        input.setTimeZone(TimeZone.getTimeZone(hasZone ? "UTC" : "Asia/Kolkata"));
+        try {
+            Date date = input.parse(text);
+            if (date == null) {
+                return raw;
+            }
+            SimpleDateFormat output = new SimpleDateFormat("dd MMM yyyy, h:mm a", Locale.ENGLISH);
+            output.setTimeZone(TimeZone.getTimeZone("Asia/Kolkata"));
+            return output.format(date);
+        } catch (ParseException e) {
+            return raw;
+        }
     }
 
     public static int dp(Context context, int value) {

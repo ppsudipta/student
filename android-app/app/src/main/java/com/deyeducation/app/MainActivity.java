@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -12,7 +13,6 @@ import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.ActionBarDrawerToggle;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -23,7 +23,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import org.json.JSONObject;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends PortraitActivity {
     public static final String EXTRA_SCREEN = "screen";
     public static final String EXTRA_ENQUIRY_ID = "enquiry_id";
     public static final String EXTRA_ENQUIRY_SUBJECT = "enquiry_subject";
@@ -56,7 +56,6 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
         PushNotificationHelper.ensureChannel(this);
-        PushNotificationHelper.requestPermissionIfNeeded(this);
         PushNotificationHelper.registerCurrentToken(this);
         drawerLayout = findViewById(R.id.drawerLayout);
         bottomNav = findViewById(R.id.bottomNav);
@@ -132,7 +131,10 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             if (!openScreenFromIntent(getIntent())) {
                 showFragment(new HomeFragment(), getString(R.string.home));
-                bottomNav.setSelectedItemId(R.id.nav_home);
+                MenuItem homeItem = bottomNav.getMenu().findItem(R.id.nav_home);
+                if (homeItem != null) {
+                    homeItem.setChecked(true);
+                }
             }
             refreshUnreadNoticesBadge();
         }
@@ -158,6 +160,19 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private boolean askedNotificationPermission;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Ask after the window is opaque. Requesting in onCreate crashes ColorOS 15
+        // while the activity is still locking orientation after login.
+        if (!askedNotificationPermission) {
+            askedNotificationPermission = true;
+            PushNotificationHelper.requestPermissionIfNeeded(this);
+        }
     }
 
     @Override

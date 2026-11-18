@@ -8,13 +8,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
 import org.json.JSONObject;
 
-public class CourseDetailActivity extends AppCompatActivity {
+public class CourseDetailActivity extends PortraitActivity {
     public static final String EXTRA_ID = "course_id";
     public static final String EXTRA_TITLE = "course_title";
 

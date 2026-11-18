@@ -9,7 +9,6 @@ import android.widget.TextView;
 import android.widget.VideoView;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
@@ -19,7 +18,7 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 
-public class NoticeDetailActivity extends AppCompatActivity {
+public class NoticeDetailActivity extends PortraitActivity {
     public static final String EXTRA_ID = "notice_id";
     public static final String EXTRA_TYPE = "notice_type";
     public static final String EXTRA_CONTENT = "notice_content";
@@ -60,7 +59,7 @@ public class NoticeDetailActivity extends AppCompatActivity {
         videoView = findViewById(R.id.noticeVideo);
         View progressBar = findViewById(R.id.noticeProgress);
 
-        dateView.setText(date == null || date.isEmpty() ? "" : date);
+        dateView.setText(UiUtils.formatIndianDateTime(date));
         api = new ApiClient(new SessionManager(this));
 
         String noticeType = type == null ? "text" : type.toLowerCase();

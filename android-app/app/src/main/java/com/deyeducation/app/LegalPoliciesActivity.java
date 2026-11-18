@@ -10,14 +10,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class LegalPoliciesActivity extends AppCompatActivity {
+public class LegalPoliciesActivity extends PortraitActivity {
     public static void open(Context context) {
         context.startActivity(new Intent(context, LegalPoliciesActivity.class));
     }

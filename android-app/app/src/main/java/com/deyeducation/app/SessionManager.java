@@ -69,7 +69,8 @@ public class SessionManager {
     }
 
     public void setToken(String token) {
-        prefs.edit().putString(AppConfig.KEY_ACCESS_TOKEN, token).apply();
+        // commit() so a crash in the next activity cannot drop the token.
+        prefs.edit().putString(AppConfig.KEY_ACCESS_TOKEN, token).commit();
     }
 
     public String getStudentName() {
