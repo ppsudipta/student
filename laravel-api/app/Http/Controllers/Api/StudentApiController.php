@@ -340,6 +340,7 @@ class StudentApiController extends Controller
                 ['id' => 'financial', 'label' => 'Financial'],
                 ['id' => 'technical', 'label' => 'Technical Support'],
                 ['id' => 'facilities', 'label' => 'Facilities'],
+                ['id' => 'rps_chat', 'label' => 'RPS Chat'],
                 ['id' => 'other', 'label' => 'Others'],
             ],
         ]);
@@ -959,16 +960,27 @@ class StudentApiController extends Controller
     {
         $student = $this->studentFromRequest($request);
         $data = $request->validate([
-            'enquiry_type' => ['required', 'string', Rule::in(['academic', 'financial', 'technical', 'facilities', 'other'])],
+            'enquiry_type' => ['required', 'string', Rule::in(['academic', 'financial', 'technical', 'facilities', 'rps_chat', 'other'])],
             'subject' => ['required', 'string', 'max:255'],
             'message' => ['required', 'string'],
             'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx'],
+            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['file', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx'],
         ]);
 
-        $attachment = null;
-        if ($request->hasFile('attachment')) {
-            $attachment = basename($this->saveUploadedFile($request->file('attachment'), base_path('../pages/uploads'), ''));
+        $savedNames = $this->saveEnquiryAttachments($request);
+        if ($data['enquiry_type'] === 'rps_chat' && $savedNames === []) {
+            return response()->json([
+                'message' => 'Please attach at least 1 file for RPS Chat (maximum 5).',
+            ], 422);
         }
+        if (count($savedNames) > 5) {
+            return response()->json([
+                'message' => 'You can attach a maximum of 5 files.',
+            ], 422);
+        }
+
+        $attachment = $savedNames === [] ? null : implode(',', $savedNames);
 
         $id = $this->table('enquiries')->insertGetId([
             'student_id' => $student->registration_code,
@@ -1005,12 +1017,17 @@ class StudentApiController extends Controller
         $data = $request->validate([
             'message' => ['required', 'string'],
             'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx'],
+            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['file', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx'],
         ]);
 
-        $attachment = null;
-        if ($request->hasFile('attachment')) {
-            $attachment = basename($this->saveUploadedFile($request->file('attachment'), base_path('../pages/uploads'), ''));
+        $savedNames = $this->saveEnquiryAttachments($request);
+        if (count($savedNames) > 5) {
+            return response()->json([
+                'message' => 'You can attach a maximum of 5 files.',
+            ], 422);
         }
+        $attachment = $savedNames === [] ? null : implode(',', $savedNames);
 
         $this->insertEnquiryMessage($id, 'student', $student->name, $data['message'], $attachment);
 
@@ -1608,7 +1625,10 @@ class StudentApiController extends Controller
             fn (array $message) => $this->formatEnquiryMessage($message),
             $this->enquiryMessages($id)
         );
-        $row['attachment_url'] = $this->enquiryAttachmentUrl($row['attachment'] ?? null);
+        $attachments = $this->parseEnquiryAttachmentList($row['attachment'] ?? null);
+        $row['attachments'] = $attachments;
+        $row['attachment_urls'] = array_map(fn (string $path) => $this->enquiryAttachmentUrl($path), $attachments);
+        $row['attachment_url'] = $row['attachment_urls'][0] ?? null;
         $row['message_count'] = count($messages);
         $row['messages'] = $withMessages ? $messages : [];
         $row['has_admin_reply'] = collect($messages)->contains(fn ($message) => ($message['sender_type'] ?? '') === 'admin')
@@ -1626,15 +1646,85 @@ class StudentApiController extends Controller
 
     private function formatEnquiryMessage(array $message): array
     {
-        $message['attachment_url'] = $this->enquiryAttachmentUrl($message['attachment'] ?? null);
+        $attachments = $this->parseEnquiryAttachmentList($message['attachment'] ?? null);
+        $message['attachments'] = $attachments;
+        $message['attachment_urls'] = array_map(fn (string $path) => $this->enquiryAttachmentUrl($path), $attachments);
+        $message['attachment_url'] = $message['attachment_urls'][0] ?? null;
 
         return $message;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function parseEnquiryAttachmentList(mixed $raw): array
+    {
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+
+        if (is_array($raw)) {
+            return array_values(array_filter(array_map(fn ($item) => trim((string) $item), $raw)));
+        }
+
+        $value = trim((string) $raw);
+        if ($value === '') {
+            return [];
+        }
+
+        if (str_starts_with($value, '[')) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                return array_values(array_filter(array_map(fn ($item) => trim((string) $item), $decoded)));
+            }
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $value))));
+    }
+
+    /**
+     * @return list<string> stored basenames
+     */
+    private function saveEnquiryAttachments(Request $request): array
+    {
+        $files = [];
+        if ($request->hasFile('attachments')) {
+            $uploaded = $request->file('attachments');
+            if (is_array($uploaded)) {
+                foreach ($uploaded as $file) {
+                    if ($file) {
+                        $files[] = $file;
+                    }
+                }
+            } elseif ($uploaded) {
+                $files[] = $uploaded;
+            }
+        }
+        if ($request->hasFile('attachment')) {
+            $files[] = $request->file('attachment');
+        }
+
+        $saved = [];
+        foreach (array_slice($files, 0, 5) as $file) {
+            $saved[] = basename($this->saveUploadedFile($file, base_path('../pages/uploads'), ''));
+        }
+
+        return $saved;
     }
 
     private function enquiryAttachmentUrl(?string $path): ?string
     {
         if ($path === null || $path === '') {
             return null;
+        }
+
+        // Legacy rows may store multiple files as "a.pdf,b.pdf" — use first for single URL.
+        if (str_contains($path, ',') && ! str_contains($path, '/')) {
+            $parts = $this->parseEnquiryAttachmentList($path);
+            $path = $parts[0] ?? null;
+            if ($path === null || $path === '') {
+                return null;
+            }
         }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {

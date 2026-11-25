@@ -15,6 +15,56 @@ if (!isset($_SESSION['username'])) {
 }
 include('config.php');
 
+function enquiry_type_label($type) {
+    $map = [
+        'academic' => 'Academic',
+        'financial' => 'Financial',
+        'technical' => 'Technical Support',
+        'facilities' => 'Facilities',
+        'rps_chat' => 'RPS Chat',
+        'other' => 'Others',
+    ];
+    $key = strtolower(trim((string) $type));
+    return $map[$key] ?? ucfirst((string) $type);
+}
+
+function enquiry_attachment_list($raw) {
+    if ($raw === null || $raw === '') {
+        return [];
+    }
+    $value = trim((string) $raw);
+    if ($value === '') {
+        return [];
+    }
+    if ($value[0] === '[') {
+        $decoded = json_decode($value, true);
+        if (is_array($decoded)) {
+            return array_values(array_filter(array_map('trim', $decoded)));
+        }
+    }
+    return array_values(array_filter(array_map('trim', explode(',', $value))));
+}
+
+function enquiry_attachment_href($file) {
+    $file = str_replace('\\/', '/', (string) $file);
+    if ($file === '') {
+        return '#';
+    }
+    if (strpos($file, 'http://') === 0 || strpos($file, 'https://') === 0) {
+        return $file;
+    }
+    if (strpos($file, 'pages/') === 0) {
+        return '../' . $file;
+    }
+    if (strpos($file, 'uploads/') === 0) {
+        return '../pages/' . $file;
+    }
+    if (strpos($file, '/') === false) {
+        return '../pages/uploads/' . $file;
+    }
+    return '../pages/' . ltrim($file, '/');
+}
+
 // Handle delete
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $id = intval($_GET['id']);
@@ -25,8 +75,18 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     } else {
         $_SESSION['error'] = "Error deleting enquiry";
     }
-    header('Location: allenc.php');
+    $redirect = 'allenc.php';
+    if (!empty($_GET['type'])) {
+        $redirect .= '?type=' . urlencode($_GET['type']);
+    }
+    header('Location: ' . $redirect);
     exit();
+}
+
+$filterType = isset($_GET['type']) ? trim((string) $_GET['type']) : '';
+$allowedFilterTypes = ['academic', 'financial', 'technical', 'facilities', 'rps_chat', 'other'];
+if ($filterType !== '' && !in_array($filterType, $allowedFilterTypes, true)) {
+    $filterType = '';
 }
 ?>
 <!DOCTYPE html>
@@ -147,6 +207,22 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
       <?php endif; ?>
 
       <div class="box">
+        <div class="box-header with-border">
+          <form method="get" class="form-inline" style="margin:8px 0;">
+            <label for="typeFilter" style="margin-right:8px;">Filter by type</label>
+            <select name="type" id="typeFilter" class="form-control" onchange="this.form.submit()">
+              <option value="">All types</option>
+              <?php foreach ($allowedFilterTypes as $typeOption): ?>
+                <option value="<?= htmlspecialchars($typeOption) ?>" <?= $filterType === $typeOption ? 'selected' : '' ?>>
+                  <?= htmlspecialchars(enquiry_type_label($typeOption)) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+            <?php if ($filterType !== ''): ?>
+              <a href="allenc.php" class="btn btn-default" style="margin-left:8px;">Clear</a>
+            <?php endif; ?>
+          </form>
+        </div>
         <div class="box-body table-responsive">
           <table id="enquiriesTable" class="table table-bordered table-hover">
             <thead>
@@ -168,11 +244,20 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             </thead>
             <tbody>
               <?php
-              $sql = "SELECT * FROM enquiries ORDER BY created_at DESC";
-              $res = $con->query($sql);
+              if ($filterType !== '') {
+                $stmt = $con->prepare("SELECT * FROM enquiries WHERE enquiry_type = ? ORDER BY created_at DESC");
+                $stmt->bind_param("s", $filterType);
+                $stmt->execute();
+                $res = $stmt->get_result();
+              } else {
+                $sql = "SELECT * FROM enquiries ORDER BY created_at DESC";
+                $res = $con->query($sql);
+              }
               $sn = 1;
               while($row = $res->fetch_assoc()) {
                 $hasReply = !empty($row['reply_message']);
+                $typeLabel = enquiry_type_label($row['enquiry_type'] ?? '');
+                $attachments = enquiry_attachment_list($row['attachment'] ?? '');
               ?>
               <tr class="<?= $hasReply ? 'replied' : '' ?>" id="enquiry-<?= $row['id'] ?>">
                 <td><?= $sn++; ?></td>
@@ -180,7 +265,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                 <td><?= htmlspecialchars($row['name']) ?></td>
                 <td><a href="mailto:<?= htmlspecialchars($row['email']) ?>"><?= htmlspecialchars($row['email']) ?></a></td>
                 <td><?= htmlspecialchars($row['phone']) ?></td>
-                <td><?= htmlspecialchars(ucfirst($row['enquiry_type'])) ?></td>
+                <td><?= htmlspecialchars($typeLabel) ?></td>
                 <td><?= htmlspecialchars($row['subject']) ?></td>
                 <td class="message-col" title="<?= htmlspecialchars($row['message']) ?>">
                   <?= htmlspecialchars(mb_strimwidth($row['message'], 0, 50, '...')) ?>
@@ -189,10 +274,12 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                   <?= !empty($row['reply_message']) ? htmlspecialchars(mb_strimwidth($row['reply_message'], 0, 50, '...')) : 'No reply yet' ?>
                 </td>
                 <td class="attachment-col text-center">
-                  <?php if (!empty($row['attachment'])): ?>
-                    <a href="../pages/<?= htmlspecialchars($row['attachment']) ?>" target="_blank" class="btn btn-xs btn-info" title="View Attachment">
-                      <i class="fas fa-paperclip"></i>
-                    </a>
+                  <?php if (!empty($attachments)): ?>
+                    <?php foreach ($attachments as $index => $file): ?>
+                      <a href="<?= htmlspecialchars(enquiry_attachment_href($file)) ?>" target="_blank" class="btn btn-xs btn-info" title="<?= htmlspecialchars(basename($file)) ?>">
+                        <i class="fas fa-paperclip"></i><?= count($attachments) > 1 ? ' ' . ($index + 1) : '' ?>
+                      </a>
+                    <?php endforeach; ?>
                   <?php else: ?>
                     <span class="text-muted">None</span>
                   <?php endif; ?>
@@ -214,7 +301,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                             data-email="<?= htmlspecialchars($row['email']) ?>"
                             data-phone="<?= htmlspecialchars($row['phone']) ?>"
                             data-student_id="<?= htmlspecialchars($row['student_id'] ?? 'N/A') ?>"
-                            data-type="<?= htmlspecialchars(ucfirst($row['enquiry_type'])) ?>"
+                            data-type="<?= htmlspecialchars($typeLabel) ?>"
                             data-subject="<?= htmlspecialchars($row['subject']) ?>"
                             data-date="<?= date('d M Y H:i', strtotime($row['created_at'])) ?>"
                             data-message="<?= htmlspecialchars($row['message']) ?>"
@@ -233,7 +320,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                             data-toggle="modal" data-target="#replyModal" title="Reply">
                       <i class="fas fa-reply"></i>
                     </button>
-                    <a href="allenc.php?id=<?= $row['id'] ?>" 
+                    <a href="allenc.php?id=<?= $row['id'] ?><?= $filterType !== '' ? '&type=' . urlencode($filterType) : '' ?>" 
                        onclick="return confirm('Are you sure you want to delete this enquiry?');"
                        class="btn btn-xs btn-danger" title="Delete">
                       <i class="fas fa-trash"></i>
@@ -445,10 +532,24 @@ $(function () {
           html += '<strong>' + who + '</strong> <small class="text-muted">' + when + '</small><br>';
           html += $('<div/>').text(msg.message).html().replace(/\n/g, '<br>');
           if (msg.attachment) {
-            var attachUrl = msg.attachment.indexOf('/') >= 0
-              ? '../pages/' + msg.attachment
-              : '../pages/uploads/' + msg.attachment;
-            html += '<br><a href="' + attachUrl + '" target="_blank"><i class="fas fa-paperclip"></i> View attachment</a>';
+            var files = [];
+            if (typeof msg.attachment === 'string' && msg.attachment.indexOf(',') >= 0) {
+              files = msg.attachment.split(',').map(function(part) { return part.trim(); }).filter(Boolean);
+            } else if (Object.prototype.toString.call(msg.attachment) === '[object Array]') {
+              files = msg.attachment;
+            } else {
+              files = [msg.attachment];
+            }
+            files.forEach(function(file, idx) {
+              var attachUrl = file.indexOf('http://') === 0 || file.indexOf('https://') === 0
+                ? file
+                : (file.indexOf('/') >= 0 ? '../pages/' + file.replace(/^pages\//, '') : '../pages/uploads/' + file);
+              if (file.indexOf('uploads/') === 0) {
+                attachUrl = '../pages/' + file;
+              }
+              var label = files.length > 1 ? ('Attachment ' + (idx + 1)) : 'View attachment';
+              html += '<br><a href="' + attachUrl + '" target="_blank"><i class="fas fa-paperclip"></i> ' + label + '</a>';
+            });
           }
           html += '</div>';
         });

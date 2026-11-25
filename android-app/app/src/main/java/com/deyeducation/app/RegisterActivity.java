@@ -123,6 +123,7 @@ public class RegisterActivity extends PortraitActivity {
             return;
         }
         try {
+            AttachmentHelper.ensureWithinSizeLimit(this, uri);
             ContentResolver resolver = getContentResolver();
             photoMimeType = resolver.getType(uri);
             if (photoMimeType == null) {
@@ -136,11 +137,7 @@ public class RegisterActivity extends PortraitActivity {
                 }
                 photoBytes = ApiClient.readAllBytes(input);
             }
-            if (photoBytes.length > 5 * 1024 * 1024) {
-                clearPhoto();
-                UiUtils.toast(this, getString(R.string.attachment_too_large));
-                return;
-            }
+            AttachmentHelper.ensureWithinSizeLimit(this, photoBytes);
             photoNameView.setText(photoFileName);
         } catch (Exception e) {
             clearPhoto();

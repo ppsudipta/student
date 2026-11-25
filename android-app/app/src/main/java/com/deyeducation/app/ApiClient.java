@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -49,6 +50,18 @@ public class ApiClient {
     public void postMultipart(String path, Map<String, String> fields, String fileField,
                               byte[] fileBytes, String fileName, String mimeType,
                               boolean auth, Callback callback) {
+        List<AttachmentHelper.SelectedFile> files = null;
+        if (fileBytes != null && fileField != null && fileName != null) {
+            files = java.util.Collections.singletonList(
+                    new AttachmentHelper.SelectedFile(fileBytes, fileName,
+                            mimeType == null ? "application/octet-stream" : mimeType));
+        }
+        postMultipart(path, fields, fileField, files, auth, callback);
+    }
+
+    public void postMultipart(String path, Map<String, String> fields, String fileField,
+                              List<AttachmentHelper.SelectedFile> files,
+                              boolean auth, Callback callback) {
         IO.execute(() -> {
             HttpURLConnection conn = null;
             try {
@@ -63,9 +76,20 @@ public class ApiClient {
                             writeField(os, boundary, entry.getKey(), entry.getValue());
                         }
                     }
-                    if (fileBytes != null && fileField != null && fileName != null) {
-                        writeFile(os, boundary, fileField, fileName,
-                                mimeType == null ? "application/octet-stream" : mimeType, fileBytes);
+                    if (files != null && fileField != null) {
+                        // Single legacy "attachment" keeps that field name; otherwise use attachments[].
+                        boolean multiField = files.size() > 1
+                                || "attachments".equals(fileField)
+                                || "attachments[]".equals(fileField);
+                        String fieldName = multiField ? "attachments[]" : fileField;
+                        for (AttachmentHelper.SelectedFile file : files) {
+                            if (file == null || file.bytes == null) {
+                                continue;
+                            }
+                            writeFile(os, boundary, fieldName, file.fileName,
+                                    file.mimeType == null ? "application/octet-stream" : file.mimeType,
+                                    file.bytes);
+                        }
                     }
                     os.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
                 }

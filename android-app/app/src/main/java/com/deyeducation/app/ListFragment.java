@@ -398,7 +398,9 @@ public class ListFragment extends Fragment {
             item.enquiryId = row.optInt("id", 0);
             item.title = row.optString("subject", "Enquiry");
             String typeLabel = row.optString("enquiry_type", "");
-            if (!typeLabel.isEmpty()) {
+            if ("rps_chat".equalsIgnoreCase(typeLabel)) {
+                typeLabel = getString(R.string.enquiry_type_rps_chat);
+            } else if (!typeLabel.isEmpty()) {
                 typeLabel = typeLabel.substring(0, 1).toUpperCase() + typeLabel.substring(1);
             }
             boolean replied = row.optBoolean("has_admin_reply", false) || !row.optString("reply_message").isEmpty();

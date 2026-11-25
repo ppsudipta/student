@@ -9,11 +9,14 @@ import android.webkit.MimeTypeMap;
 
 import androidx.annotation.Nullable;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -52,6 +55,19 @@ public final class AttachmentHelper {
         }
     }
 
+    public static void ensureWithinSizeLimit(Context context, Uri uri) {
+        long reportedSize = querySize(context, uri);
+        if (reportedSize > MAX_BYTES) {
+            throw new IllegalArgumentException(context.getString(R.string.attachment_too_large));
+        }
+    }
+
+    public static void ensureWithinSizeLimit(Context context, byte[] bytes) {
+        if (bytes != null && bytes.length > MAX_BYTES) {
+            throw new IllegalArgumentException(context.getString(R.string.attachment_too_large));
+        }
+    }
+
     @Nullable
     public static SelectedFile readSelectedFile(Context context, Uri uri) throws Exception {
         String fileName = queryDisplayName(context, uri);
@@ -62,6 +78,8 @@ public final class AttachmentHelper {
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new IllegalArgumentException(context.getString(R.string.attachment_type_not_allowed));
         }
+
+        ensureWithinSizeLimit(context, uri);
 
         String mimeType = context.getContentResolver().getType(uri);
         if (mimeType == null || mimeType.isEmpty()) {
@@ -76,9 +94,7 @@ public final class AttachmentHelper {
                 throw new IllegalStateException(context.getString(R.string.network_error));
             }
             byte[] bytes = ApiClient.readAllBytes(input);
-            if (bytes.length > MAX_BYTES) {
-                throw new IllegalArgumentException(context.getString(R.string.attachment_too_large));
-            }
+            ensureWithinSizeLimit(context, bytes);
             if (!fileName.contains(".")) {
                 fileName = fileName + "." + extension;
             }
@@ -91,23 +107,100 @@ public final class AttachmentHelper {
         if (url == null || url.isEmpty()) {
             return;
         }
-        String name = row.optString("attachment", "attachment");
-        String lower = name.toLowerCase(Locale.US);
+        List<String> names = attachmentNamesFromJson(row);
+        String name = names.isEmpty() ? row.optString("attachment", "attachment") : names.get(0);
+        if (name.contains(",")) {
+            name = name.split(",")[0].trim();
+        }
+        openAttachmentUrl(context, name, url);
+    }
+
+    public static void openAttachmentUrl(Context context, String name, String url) {
+        if (url == null || url.isEmpty()) {
+            return;
+        }
+        String displayName = displayFileName(name == null || name.isEmpty() ? "attachment" : name);
+        String lower = displayName.toLowerCase(Locale.US);
         if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")
                 || lower.endsWith(".gif") || lower.endsWith(".webp")) {
-            ImageViewerActivity.open(context, name, url, true);
+            ImageViewerActivity.open(context, displayName, url, true);
             return;
         }
         if (lower.endsWith(".pdf")) {
             Intent intent = new Intent(context, PdfActivity.class);
             intent.putExtra(PdfActivity.EXTRA_URL, url);
-            intent.putExtra(PdfActivity.EXTRA_TITLE, name);
+            intent.putExtra(PdfActivity.EXTRA_TITLE, displayName);
             intent.putExtra(PdfActivity.EXTRA_CAN_DOWNLOAD, true);
             context.startActivity(intent);
             return;
         }
         Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         context.startActivity(Intent.createChooser(view, context.getString(R.string.open_attachment)));
+    }
+
+    public static List<String> attachmentNamesFromJson(@Nullable JSONObject row) {
+        List<String> names = new ArrayList<>();
+        if (row == null) {
+            return names;
+        }
+        JSONArray attachments = row.optJSONArray("attachments");
+        if (attachments != null && attachments.length() > 0) {
+            for (int i = 0; i < attachments.length(); i++) {
+                String name = attachments.optString(i, "");
+                if (!name.isEmpty() && !"null".equalsIgnoreCase(name)) {
+                    names.add(name);
+                }
+            }
+            return names;
+        }
+        String raw = row.optString("attachment", "");
+        if (raw.isEmpty() || "null".equalsIgnoreCase(raw)) {
+            return names;
+        }
+        if (raw.contains(",")) {
+            for (String part : raw.split(",")) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) {
+                    names.add(trimmed);
+                }
+            }
+        } else {
+            names.add(raw);
+        }
+        return names;
+    }
+
+    public static List<String> attachmentUrlsFromJson(String baseUrl, @Nullable JSONObject row) {
+        List<String> urls = new ArrayList<>();
+        if (row == null) {
+            return urls;
+        }
+        JSONArray directUrls = row.optJSONArray("attachment_urls");
+        if (directUrls != null && directUrls.length() > 0) {
+            for (int i = 0; i < directUrls.length(); i++) {
+                String url = directUrls.optString(i, "");
+                if (!url.isEmpty() && !"null".equalsIgnoreCase(url)) {
+                    if (url.startsWith("http://") || url.startsWith("https://")) {
+                        urls.add(url);
+                    } else {
+                        String resolved = UrlHelper.enquiryAttachmentUrl(baseUrl, url);
+                        if (resolved != null) {
+                            urls.add(resolved);
+                        }
+                    }
+                }
+            }
+            if (!urls.isEmpty()) {
+                return urls;
+            }
+        }
+        for (String name : attachmentNamesFromJson(row)) {
+            String url = UrlHelper.enquiryAttachmentUrl(baseUrl, name);
+            if (url != null) {
+                urls.add(url);
+            }
+        }
+        return urls;
     }
 
     @Nullable
@@ -123,6 +216,20 @@ public final class AttachmentHelper {
         } catch (Exception ignored) {
         }
         return null;
+    }
+
+    private static long querySize(Context context, Uri uri) {
+        try (Cursor cursor = context.getContentResolver()
+                .query(uri, new String[]{OpenableColumns.SIZE}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndex(OpenableColumns.SIZE);
+                if (index >= 0 && !cursor.isNull(index)) {
+                    return cursor.getLong(index);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return -1L;
     }
 
     private static String extensionFromName(String fileName) {

@@ -125,6 +125,13 @@ public class ProfileFragment extends Fragment {
             return;
         }
         UiUtils.setLoaderVisible(progressBar, true);
+        try {
+            AttachmentHelper.ensureWithinSizeLimit(requireContext(), uri);
+        } catch (IllegalArgumentException e) {
+            UiUtils.setLoaderVisible(progressBar, false);
+            UiUtils.toast(requireContext(), e.getMessage());
+            return;
+        }
         try (InputStream input = requireContext().getContentResolver().openInputStream(uri)) {
             if (input == null) {
                 UiUtils.setLoaderVisible(progressBar, false);
@@ -147,6 +154,13 @@ public class ProfileFragment extends Fragment {
                 extension = "gif";
             }
             byte[] bytes = ApiClient.readAllBytes(input);
+            try {
+                AttachmentHelper.ensureWithinSizeLimit(requireContext(), bytes);
+            } catch (IllegalArgumentException e) {
+                UiUtils.setLoaderVisible(progressBar, false);
+                UiUtils.toast(requireContext(), e.getMessage());
+                return;
+            }
             api.postMultipart("/me/photo", null, "image", bytes, "profile." + extension, mimeType, true,
                     new ApiClient.Callback() {
                         @Override

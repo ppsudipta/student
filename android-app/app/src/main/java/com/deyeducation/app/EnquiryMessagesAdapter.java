@@ -48,16 +48,36 @@ public class EnquiryMessagesAdapter extends RecyclerView.Adapter<EnquiryMessages
         holder.time.setText(row.optString("created_at", ""));
         holder.body.setText(row.optString("message", ""));
 
-        String attachment = row.optString("attachment", "");
-        String attachmentUrl = UrlHelper.enquiryAttachmentFromJson(baseUrl, row);
-        if (attachmentUrl != null && !attachment.isEmpty() && !"null".equalsIgnoreCase(attachment)) {
-            holder.attachmentRow.setVisibility(View.VISIBLE);
-            holder.attachmentName.setText(AttachmentHelper.displayFileName(attachment));
-            holder.attachmentRow.setOnClickListener(v ->
-                    AttachmentHelper.openAttachment(holder.itemView.getContext(), baseUrl, row));
-        } else {
-            holder.attachmentRow.setVisibility(View.GONE);
-            holder.attachmentRow.setOnClickListener(null);
+        holder.attachmentsContainer.removeAllViews();
+        List<String> names = AttachmentHelper.attachmentNamesFromJson(row);
+        List<String> urls = AttachmentHelper.attachmentUrlsFromJson(baseUrl, row);
+        if (names.isEmpty() || urls.isEmpty()) {
+            holder.attachmentsContainer.setVisibility(View.GONE);
+            return;
+        }
+
+        holder.attachmentsContainer.setVisibility(View.VISIBLE);
+        LayoutInflater inflater = LayoutInflater.from(holder.itemView.getContext());
+        int count = Math.min(names.size(), urls.size());
+        for (int i = 0; i < count; i++) {
+            String name = names.get(i);
+            String url = urls.get(i);
+            if (url == null || url.isEmpty()) {
+                continue;
+            }
+            View chip = inflater.inflate(R.layout.item_selected_attachment, holder.attachmentsContainer, false);
+            TextView nameView = chip.findViewById(R.id.tvAttachmentName);
+            View remove = chip.findViewById(R.id.btnRemoveAttachmentItem);
+            if (remove != null) {
+                remove.setVisibility(View.GONE);
+            }
+            nameView.setText(AttachmentHelper.displayFileName(name));
+            chip.setOnClickListener(v ->
+                    AttachmentHelper.openAttachmentUrl(holder.itemView.getContext(), name, url));
+            holder.attachmentsContainer.addView(chip);
+        }
+        if (holder.attachmentsContainer.getChildCount() == 0) {
+            holder.attachmentsContainer.setVisibility(View.GONE);
         }
     }
 
@@ -70,16 +90,14 @@ public class EnquiryMessagesAdapter extends RecyclerView.Adapter<EnquiryMessages
         final TextView sender;
         final TextView time;
         final TextView body;
-        final LinearLayout attachmentRow;
-        final TextView attachmentName;
+        final LinearLayout attachmentsContainer;
 
         Holder(@NonNull View itemView) {
             super(itemView);
             sender = itemView.findViewById(R.id.msgSender);
             time = itemView.findViewById(R.id.msgTime);
             body = itemView.findViewById(R.id.msgBody);
-            attachmentRow = itemView.findViewById(R.id.msgAttachmentRow);
-            attachmentName = itemView.findViewById(R.id.msgAttachmentName);
+            attachmentsContainer = itemView.findViewById(R.id.msgAttachmentsContainer);
         }
     }
 }

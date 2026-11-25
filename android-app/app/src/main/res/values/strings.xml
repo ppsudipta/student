@@ -228,11 +228,16 @@
     <string name="view_course">View course</string>
     <string name="attach_file">Attach file</string>
     <string name="attachment_optional">Attach image, PDF, Word or Excel (optional)</string>
+    <string name="attachment_required_rps">Attach file(s) for RPS Chat (required)</string>
     <string name="attachment_limit_hint">Max 5 MB · JPG, PNG, PDF, DOC, DOCX, XLS, XLSX</string>
-    <string name="attachment_too_large">File is too large. Maximum size is 5 MB.</string>
+    <string name="attachment_limit_hint_multi">Up to 5 files · Max 5 MB each · JPG, PNG, PDF, DOC, DOCX, XLS, XLSX</string>
+    <string name="attachment_too_large">File is too large. Each file must be 5 MB or less.</string>
     <string name="attachment_type_not_allowed">This file type is not allowed.</string>
+    <string name="attachment_required">Please attach at least one file to submit.</string>
+    <string name="attachment_max_reached">You can attach a maximum of 5 files.</string>
     <string name="remove_attachment">Remove attachment</string>
     <string name="open_attachment">Open attachment</string>
+    <string name="enquiry_type_rps_chat">RPS Chat</string>
 
     <string name="loader_title_general">Loading…</string>
     <string name="loader_title_home">Welcome back!</string>
